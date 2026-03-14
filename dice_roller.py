@@ -1,7 +1,8 @@
 import random
 import re
+from typing import List, Tuple
 
-def roll_dice(notation: str):
+def roll_dice(notation: str) -> Tuple[List[int], int, int]:
     """Parses standard dice notation (e.g., '1d20+5') and returns result and individual rolls."""
     notation = notation.lower().replace(' ', '')
     match = re.match(r'^(\d+)?d(\d+)([+-]\d+)?$', notation)
