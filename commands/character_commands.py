@@ -1,7 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List
+from typing import List, Optional
 from database import SessionLocal
 from models import User, Server, Character, CharacterSkill, Attack
 from enums.skill_proficiency_status import SkillProficiencyStatus
@@ -52,12 +52,14 @@ def register_character_commands(bot: commands.Bot) -> None:
         constitution="Constitution score (1-30)",
         intelligence="Intelligence score (1-30)",
         wisdom="Wisdom score (1-30)",
-        charisma="Charisma score (1-30)"
+        charisma="Charisma score (1-30)",
+        initiative_bonus="Initiative bonus (optional, defaults to Dex mod)"
     )
     async def set_stats(
         interaction: discord.Interaction,
-        strength: int, dexterity: int, constitution: int,
-        intelligence: int, wisdom: int, charisma: int
+        strength: Optional[int] = None, dexterity: Optional[int] = None, constitution: Optional[int] = None,
+        intelligence: Optional[int] = None, wisdom: Optional[int] = None, charisma: Optional[int] = None,
+        initiative_bonus: Optional[int] = None
     ) -> None:
         db = SessionLocal()
         try:
@@ -69,34 +71,35 @@ def register_character_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message("You don't have a character in this server. Use `/create_character` first.", ephemeral=True)
                 return
 
-            if strength < 1 or strength > 30:
-                await interaction.response.send_message("Strength score must be between 1 and 30.", ephemeral=True)
-                return
-            if dexterity < 1 or dexterity > 30:
-                await interaction.response.send_message("dexterity score must be between 1 and 30.", ephemeral=True)
-                return
-            if constitution < 1 or constitution > 30:
-                await interaction.response.send_message("constitution score must be between 1 and 30.", ephemeral=True)
-                return
+            # Check for first-time registration (if any existing core stats are None)
+            is_first_time = any(getattr(char, s) is None for s in ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"])
+            
+            if is_first_time:
+                # Must provide all core stats
+                if any(s is None for s in [strength, dexterity, constitution, intelligence, wisdom, charisma]):
+                    await interaction.response.send_message("This is your first time setting stats for this character. Please provide all core stats (strength, dexterity, constitution, intelligence, wisdom, charisma).", ephemeral=True)
+                    return
 
-            if intelligence < 1 or intelligence > 30:
-                await interaction.response.send_message("intelligence score must be between 1 and 30.", ephemeral=True)
-                return
+            # Validation and update
+            stats_to_update = {
+                "strength": strength,
+                "dexterity": dexterity,
+                "constitution": constitution,
+                "intelligence": intelligence,
+                "wisdom": wisdom,
+                "charisma": charisma
+            }
 
-            if wisdom < 1 or wisdom > 30:
-                await interaction.response.send_message("wisdom score must be between 1 and 30.", ephemeral=True)
-                return
+            for stat_name, value in stats_to_update.items():
+                if value is not None:
+                    if not (1 <= value <= 30):
+                        await interaction.response.send_message(f"{stat_name.title()} score must be between 1 and 30.", ephemeral=True)
+                        return
+                    setattr(char, stat_name, value)
 
-            if charisma < 1 or charisma > 30:
-                await interaction.response.send_message("charisma score must be between 1 and 30.", ephemeral=True)
-                return
-
-            char.strength = strength
-            char.dexterity = dexterity
-            char.constitution = constitution
-            char.intelligence = intelligence
-            char.wisdom = wisdom
-            char.charisma = charisma
+            # Initiative bonus is always optional
+            if initiative_bonus is not None:
+                char.initiative_bonus = initiative_bonus
 
             db.commit()
             await interaction.response.send_message(f"Stats updated for **{char.name}**!")
@@ -159,6 +162,10 @@ def register_character_commands(bot: commands.Bot) -> None:
                 color=discord.Color.blue()
             )
 
+            dex_mod = get_stat_modifier(char.dexterity)
+            init_bonus = char.initiative_bonus if char.initiative_bonus is not None else dex_mod
+            embed.description += f"\n**Initiative:** {init_bonus:+d}"
+
             # Core Stats
             stats_display = []
             for stat in ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]:
@@ -199,7 +206,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                     mark = "◉"
                 elif prof_status == SkillProficiencyStatus.JACK_OF_ALL_TRADES:
                     skill_mod += prof_bonus // 2
-                    mark = "○"
+                    mark = "◗"
                 else:
                     mark = "○"
                 

@@ -11,7 +11,9 @@ if TYPE_CHECKING:
 def get_proficiency_bonus(level: int) -> int:
     return (level - 1) // 4 + 2
 
-def get_stat_modifier(score: int) -> int:
+def get_stat_modifier(score: Optional[int]) -> int:
+    if score is None:
+        return 0
     return (score - 10) // 2
 
 async def perform_roll(char: "Character", notation: str, db: "Session") -> str:
@@ -27,8 +29,9 @@ async def perform_roll(char: "Character", notation: str, db: "Session") -> str:
 
     matched_skill = next((s for s in SKILL_TO_STAT.keys() if s.lower() == clean_notation), None)
     matched_stat = STAT_NAMES.get(clean_notation) if not is_save and not matched_skill else None
+    is_initiative = clean_notation in ["initiative", "init"]
 
-    if matched_skill or is_save or matched_stat:
+    if matched_skill or is_save or matched_stat or is_initiative:
         prof_bonus = get_proficiency_bonus(char.level)
         d20_roll = random.randint(1, 20)
 
@@ -61,6 +64,12 @@ async def perform_roll(char: "Character", notation: str, db: "Session") -> str:
             save_mod = stat_mod + (prof_bonus if is_proficient else 0)
             total = d20_roll + save_mod
             return f"**{char.name}**: {stat_name.title()} Save `d20({d20_roll}) + {save_mod}` = **{total}**"
+
+        elif is_initiative:
+            dex_mod = get_stat_modifier(char.dexterity)
+            init_bonus = char.initiative_bonus if char.initiative_bonus is not None else dex_mod
+            total = d20_roll + init_bonus
+            return f"**{char.name}**: Initiative `d20({d20_roll}) + {init_bonus}` = **{total}**"
 
         else: # matched_stat
             stat_name = matched_stat

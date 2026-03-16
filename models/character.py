@@ -18,14 +18,15 @@ class Character(Base):
     server_id: Mapped[int] = mapped_column(Integer, ForeignKey('servers.id'), nullable=False)
     
     # Core Stats
-    strength: Mapped[int] = mapped_column(Integer, default=10)
-    dexterity: Mapped[int] = mapped_column(Integer, default=10)
-    constitution: Mapped[int] = mapped_column(Integer, default=10)
-    intelligence: Mapped[int] = mapped_column(Integer, default=10)
-    wisdom: Mapped[int] = mapped_column(Integer, default=10)
-    charisma: Mapped[int] = mapped_column(Integer, default=10)
+    strength: Mapped[int] = mapped_column(Integer, nullable=True)
+    dexterity: Mapped[int] = mapped_column(Integer, nullable=True)
+    constitution: Mapped[int] = mapped_column(Integer, nullable=True)
+    intelligence: Mapped[int] = mapped_column(Integer, nullable=True)
+    wisdom: Mapped[int] = mapped_column(Integer, nullable=True)
+    charisma: Mapped[int] = mapped_column(Integer, nullable=True)
     
     level: Mapped[int] = mapped_column(Integer, default=1)
+    initiative_bonus: Mapped[int] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     
     # Saving Throw Proficiency Status
