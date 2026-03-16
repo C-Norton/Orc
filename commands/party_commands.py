@@ -65,11 +65,28 @@ def register_party_commands(bot: commands.Bot) -> None:
             db.add(new_party)
             db.commit()
 
-            stmt = update(user_server_association).where(
+            # Ensure the user-server association exists and update active party
+            stmt = select(user_server_association).where(
                 user_server_association.c.user_id == user.id,
                 user_server_association.c.server_id == server.id
-            ).values(active_party_id=new_party.id)
-            db.execute(stmt)
+            )
+            assoc = db.execute(stmt).fetchone()
+            
+            if assoc:
+                stmt = update(user_server_association).where(
+                    user_server_association.c.user_id == user.id,
+                    user_server_association.c.server_id == server.id
+                ).values(active_party_id=new_party.id)
+                db.execute(stmt)
+            else:
+                from sqlalchemy import insert
+                stmt = insert(user_server_association).values(
+                    user_id=user.id,
+                    server_id=server.id,
+                    active_party_id=new_party.id
+                )
+                db.execute(stmt)
+            
             db.commit()
 
             if not found_chars:
@@ -205,11 +222,28 @@ def register_party_commands(bot: commands.Bot) -> None:
                     await interaction.response.send_message(f"Party '**{party_name}**' not found.", ephemeral=True)
                     return
                 
-                stmt = update(user_server_association).where(
+                # Ensure the user-server association exists
+                stmt = select(user_server_association).where(
                     user_server_association.c.user_id == user.id,
                     user_server_association.c.server_id == server.id
-                ).values(active_party_id=party.id)
-                db.execute(stmt)
+                )
+                assoc = db.execute(stmt).fetchone()
+                
+                if assoc:
+                    stmt = update(user_server_association).where(
+                        user_server_association.c.user_id == user.id,
+                        user_server_association.c.server_id == server.id
+                    ).values(active_party_id=party.id)
+                    db.execute(stmt)
+                else:
+                    from sqlalchemy import insert
+                    stmt = insert(user_server_association).values(
+                        user_id=user.id,
+                        server_id=server.id,
+                        active_party_id=party.id
+                    )
+                    db.execute(stmt)
+                
                 db.commit()
                 await interaction.response.send_message(f"Set '**{party_name}**' as your active party.")
             else:
@@ -311,6 +345,37 @@ def register_party_commands(bot: commands.Bot) -> None:
                 await interaction.followup.send(response)
         finally:
             db.close()
+
+    @bot.tree.command(name="view_party", description="View details of a party")
+    @app_commands.describe(party_name="The name of the party to view")
+    async def view_party(interaction: discord.Interaction, party_name: str) -> None:
+        db = SessionLocal()
+        try:
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+
+            if not party:
+                await interaction.response.send_message(f"Party '**{party_name}**' not found.", ephemeral=True)
+                return
+
+            embed = discord.Embed(title=f"Party: {party.name}", color=discord.Color.blue())
+            embed.add_field(name="GM", value=f"<@{party.gm.discord_id}>", inline=False)
+            
+            if not party.characters:
+                embed.description = "This party has no members."
+            else:
+                members_info = []
+                for char in party.characters:
+                    members_info.append(f"● **{char.name}** (Level {char.level}) - Controlled by <@{char.user.discord_id}>")
+                embed.add_field(name="Members", value="\n".join(members_info), inline=False)
+
+            await interaction.response.send_message(embed=embed)
+        finally:
+            db.close()
+
+    @view_party.autocomplete("party_name")
+    async def view_party_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        return await party_name_autocomplete(interaction, current)
 
     @bot.tree.command(name="delete_party", description="Delete a party")
     async def delete_party(interaction: discord.Interaction, party_name: str) -> None:

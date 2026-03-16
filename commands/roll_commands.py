@@ -31,7 +31,10 @@ def register_roll_commands(bot: commands.Bot) -> None:
             # Check if it's a flat attribute roll
             matched_stat = STAT_NAMES.get(clean_notation) if not is_save and not matched_skill else None
 
-            if matched_skill or is_save or matched_stat:
+            # Check if it's initiative
+            is_initiative = clean_notation in ["initiative", "init"]
+
+            if matched_skill or is_save or matched_stat or is_initiative:
                 # Character-based roll logic
                 user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
                 server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
@@ -73,6 +76,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
         # Add skills
         skills = sorted(SKILL_TO_STAT.keys())
         suggestions.extend([skill for skill in skills])
+
+        # Add initiative
+        suggestions.append("Initiative")
 
         # Add attributes
         stats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
