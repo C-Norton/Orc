@@ -1,10 +1,14 @@
 import discord
 from discord.ext import commands
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 def register_meta_commands(bot: commands.Bot) -> None:
     @bot.tree.command(name="help", description="Show help for all bot commands")
     async def help_command(interaction: discord.Interaction) -> None:
         """Show help for all bot commands and the party system."""
+        logger.debug(f"Command /help called by {interaction.user} (ID: {interaction.user.id})")
         embed = discord.Embed(
             title="🎲 Orc Help",
             description="Your D&D 5e companion for characters, rolls, and parties.",

@@ -6,6 +6,9 @@ import random
 from database import SessionLocal
 from models import User, Server, Character, Attack
 from dice_roller import roll_dice
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 def register_attack_commands(bot: commands.Bot) -> None:
     @bot.tree.command(name="add_attack", description="Add an attack to your character")
@@ -15,12 +18,16 @@ def register_attack_commands(bot: commands.Bot) -> None:
         damage_formula="Damage dice (e.g., 1d8+3)"
     )
     async def add_attack(interaction: discord.Interaction, name: str, hit_mod: int, damage_formula: str) -> None:
+        logger.debug(f"Command /add_attack called by {interaction.user} (ID: {interaction.user.id}) for guild {interaction.guild_id} with name: {name}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
             server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
-            
+            logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
+
+            roll_dice(damage_formula) #raises a ValueError
+
             if not char:
                 await interaction.response.send_message("You don't have a character in this server.", ephemeral=True)
                 return
@@ -37,19 +44,25 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 msg = f"Added attack **{name}** to **{char.name}**."
             
             db.commit()
+            logger.info(f"/add_attack completed for user {interaction.user.id}: {msg}")
             await interaction.response.send_message(msg)
+        except ValueError as e:
+            logger.error(f"Error adding attack for user {interaction.user.id}: {e}")
+            await interaction.response.send_message(f"Error adding attack: {e}.", ephemeral=True)
         finally:
             db.close()
 
     @bot.tree.command(name="attack", description="Perform an attack roll")
     @app_commands.describe(attack_name="The name of the attack to use")
     async def attack(interaction: discord.Interaction, attack_name: str) -> None:
+        logger.debug(f"Command /attack called by {interaction.user} (ID: {interaction.user.id}) for guild {interaction.guild_id} with attack_name: {attack_name}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
             server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
-            
+            logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
+
             if not char:
                 await interaction.response.send_message("You don't have a character in this server.", ephemeral=True)
                 return
@@ -73,6 +86,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 mod_str = f" {modifier:+d}" if modifier != 0 else ""
                 damage_detail = f"({rolls_str}){mod_str}"
             except ValueError as e:
+                logger.warning(f"ValueError in /attack (damage formula: {attack_obj.damage_formula}): {e}")
                 await interaction.response.send_message(f"❌ Error in damage formula: {str(e)}", ephemeral=True)
                 return
 
@@ -81,6 +95,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
             response += f"**Damage**: `{attack_obj.damage_formula}` -> `{damage_detail}` = **{damage_total}**"
             
             await interaction.response.send_message(response)
+            logger.info(f"/attack completed for user {interaction.user.id}: {char.name} used {attack_obj.name}")
         finally:
             db.close()
 
@@ -104,12 +119,14 @@ def register_attack_commands(bot: commands.Bot) -> None:
 
     @bot.tree.command(name="attacks", description="List all of your character's attacks")
     async def attacks_list(interaction: discord.Interaction) -> None:
+        logger.debug(f"Command /attacks called by {interaction.user} (ID: {interaction.user.id}) for guild {interaction.guild_id}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
             server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
-            
+            logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
+
             if not char:
                 await interaction.response.send_message("You don't have a character in this server.", ephemeral=True)
                 return
@@ -127,5 +144,6 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 )
             
             await interaction.response.send_message(embed=embed)
+            logger.info(f"/attacks completed for user {interaction.user.id}: listed {len(char.attacks)} attacks")
         finally:
             db.close()

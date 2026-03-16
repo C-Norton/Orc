@@ -7,12 +7,16 @@ from models import User, Server, Character
 from dice_roller import roll_dice
 from utils.constants import SKILL_TO_STAT, STAT_NAMES
 from utils.dnd_logic import perform_roll
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 def register_roll_commands(bot: commands.Bot) -> None:
     @bot.tree.command(name="roll", description="Roll a d20 skill check, Save, or standard dice notation.")
     @app_commands.describe(notation="Skill, attribute, save name or dice notation (e.g., 'insight', 'str', 'str save', '1d20+5')")
     async def roll(interaction: discord.Interaction, notation: str) -> None:
         """Unified roll command for skills, attributes, saves and dice notation."""
+        logger.debug(f"Command /roll called by {interaction.user} (ID: {interaction.user.id}) in guild {interaction.guild_id} with notation: {notation}")
         db = SessionLocal()
         try:
             # Normalize notation for matching
@@ -39,6 +43,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
                 server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
                 char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+                logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
 
                 if not char:
                     await interaction.response.send_message("You don't have a character in this server. Use `/create_character` first.", ephemeral=True)
@@ -46,6 +51,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
 
                 response = await perform_roll(char, notation, db)
                 await interaction.response.send_message(response)
+                logger.info(f"/roll completed for user {interaction.user.id}")
             else:
                 # Standard dice notation logic
                 rolls, modifier, total = roll_dice(notation)
@@ -59,12 +65,14 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 response += f"**Total: {total}**"
 
                 await interaction.response.send_message(response)
+                logger.info(f"/roll completed for user {interaction.user.id}")
 
         except ValueError as e:
+            logger.warning(f"ValueError in /roll (notation: {notation}): {e}")
             await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
         except Exception as e:
+            logger.error(f"Unexpected error in /roll (notation: {notation}): {e}", exc_info=True)
             await interaction.response.send_message(f"❌ An unexpected error occurred.", ephemeral=True)
-            print(f"Unexpected error: {e}")
         finally:
             db.close()
 
