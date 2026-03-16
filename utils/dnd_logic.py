@@ -3,6 +3,9 @@ import random
 from dice_roller import roll_dice
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from utils.constants import SKILL_TO_STAT, STAT_NAMES
+from utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from models import Character
@@ -18,6 +21,7 @@ def get_stat_modifier(score: Optional[int]) -> int:
 
 async def perform_roll(char: "Character", notation: str, db: "Session") -> str:
     """Shared roll logic extracted from /roll."""
+    logger.debug(f"Performing roll for {char.name} (ID: {char.id}) with notation: {notation}")
     clean_notation = notation.lower().strip()
     is_save = False
     save_stat = None
@@ -84,4 +88,5 @@ async def perform_roll(char: "Character", notation: str, db: "Session") -> str:
             mod_str = f" {modifier:+d}" if modifier != 0 else ""
             return f"**{char.name}**: `{notation}` ({rolls_str}){mod_str} = **{total}**"
         except ValueError as e:
+            logger.debug(f"ValueError in perform_roll for {notation}: {e}")
             return f"**{char.name}**: ❌ Error: {str(e)}"
