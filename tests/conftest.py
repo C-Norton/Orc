@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 import discord
 
-from models import Base, User, Server, Character
+from models import Base, User, Server, Character, ClassLevel
 from enums.skill_proficiency_status import SkillProficiencyStatus
 
 
@@ -106,13 +106,12 @@ def sample_server(db_session):
 
 @pytest.fixture
 def sample_character(db_session, sample_user, sample_server):
-    """Active character with all core stats set. Level 5 → proficiency +3."""
+    """Active Fighter level 5 with all core stats set. Level 5 → proficiency +3."""
     char = Character(
         name="Aldric",
         user=sample_user,
         server=sample_server,
         is_active=True,
-        level=5,
         strength=16,       # mod +3
         dexterity=14,      # mod +2
         constitution=15,   # mod +2
@@ -123,6 +122,8 @@ def sample_character(db_session, sample_user, sample_server):
         st_prof_constitution=True,
     )
     db_session.add(char)
+    db_session.flush()
+    db_session.add(ClassLevel(character_id=char.id, class_name="Fighter", level=5))
     db_session.commit()
     db_session.refresh(char)
     return char
@@ -130,15 +131,16 @@ def sample_character(db_session, sample_user, sample_server):
 
 @pytest.fixture
 def sample_character_no_stats(db_session, sample_user, sample_server):
-    """Active character whose core stats have never been set (all None)."""
+    """Active Fighter level 1 whose core stats have never been set (all None)."""
     char = Character(
         name="Unnamed",
         user=sample_user,
         server=sample_server,
         is_active=True,
-        level=1,
     )
     db_session.add(char)
+    db_session.flush()
+    db_session.add(ClassLevel(character_id=char.id, class_name="Fighter", level=1))
     db_session.commit()
     db_session.refresh(char)
     return char

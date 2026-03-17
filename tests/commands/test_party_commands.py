@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy import select
-from models import Party, Character, User, user_server_association
+from models import Party, Character, User, Server, user_server_association
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
 
@@ -475,3 +475,87 @@ async def test_view_party_shows_multiple_gms(mocker, party_bot, sample_party, sa
     gm_field = next(f for f in embed.fields if f.name == "GMs")
     assert "111" in gm_field.value
     assert "555" in gm_field.value
+
+
+# ---------------------------------------------------------------------------
+# Resource limits
+# ---------------------------------------------------------------------------
+
+async def test_create_party_over_gm_limit(
+    mocker, party_bot, sample_user, sample_server, db_session, interaction
+):
+    """A user who is already GM of the maximum number of parties cannot create another."""
+    mocker.patch("commands.party_commands.MAX_GM_PARTIES_PER_USER", 2)
+
+    for i in range(2):
+        p = Party(name=f"Party{i}", gms=[sample_user], server=sample_server)
+        db_session.add(p)
+    db_session.commit()
+
+    cb = get_callback(party_bot, "create_party")
+    await cb(interaction, party_name="OneMore")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "maximum" in msg.lower()
+
+
+async def test_create_party_over_server_limit(
+    mocker, party_bot, sample_user, sample_server, db_session, interaction
+):
+    """A server that has reached the maximum party count rejects new parties."""
+    mocker.patch("commands.party_commands.MAX_PARTIES_PER_SERVER", 2)
+
+    # Need a second user so these don't also hit the GM limit
+    other_gm = User(discord_id="888")
+    db_session.add(other_gm)
+    db_session.flush()
+    for i in range(2):
+        p = Party(name=f"SrvParty{i}", gms=[other_gm], server=sample_server)
+        db_session.add(p)
+    db_session.commit()
+
+    cb = get_callback(party_bot, "create_party")
+    await cb(interaction, party_name="CantAdd")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "maximum" in msg.lower()
+
+
+async def test_party_add_over_member_limit(
+    mocker, party_bot, sample_party, sample_user, sample_server, db_session, interaction
+):
+    """Adding a character when the party is already at max members is rejected."""
+    mocker.patch("commands.party_commands.MAX_CHARACTERS_PER_PARTY", 1)
+
+    # Seed one character already in the party to hit the cap
+    existing = Character(
+        name="AlreadyIn",
+        user=sample_user,
+        server=sample_server,
+        is_active=False,
+        level=1,
+    )
+    db_session.add(existing)
+    db_session.flush()
+    sample_party.characters.append(existing)
+    db_session.commit()
+
+    # The character being added
+    target = Character(
+        name="Aldric",
+        user=sample_user,
+        server=sample_server,
+        is_active=True,
+        level=5,
+    )
+    db_session.add(target)
+    db_session.commit()
+
+    cb = get_callback(party_bot, "party_add")
+    await cb(interaction, party_name="The Fellowship", character_name="Aldric")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "maximum" in msg.lower()

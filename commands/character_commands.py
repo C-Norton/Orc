@@ -3,15 +3,219 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 from database import SessionLocal
-from models import User, Server, Character, CharacterSkill, EncounterTurn
+from models import User, Server, Character, CharacterSkill, ClassLevel, EncounterTurn
+from enums.character_class import CharacterClass
 from enums.encounter_status import EncounterStatus
 from enums.skill_proficiency_status import SkillProficiencyStatus
+from utils.class_data import apply_class_save_profs, calculate_max_hp
 from utils.constants import SKILL_TO_STAT
 from utils.dnd_logic import get_proficiency_bonus, get_stat_modifier
+from utils.limits import MAX_CHARACTERS_PER_USER
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# Character-sheet reaction state
+# ---------------------------------------------------------------------------
+
+# Maps message_id -> {"user_id": int, "char_id": int}
+char_sheet_owners: dict[int, dict] = {}
+
+CHAR_SHEET_EMOJIS = ["🏠", "📊", "🎯", "⚔️"]
+
+_STAT_NAMES = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+_STAT_ABBR = {"strength": "STR", "dexterity": "DEX", "constitution": "CON",
+              "intelligence": "INT", "wisdom": "WIS", "charisma": "CHA"}
+
+
+def _class_summary(char: Character) -> str:
+    """Return e.g. 'Fighter 5' or 'Fighter 3 / Rogue 2'."""
+    sorted_cls = sorted(char.class_levels, key=lambda cl: cl.id)
+    return " / ".join(f"{cl.class_name} {cl.level}" for cl in sorted_cls) if sorted_cls else "No class"
+
+
+def _build_sheet_page0(char: Character) -> discord.Embed:
+    """Page 0 (🏠): intro/overview — identity, HP, initiative, proficiency bonus."""
+    prof_bonus = get_proficiency_bonus(char.level)
+    cls_summary = _class_summary(char)
+
+    dex_mod = get_stat_modifier(char.dexterity)
+    init_bonus = char.initiative_bonus if char.initiative_bonus is not None else dex_mod
+
+    embed = discord.Embed(
+        title=Strings.CHAR_SHEET_INTRO_TITLE.format(char_name=char.name),
+        description=Strings.CHAR_SHEET_INTRO_DESC.format(
+            char_level=char.level, class_summary=cls_summary
+        ),
+        color=discord.Color.blue(),
+    )
+
+    # Quick-reference block
+    hp_str = (
+        f"❤️ {char.current_hp}/{char.max_hp}"
+        if char.max_hp != -1
+        else "❤️ *Not set — use `/set_max_hp`*"
+    )
+    if char.temp_hp > 0:
+        hp_str += f" (+{char.temp_hp} temp)"
+
+    ac_str = (
+        Strings.CHAR_SHEET_AC.format(ac=char.ac)
+        if char.ac is not None
+        else Strings.CHAR_SHEET_AC_NOT_SET
+    )
+
+    quick_lines = [
+        hp_str,
+        ac_str,
+        f"🔰 Proficiency Bonus: **{prof_bonus:+d}**",
+        f"⚡ Initiative: **{init_bonus:+d}**",
+    ]
+    embed.add_field(
+        name=Strings.CHAR_SHEET_INTRO_QUICK_REF,
+        value="\n".join(quick_lines),
+        inline=False,
+    )
+    embed.set_footer(text=Strings.CHAR_SHEET_FOOTER)
+    return embed
+
+
+def _build_sheet_page1(char: Character) -> discord.Embed:
+    """Page 1 (📊): ability scores and saving throws."""
+    prof_bonus = get_proficiency_bonus(char.level)
+    cls_summary = _class_summary(char)
+
+    embed = discord.Embed(
+        title=Strings.CHAR_VIEW_TITLE.format(char_name=char.name),
+        description=Strings.CHAR_VIEW_DESC.format(
+            char_level=char.level, class_summary=cls_summary
+        ),
+        color=discord.Color.blue(),
+    )
+
+    stats_set = all(getattr(char, s) is not None for s in _STAT_NAMES)
+    if not stats_set:
+        embed.add_field(
+            name=Strings.CHAR_VIEW_STATS_FIELD,
+            value=Strings.CHAR_SHEET_NO_STATS,
+            inline=False,
+        )
+        embed.set_footer(text=Strings.CHAR_SHEET_FOOTER)
+        return embed
+
+    # Ability scores — two rows of three, rendered as a compact table
+    stats_lines = []
+    for stat in _STAT_NAMES:
+        val = getattr(char, stat)
+        mod = get_stat_modifier(val)
+        abbr = _STAT_ABBR[stat]
+        stats_lines.append(f"**{abbr}** {val:>2} ({mod:+d})")
+    # Two columns of three
+    embed.add_field(
+        name=Strings.CHAR_VIEW_STATS_FIELD,
+        value="\n".join(stats_lines[:3]),
+        inline=True,
+    )
+    embed.add_field(name="\u200b", value="\n".join(stats_lines[3:]), inline=True)
+    embed.add_field(name="\u200b", value="\u200b", inline=True)  # spacer
+
+    # Saving throws
+    saves_lines = []
+    for stat in _STAT_NAMES:
+        val = getattr(char, stat)
+        mod = get_stat_modifier(val)
+        is_prof = getattr(char, f"st_prof_{stat}")
+        save_mod = mod + (prof_bonus if is_prof else 0)
+        mark = "●" if is_prof else "○"
+        abbr = _STAT_ABBR[stat]
+        saves_lines.append(f"{mark} **{abbr}**: {save_mod:+d}")
+    embed.add_field(
+        name=Strings.CHAR_VIEW_SAVES_FIELD,
+        value="\n".join(saves_lines[:3]),
+        inline=True,
+    )
+    embed.add_field(name="\u200b", value="\n".join(saves_lines[3:]), inline=True)
+    embed.add_field(name="\u200b", value="\u200b", inline=True)  # spacer
+
+    embed.set_footer(text=Strings.CHAR_SHEET_FOOTER)
+    return embed
+
+
+def _build_sheet_page2(char: Character) -> discord.Embed:
+    """Page 2 (🎯): skill proficiencies and modifiers."""
+    prof_bonus = get_proficiency_bonus(char.level)
+
+    embed = discord.Embed(
+        title=Strings.CHAR_VIEW_TITLE.format(char_name=char.name),
+        description=Strings.CHAR_VIEW_SKILLS_FIELD,
+        color=discord.Color.green(),
+    )
+
+    stats_set = all(getattr(char, s) is not None for s in _STAT_NAMES)
+    if not stats_set:
+        embed.add_field(name="\u200b", value=Strings.CHAR_SHEET_NO_STATS, inline=False)
+        embed.set_footer(text=Strings.CHAR_SHEET_FOOTER)
+        return embed
+
+    char_skills = {s.skill_name: s.proficiency for s in char.skills}
+    skills_display = []
+    for skill_name in sorted(SKILL_TO_STAT.keys()):
+        stat_name = SKILL_TO_STAT[skill_name]
+        stat_mod = get_stat_modifier(getattr(char, stat_name))
+        prof_status = char_skills.get(skill_name, SkillProficiencyStatus.NOT_PROFICIENT)
+
+        skill_mod = stat_mod
+        if prof_status == SkillProficiencyStatus.PROFICIENT:
+            skill_mod += prof_bonus
+            mark = "●"
+        elif prof_status == SkillProficiencyStatus.EXPERTISE:
+            skill_mod += 2 * prof_bonus
+            mark = "◉"
+        elif prof_status == SkillProficiencyStatus.JACK_OF_ALL_TRADES:
+            skill_mod += prof_bonus // 2
+            mark = "◗"
+        else:
+            mark = "○"
+        skills_display.append(f"{mark} **{skill_name}**: {skill_mod:+d}")
+
+    mid = (len(skills_display) + 1) // 2
+    embed.add_field(name="\u200b", value="\n".join(skills_display[:mid]), inline=True)
+    embed.add_field(name="\u200b", value="\n".join(skills_display[mid:]), inline=True)
+    embed.set_footer(text=Strings.CHAR_SHEET_FOOTER)
+    return embed
+
+
+def _build_sheet_page3(char: Character) -> discord.Embed:
+    """Page 3 (⚔️): saved attacks."""
+    embed = discord.Embed(
+        title=Strings.CHAR_VIEW_TITLE.format(char_name=char.name),
+        description=Strings.HELP_COMBAT_NAME,
+        color=discord.Color.red(),
+    )
+
+    if not char.attacks:
+        embed.add_field(name="\u200b", value=Strings.CHAR_SHEET_NO_ATTACKS, inline=False)
+    else:
+        for atk in char.attacks:
+            embed.add_field(
+                name=atk.name,
+                value=f"**To Hit:** +{atk.hit_modifier}  |  **Damage:** `{atk.damage_formula}`",
+                inline=False,
+            )
+
+    embed.set_footer(text=Strings.CHAR_SHEET_FOOTER)
+    return embed
+
+
+_SHEET_PAGE_BUILDERS = {
+    "🏠": _build_sheet_page0,
+    "📊": _build_sheet_page1,
+    "🎯": _build_sheet_page2,
+    "⚔️": _build_sheet_page3,
+}
+
 
 def register_character_commands(bot: commands.Bot) -> None:
     """
@@ -25,28 +229,46 @@ def register_character_commands(bot: commands.Bot) -> None:
       within 3 seconds, or it will time out.
     """
     @bot.tree.command(name="create_character", description="Create a new D&D character for this server")
-    @app_commands.describe(name="The name of your character")
-    async def create_character(interaction: discord.Interaction, name: str, level: int) -> None:
-        logger.debug(f"Command /create_character called by {interaction.user} (ID: {interaction.user.id}) in guild {interaction.guild_id} with name: {name}")
+    @app_commands.describe(
+        name="The name of your character",
+        character_class="Your character's starting class",
+        level="Starting level in that class (1-20)",
+    )
+    @app_commands.choices(character_class=[
+        app_commands.Choice(name=cls.value, value=cls.value) for cls in CharacterClass
+    ])
+    async def create_character(
+        interaction: discord.Interaction, name: str, character_class: str, level: int
+    ) -> None:
+        logger.debug(
+            f"Command /create_character called by {interaction.user} (ID: {interaction.user.id}) "
+            f"in guild {interaction.guild_id} with name: {name}, class: {character_class}, level: {level}"
+        )
         db = SessionLocal()
 
         if len(name) > 100:
-            # ephemeral=True means only the user who ran the command can see the response.
             await interaction.response.send_message(Strings.CHAR_CREATE_NAME_LIMIT, ephemeral=True)
             return
         try:
-            # discord_id is stored as a string to prevent precision loss with large snowflakes.
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
             if not user:
                 user = User(discord_id=str(interaction.user.id))
                 db.add(user)
-                db.flush() # Flush to get the ID without committing yet.
+                db.flush()
 
             server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             if not server:
                 server = Server(discord_id=str(interaction.guild_id), name=interaction.guild.name)
                 db.add(server)
                 db.flush()
+
+            char_count = db.query(Character).filter_by(user_id=user.id).count()
+            if char_count >= MAX_CHARACTERS_PER_USER:
+                await interaction.response.send_message(
+                    Strings.ERROR_LIMIT_CHARACTERS.format(limit=MAX_CHARACTERS_PER_USER),
+                    ephemeral=True,
+                )
+                return
 
             existing_char = db.query(Character).filter_by(user=user, server=server, name=name).first()
             if existing_char:
@@ -55,14 +277,27 @@ def register_character_commands(bot: commands.Bot) -> None:
             if level < 1 or level > 20:
                 await interaction.response.send_message(Strings.CHAR_LEVEL_LIMIT, ephemeral=True)
                 return
-            # Deactivate all other characters for this user in this server
+
             db.query(Character).filter_by(user=user, server=server).update({"is_active": False})
 
-            new_char = Character(name=name, user=user, server=server, level= level, is_active=True)
+            new_char = Character(name=name, user=user, server=server, is_active=True)
             db.add(new_char)
+            db.flush()
+
+            cls_enum = CharacterClass(character_class)
+            db.add(ClassLevel(character_id=new_char.id, class_name=cls_enum.value, level=level))
+            db.flush()
+            db.refresh(new_char)
+
+            apply_class_save_profs(new_char, cls_enum)
             db.commit()
-            logger.info(f"/create_character completed for user {interaction.user.id}: created '{name}' at level {level}")
-            await interaction.response.send_message(Strings.CHAR_CREATED_ACTIVE.format(name=name, level=level))
+            logger.info(
+                f"/create_character completed for user {interaction.user.id}: "
+                f"created '{name}' as level {level} {character_class}"
+            )
+            await interaction.response.send_message(
+                Strings.CHAR_CREATED_ACTIVE.format(name=name, level=level, char_class=character_class)
+            )
         finally:
             db.close()
 
@@ -125,6 +360,13 @@ def register_character_commands(bot: commands.Bot) -> None:
             if initiative_bonus is not None:
                 char.initiative_bonus = initiative_bonus
 
+            # Recalculate max HP whenever CON changes (class levels must already exist)
+            if constitution is not None and char.class_levels:
+                new_max = calculate_max_hp(char)
+                if new_max != -1:
+                    char.max_hp = new_max
+                    char.current_hp = new_max
+
             db.commit()
             logger.info(f"/set_stats completed for user {interaction.user.id}: updated stats for '{char.name}'")
             await interaction.response.send_message(Strings.CHAR_STATS_UPDATED.format(char_name=char.name))
@@ -170,7 +412,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         finally:
             db.close()
 
-    @bot.tree.command(name="view_character", description="View your character's stats, skills, and saving throws")
+    @bot.tree.command(name="view_character", description="View your character sheet")
     async def view_character(interaction: discord.Interaction) -> None:
         logger.debug(f"Command /view_character called by {interaction.user} (ID: {interaction.user.id}) for guild {interaction.guild_id}")
         db = SessionLocal()
@@ -181,73 +423,21 @@ def register_character_commands(bot: commands.Bot) -> None:
             logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
 
             if not char:
-                await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND + " Use `/create_character` or `/switch_character`.", ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.ACTIVE_CHARACTER_NOT_FOUND + " Use `/create_character` or `/switch_character`.",
+                    ephemeral=True,
+                )
                 return
 
-            prof_bonus = get_proficiency_bonus(char.level)
-
-            # Embeds are rich-text messages commonly used in Discord for structured data.
-            embed = discord.Embed(
-                title=Strings.CHAR_VIEW_TITLE.format(char_name=char.name),
-                description=Strings.CHAR_VIEW_DESC.format(char_level=char.level),
-                color=discord.Color.blue()
-            )
-
-            dex_mod = get_stat_modifier(char.dexterity)
-            init_bonus = char.initiative_bonus if char.initiative_bonus is not None else dex_mod
-            embed.description += Strings.CHAR_VIEW_INIT.format(init_bonus=init_bonus)
-
-            # Core Stats
-            stats_display = []
-            for stat in ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]:
-                val = getattr(char, stat)
-                mod = get_stat_modifier(val)
-                stats_display.append(f"**{stat.title()[:3]}**: {val} ({mod:+d})")
-
-            embed.add_field(name=Strings.CHAR_VIEW_STATS_FIELD, value=" | ".join(stats_display), inline=False)
-
-            # Saving Throws
-            saves_display = []
-            for stat in ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]:
-                val = getattr(char, stat)
-                mod = get_stat_modifier(val)
-                is_prof = getattr(char, f"st_prof_{stat}")
-                save_mod = mod + (prof_bonus if is_prof else 0)
-                prof_mark = "●" if is_prof else "○"
-                saves_display.append(f"{prof_mark} {stat.title()[:3]}: {save_mod:+d}")
-
-            embed.add_field(name=Strings.CHAR_VIEW_SAVES_FIELD, value="\n".join(saves_display), inline=True)
-
-            # Skills
-            skills_display = []
-            char_skills = {s.skill_name: s.proficiency for s in char.skills}
-
-            sorted_skills = sorted(SKILL_TO_STAT.keys())
-            for skill_name in sorted_skills:
-                stat_name = SKILL_TO_STAT[skill_name]
-                stat_mod = get_stat_modifier(getattr(char, stat_name))
-                prof_status = char_skills.get(skill_name, SkillProficiencyStatus.NOT_PROFICIENT)
-
-                skill_mod = stat_mod
-                if prof_status == SkillProficiencyStatus.PROFICIENT:
-                    skill_mod += prof_bonus
-                    mark = "●"
-                elif prof_status == SkillProficiencyStatus.EXPERTISE:
-                    skill_mod += 2 * prof_bonus
-                    mark = "◉"
-                elif prof_status == SkillProficiencyStatus.JACK_OF_ALL_TRADES:
-                    skill_mod += prof_bonus // 2
-                    mark = "◗"
-                else:
-                    mark = "○"
-
-                skills_display.append(f"{mark} {skill_name}: {skill_mod:+d}")
-
-            # Split skills into two columns if needed, or just one
-            embed.add_field(name=Strings.CHAR_VIEW_SKILLS_FIELD, value="\n".join(skills_display[:9]), inline=True)
-            embed.add_field(name=Strings.CHAR_VIEW_SKILLS_CONT_FIELD, value="\n".join(skills_display[9:]), inline=True)
-
+            embed = _build_sheet_page0(char)
             await interaction.response.send_message(embed=embed)
+            message = await interaction.original_response()
+
+            char_sheet_owners[message.id] = {"user_id": interaction.user.id, "char_id": char.id}
+
+            for emoji in CHAR_SHEET_EMOJIS:
+                await message.add_reaction(emoji)
+
             logger.info(f"/view_character completed for user {interaction.user.id}: viewed '{char.name}'")
         finally:
             db.close()
@@ -298,14 +488,13 @@ def register_character_commands(bot: commands.Bot) -> None:
         finally:
             db.close()
 
-    @bot.tree.command(name="set_level", description="Set your character's level (1-20)")
-    @app_commands.describe(level="Your character's level")
-    async def set_level(interaction: discord.Interaction, level: int) -> None:
-        logger.debug(f"Command /set_level called by {interaction.user} (ID: {interaction.user.id}) for guild {interaction.guild_id} with level: {level}")
-        if not (1 <= level <= 20):
-            await interaction.response.send_message(Strings.CHAR_LEVEL_LIMIT, ephemeral=True)
+    @bot.tree.command(name="set_ac", description="Set your active character's Armor Class")
+    @app_commands.describe(ac="Armor Class value (1-30)")
+    async def set_ac(interaction: discord.Interaction, ac: int) -> None:
+        logger.debug(f"Command /set_ac called by {interaction.user} (ID: {interaction.user.id}) with ac: {ac}")
+        if not (1 <= ac <= 30):
+            await interaction.response.send_message(Strings.CHAR_AC_LIMIT, ephemeral=True)
             return
-
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
@@ -317,10 +506,161 @@ def register_character_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
                 return
 
-            char.level = level
+            char.ac = ac
             db.commit()
-            logger.info(f"/set_level completed for user {interaction.user.id}: '{char.name}' set to level {level}")
-            await interaction.response.send_message(Strings.CHAR_LEVEL_UPDATED.format(char_name=char.name, level=level))
+            logger.info(f"/set_ac completed for user {interaction.user.id}: '{char.name}' AC set to {ac}")
+            await interaction.response.send_message(
+                Strings.CHAR_AC_UPDATED.format(char_name=char.name, ac=ac)
+            )
+        finally:
+            db.close()
+
+    @bot.tree.command(name="add_class", description="Add or update a class level on your active character")
+    @app_commands.describe(
+        character_class="The class to add or update",
+        level="Number of levels in this class",
+    )
+    @app_commands.choices(character_class=[
+        app_commands.Choice(name=cls.value, value=cls.value) for cls in CharacterClass
+    ])
+    async def add_class(interaction: discord.Interaction, character_class: str, level: int) -> None:
+        logger.debug(
+            f"Command /add_class called by {interaction.user} (ID: {interaction.user.id}) "
+            f"with class: {character_class}, level: {level}"
+        )
+        if level < 1 or level > 20:
+            await interaction.response.send_message(Strings.CHAR_LEVEL_LIMIT, ephemeral=True)
+            return
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
+
+            if not char:
+                await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
+                return
+
+            cls_enum = CharacterClass(character_class)
+            existing_cl = db.query(ClassLevel).filter_by(
+                character_id=char.id, class_name=cls_enum.value
+            ).first()
+
+            # Check total level cap (20)
+            other_levels = sum(
+                cl.level for cl in char.class_levels
+                if cl.class_name != cls_enum.value
+            )
+            if other_levels + level > 20:
+                await interaction.response.send_message(
+                    Strings.CHAR_CLASS_TOTAL_LEVEL_EXCEEDED.format(
+                        level=level,
+                        char_class=character_class,
+                        char_name=char.name,
+                        current_total=char.level,
+                    ),
+                    ephemeral=True,
+                )
+                return
+
+            is_first_class = not char.class_levels
+
+            if existing_cl:
+                existing_cl.level = level
+                msg = Strings.CHAR_CLASS_UPDATED
+            else:
+                db.add(ClassLevel(character_id=char.id, class_name=cls_enum.value, level=level))
+                msg = Strings.CHAR_CLASS_ADDED
+
+            db.flush()
+            db.refresh(char)
+
+            # Apply save profs only when this is the very first class on the character
+            if is_first_class:
+                apply_class_save_profs(char, cls_enum)
+
+            # Recalculate HP if stats are already set
+            new_max = calculate_max_hp(char)
+            if new_max != -1:
+                char.max_hp = new_max
+                char.current_hp = new_max
+
+            db.commit()
+            db.refresh(char)
+            total = char.level
+            logger.info(
+                f"/add_class completed for user {interaction.user.id}: "
+                f"'{char.name}' {character_class} level {level} (total {total})"
+            )
+            await interaction.response.send_message(
+                msg.format(
+                    char_name=char.name, char_class=character_class,
+                    level=level, total_level=total
+                )
+            )
+        finally:
+            db.close()
+
+    @bot.tree.command(name="remove_class", description="Remove a class from your active character")
+    @app_commands.describe(character_class="The class to remove")
+    @app_commands.choices(character_class=[
+        app_commands.Choice(name=cls.value, value=cls.value) for cls in CharacterClass
+    ])
+    async def remove_class(interaction: discord.Interaction, character_class: str) -> None:
+        logger.debug(
+            f"Command /remove_class called by {interaction.user} (ID: {interaction.user.id}) "
+            f"with class: {character_class}"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
+
+            if not char:
+                await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
+                return
+
+            cls_enum = CharacterClass(character_class)
+            cl = db.query(ClassLevel).filter_by(
+                character_id=char.id, class_name=cls_enum.value
+            ).first()
+            if not cl:
+                await interaction.response.send_message(
+                    Strings.CHAR_CLASS_NOT_FOUND.format(
+                        char_name=char.name, char_class=character_class
+                    ),
+                    ephemeral=True,
+                )
+                return
+
+            db.delete(cl)
+            db.flush()
+            db.refresh(char)
+
+            # Recalculate HP if stats are still set (or mark unset if no classes remain)
+            new_max = calculate_max_hp(char)
+            if new_max != -1:
+                char.max_hp = new_max
+                char.current_hp = new_max
+            elif not char.class_levels:
+                char.max_hp = -1
+                char.current_hp = -1
+
+            db.commit()
+            db.refresh(char)
+            total = char.level
+            logger.info(
+                f"/remove_class completed for user {interaction.user.id}: "
+                f"removed {character_class} from '{char.name}' (total level now {total})"
+            )
+            await interaction.response.send_message(
+                Strings.CHAR_CLASS_REMOVED.format(
+                    char_name=char.name, char_class=character_class, total_level=total
+                )
+            )
         finally:
             db.close()
 
@@ -398,9 +738,14 @@ def register_character_commands(bot: commands.Bot) -> None:
 
             for char in chars:
                 status = " (Active)" if char.is_active else ""
+                sorted_cls = sorted(char.class_levels, key=lambda cl: cl.id)
+                if sorted_cls:
+                    class_summary = " / ".join(f"{cl.class_name} {cl.level}" for cl in sorted_cls)
+                else:
+                    class_summary = "No class"
                 embed.add_field(
                     name=f"{char.name}{status}",
-                    value=f"Level {char.level}",
+                    value=f"Level {char.level} — {class_summary}",
                     inline=True
                 )
 
@@ -467,3 +812,38 @@ def register_character_commands(bot: commands.Bot) -> None:
             ]
         finally:
             db.close()
+
+    # ------------------------------------------------------------------
+    # Character sheet reaction handler
+    # ------------------------------------------------------------------
+
+    async def on_char_sheet_reaction(reaction: discord.Reaction, user: discord.User) -> None:
+        """Switch character sheet pages when the owner clicks a navigation reaction."""
+        if user.bot:
+            return
+
+        entry = char_sheet_owners.get(reaction.message.id)
+        if not entry or user.id != entry["user_id"]:
+            return
+
+        emoji = str(reaction.emoji)
+        builder = _SHEET_PAGE_BUILDERS.get(emoji)
+        if builder is None:
+            return
+
+        db = SessionLocal()
+        try:
+            char = db.get(Character, entry["char_id"])
+            if char is None:
+                return
+            embed = builder(char)
+        finally:
+            db.close()
+
+        await reaction.message.edit(embed=embed)
+        try:
+            await reaction.message.remove_reaction(reaction.emoji, user)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+    bot.add_listener(on_char_sheet_reaction, "on_reaction_add")

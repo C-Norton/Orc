@@ -103,6 +103,29 @@ async def test_add_enemy_cannot_add_to_active_encounter(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
+async def test_add_enemy_over_limit_rejected(
+    mocker, encounter_bot, sample_pending_encounter, db_session, interaction
+):
+    """Adding an enemy beyond the per-encounter cap is rejected."""
+    mocker.patch("commands.encounter_commands.MAX_ENEMIES_PER_ENCOUNTER", 2)
+
+    for i in range(2):
+        db_session.add(Enemy(
+            encounter_id=sample_pending_encounter.id,
+            name=f"Enemy{i}",
+            initiative_modifier=0,
+            max_hp=10,
+        ))
+    db_session.commit()
+
+    cb = get_callback(encounter_bot, "add_enemy")
+    await cb(interaction, name="OneMore", initiative_modifier=0, max_hp=5)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "maximum" in msg.lower()
+
+
 # ---------------------------------------------------------------------------
 # /start_encounter
 # ---------------------------------------------------------------------------

@@ -1,5 +1,5 @@
 import pytest
-from models import Attack
+from models import Attack, Character
 from tests.commands.conftest import get_callback
 
 
@@ -128,4 +128,51 @@ async def test_attacks_list_no_character(attack_bot, sample_user, sample_server,
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+# ---------------------------------------------------------------------------
+# Resource limits
+# ---------------------------------------------------------------------------
+
+async def test_add_attack_over_limit_rejected(
+    mocker, attack_bot, sample_character, db_session, interaction
+):
+    """Creating a new attack beyond the per-character cap is rejected."""
+    mocker.patch("commands.attack_commands.MAX_ATTACKS_PER_CHARACTER", 2)
+
+    for i in range(2):
+        db_session.add(Attack(
+            character_id=sample_character.id,
+            name=f"Attack{i}",
+            hit_modifier=0,
+            damage_formula="1d4",
+        ))
+    db_session.commit()
+
+    cb = get_callback(attack_bot, "add_attack")
+    await cb(interaction, name="NewAttack", hit_mod=0, damage_formula="1d6")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "maximum" in msg.lower()
+
+
+async def test_add_attack_update_existing_ignores_limit(
+    mocker, attack_bot, sample_character, db_session, interaction
+):
+    """Updating an existing attack is always allowed even when at the cap."""
+    mocker.patch("commands.attack_commands.MAX_ATTACKS_PER_CHARACTER", 1)
+
+    db_session.add(Attack(
+        character_id=sample_character.id,
+        name="Longsword",
+        hit_modifier=3,
+        damage_formula="1d8+3",
+    ))
+    db_session.commit()
+
+    cb = get_callback(attack_bot, "add_attack")
+    await cb(interaction, name="Longsword", hit_mod=5, damage_formula="1d8+5")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
 

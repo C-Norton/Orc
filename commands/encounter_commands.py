@@ -8,6 +8,7 @@ from database import SessionLocal
 from models import User, Server, Party, Character, Encounter, Enemy, EncounterTurn, user_server_association
 from enums.encounter_status import EncounterStatus
 from utils.dnd_logic import roll_initiative_for_character, get_stat_modifier
+from utils.limits import MAX_ENEMIES_PER_ENCOUNTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
@@ -165,6 +166,13 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             if encounter.status != EncounterStatus.PENDING:
                 await interaction.response.send_message(
                     Strings.ENCOUNTER_NOT_STARTED, ephemeral=True
+                )
+                return
+
+            if len(encounter.enemies) >= MAX_ENEMIES_PER_ENCOUNTER:
+                await interaction.response.send_message(
+                    Strings.ERROR_LIMIT_ENEMIES.format(limit=MAX_ENEMIES_PER_ENCOUNTER),
+                    ephemeral=True,
                 )
                 return
 
