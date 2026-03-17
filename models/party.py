@@ -25,6 +25,8 @@ class Party(Base):
     characters: Mapped[list["Character"]] = relationship(
         "Character", secondary=party_character_association, back_populates="parties"
     )
-    encounters: Mapped[list["Encounter"]] = relationship("Encounter", back_populates="party")
+    encounters: Mapped[list["Encounter"]] = relationship(
+        "Encounter", back_populates="party", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (UniqueConstraint('server_id', 'name', name='_server_party_name_uc'),)

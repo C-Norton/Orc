@@ -17,12 +17,22 @@ def make_bot():
     return commands.Bot(command_prefix="!", intents=intents)
 
 
-def get_callback(bot, name):
-    """Return the raw async callback for a registered slash command."""
-    for cmd in bot.tree.get_commands():
-        if cmd.name == name:
-            return cmd.callback
-    raise KeyError(f"No command {name!r} registered on this bot")
+def get_callback(bot, *path):
+    """Return the raw async callback for a (possibly nested) slash command.
+
+    Examples::
+        get_callback(bot, "roll")                   # top-level
+        get_callback(bot, "character", "create")    # group > subcommand
+        get_callback(bot, "attack", "roll")         # group > subcommand
+    """
+    cmd = bot.tree.get_command(path[0])
+    if cmd is None:
+        raise KeyError(f"No command {path[0]!r} registered on this bot")
+    for part in path[1:]:
+        cmd = cmd.get_command(part)
+        if cmd is None:
+            raise KeyError(f"No subcommand {part!r}")
+    return cmd.callback
 
 
 # ---------------------------------------------------------------------------

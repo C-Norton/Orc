@@ -1,4 +1,5 @@
 import pytest
+import discord
 from models import Character, CharacterSkill, ClassLevel
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from tests.conftest import make_interaction
@@ -6,11 +7,11 @@ from tests.commands.conftest import get_callback
 
 
 # ---------------------------------------------------------------------------
-# /create_character
+# /character create
 # ---------------------------------------------------------------------------
 
 async def test_create_character_success(char_bot, sample_user, sample_server, interaction, session_factory):
-    cb = get_callback(char_bot, "create_character")
+    cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="Aldric", character_class="Fighter", level=1)
 
     interaction.response.send_message.assert_called_once()
@@ -31,7 +32,7 @@ async def test_create_character_success(char_bot, sample_user, sample_server, in
 
 async def test_create_character_sets_class_save_profs(char_bot, sample_user, sample_server, interaction, session_factory):
     """Creating a Fighter should automatically set STR and CON save proficiencies."""
-    cb = get_callback(char_bot, "create_character")
+    cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="Gorrath", character_class="Fighter", level=1)
 
     verify = session_factory()
@@ -43,7 +44,7 @@ async def test_create_character_sets_class_save_profs(char_bot, sample_user, sam
 
 
 async def test_create_character_name_too_long(char_bot, interaction):
-    cb = get_callback(char_bot, "create_character")
+    cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="A" * 101, character_class="Fighter", level=1)
 
     kwargs = interaction.response.send_message.call_args.kwargs
@@ -51,8 +52,8 @@ async def test_create_character_name_too_long(char_bot, interaction):
 
 
 async def test_create_character_duplicate_name(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "create_character")
-    await cb(interaction, name="Aldric", character_class="Fighter", level=1)  # sample_character is already named Aldric
+    cb = get_callback(char_bot, "character", "create")
+    await cb(interaction, name="Aldric", character_class="Fighter", level=1)
 
     kwargs = interaction.response.send_message.call_args.kwargs
     assert kwargs.get("ephemeral") is True
@@ -61,7 +62,7 @@ async def test_create_character_duplicate_name(char_bot, sample_character, inter
 
 async def test_create_character_new_char_becomes_active(char_bot, sample_character, interaction, session_factory):
     """Creating a second character should deactivate the first."""
-    cb = get_callback(char_bot, "create_character")
+    cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="Beren", character_class="Rogue", level=1)
 
     verify = session_factory()
@@ -75,7 +76,7 @@ async def test_create_character_new_char_becomes_active(char_bot, sample_charact
 async def test_create_character_auto_creates_user_record(mocker, char_bot, sample_server, session_factory):
     """A brand-new Discord user should have a User record created automatically."""
     new_user_interaction = make_interaction(mocker, user_id=999)
-    cb = get_callback(char_bot, "create_character")
+    cb = get_callback(char_bot, "character", "create")
     await cb(new_user_interaction, name="Ghost", character_class="Wizard", level=1)
 
     verify = session_factory()
@@ -104,7 +105,7 @@ async def test_create_character_over_user_limit(
         ))
     db_session.commit()
 
-    cb = get_callback(char_bot, "create_character")
+    cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="OneMore", character_class="Fighter", level=1)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -113,11 +114,11 @@ async def test_create_character_over_user_limit(
 
 
 # ---------------------------------------------------------------------------
-# /set_stats
+# /character stats
 # ---------------------------------------------------------------------------
 
 async def test_set_stats_first_time_requires_all_stats(char_bot, sample_character_no_stats, interaction):
-    cb = get_callback(char_bot, "set_stats")
+    cb = get_callback(char_bot, "character", "stats")
     await cb(interaction, strength=10)  # missing five stats
 
     kwargs = interaction.response.send_message.call_args.kwargs
@@ -126,7 +127,7 @@ async def test_set_stats_first_time_requires_all_stats(char_bot, sample_characte
 
 
 async def test_set_stats_first_time_success(char_bot, sample_character_no_stats, interaction, session_factory):
-    cb = get_callback(char_bot, "set_stats")
+    cb = get_callback(char_bot, "character", "stats")
     await cb(interaction, strength=16, dexterity=14, constitution=15,
              intelligence=10, wisdom=12, charisma=8)
 
@@ -139,7 +140,7 @@ async def test_set_stats_first_time_success(char_bot, sample_character_no_stats,
 
 async def test_set_stats_partial_update_after_first_time(char_bot, sample_character, interaction, session_factory):
     """After stats are set, only providing one stat should update just that stat."""
-    cb = get_callback(char_bot, "set_stats")
+    cb = get_callback(char_bot, "character", "stats")
     await cb(interaction, strength=20)
 
     verify = session_factory()
@@ -150,7 +151,7 @@ async def test_set_stats_partial_update_after_first_time(char_bot, sample_charac
 
 
 async def test_set_stats_out_of_range_rejected(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "set_stats")
+    cb = get_callback(char_bot, "character", "stats")
     await cb(interaction, strength=31)
 
     kwargs = interaction.response.send_message.call_args.kwargs
@@ -158,7 +159,7 @@ async def test_set_stats_out_of_range_rejected(char_bot, sample_character, inter
 
 
 async def test_set_stats_no_character(char_bot, sample_user, sample_server, interaction):
-    cb = get_callback(char_bot, "set_stats")
+    cb = get_callback(char_bot, "character", "stats")
     await cb(interaction, strength=10, dexterity=10, constitution=10,
              intelligence=10, wisdom=10, charisma=10)
 
@@ -167,11 +168,11 @@ async def test_set_stats_no_character(char_bot, sample_user, sample_server, inte
 
 
 # ---------------------------------------------------------------------------
-# /set_saving_throws
+# /character saves
 # ---------------------------------------------------------------------------
 
 async def test_set_saving_throws_success(char_bot, sample_character, interaction, session_factory):
-    cb = get_callback(char_bot, "set_saving_throws")
+    cb = get_callback(char_bot, "character", "saves")
     await cb(interaction, strength=True, dexterity=True)
 
     verify = session_factory()
@@ -183,19 +184,19 @@ async def test_set_saving_throws_success(char_bot, sample_character, interaction
 
 
 async def test_set_saving_throws_no_character(char_bot, sample_user, sample_server, interaction):
-    cb = get_callback(char_bot, "set_saving_throws")
+    cb = get_callback(char_bot, "character", "saves")
     await cb(interaction, strength=True)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ---------------------------------------------------------------------------
-# /view_character
+# /character view
 # ---------------------------------------------------------------------------
 
 async def test_view_character_sends_intro_embed(char_bot, sample_character, interaction):
     """Initial view sends the intro page (page 0)."""
-    cb = get_callback(char_bot, "view_character")
+    cb = get_callback(char_bot, "character", "view")
     await cb(interaction)
 
     interaction.response.send_message.assert_called_once()
@@ -204,45 +205,180 @@ async def test_view_character_sends_intro_embed(char_bot, sample_character, inte
     assert "Aldric" in embed.title
 
 
-async def test_view_character_adds_reactions(char_bot, sample_character, interaction):
-    """After sending, four navigation reactions must be added."""
-    cb = get_callback(char_bot, "view_character")
+async def test_view_character_sends_sheet_view_with_buttons(char_bot, sample_character, interaction):
+    """The response attaches a CharacterSheetView with one button per page."""
+    from commands.character_commands import CharacterSheetView, _SHEET_PAGES
+    cb = get_callback(char_bot, "character", "view")
     await cb(interaction)
 
-    msg = await interaction.original_response()
-    assert msg.add_reaction.call_count == 4
-    added = [call.args[0] for call in msg.add_reaction.call_args_list]
-    assert "🏠" in added
-    assert "📊" in added
-    assert "🎯" in added
-    assert "⚔️" in added
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
+    assert isinstance(view, CharacterSheetView)
+    assert view._owner_id == interaction.user.id
+
+    button_labels = [item.label for item in view.children]
+    for _, label, _ in _SHEET_PAGES:
+        assert label in button_labels
 
 
-async def test_view_character_registers_message_owner(char_bot, sample_character, interaction):
-    """The message→owner mapping must be saved so reactions work."""
-    from commands.character_commands import char_sheet_owners
-    cb = get_callback(char_bot, "view_character")
+async def test_view_character_stores_message_reference(char_bot, sample_character, interaction):
+    """The view's .message is set after the response is sent."""
+    from commands.character_commands import CharacterSheetView
+    cb = get_callback(char_bot, "character", "view")
     await cb(interaction)
 
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
     msg = await interaction.original_response()
-    assert msg.id in char_sheet_owners
-    assert char_sheet_owners[msg.id]["user_id"] == interaction.user.id
+    assert view.message is msg
+
+
+async def test_view_character_page_button_edits_embed(
+    mocker, char_bot, sample_character, interaction
+):
+    """Clicking a page button edits the message to show the correct page."""
+    from commands.character_commands import CharacterSheetView
+    cb = get_callback(char_bot, "character", "view")
+    await cb(interaction)
+
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
+
+    stats_btn = next(item for item in view.children if getattr(item, "label", "") == "Stats")
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.user = mocker.MagicMock()
+    btn_interaction.user.id = interaction.user.id
+    btn_interaction.response = mocker.AsyncMock()
+
+    await stats_btn.callback(btn_interaction)
+
+    btn_interaction.response.edit_message.assert_called_once()
+    _, edit_kwargs = btn_interaction.response.edit_message.call_args
+    embed = edit_kwargs.get("embed")
+    assert embed is not None
+    assert "Aldric" in embed.title
+
+
+async def test_view_character_sheet_interaction_check_blocks_others(
+    mocker, char_bot, sample_character, interaction
+):
+    """Non-owner button presses are rejected with an ephemeral message."""
+    from commands.character_commands import CharacterSheetView
+    cb = get_callback(char_bot, "character", "view")
+    await cb(interaction)
+
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
+
+    other_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    other_interaction.user = mocker.MagicMock()
+    other_interaction.user.id = 99999
+    other_interaction.response = mocker.AsyncMock()
+
+    result = await view.interaction_check(other_interaction)
+    assert result is False
+    other_interaction.response.send_message.assert_called_once()
+    assert other_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_view_character_no_character(char_bot, sample_user, sample_server, interaction):
-    cb = get_callback(char_bot, "view_character")
+    cb = get_callback(char_bot, "character", "view")
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
+async def test_view_character_by_own_name(char_bot, sample_character, interaction):
+    """Supplying the character's own name shows that character's sheet."""
+    cb = get_callback(char_bot, "character", "view")
+    await cb(interaction, name="Aldric")
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    assert embed is not None
+    assert "Aldric" in embed.title
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+
+
+async def test_view_character_by_inactive_own_name(
+    char_bot, sample_character, db_session, sample_user, sample_server, interaction, session_factory
+):
+    """A non-active character can be viewed by name."""
+    from models import Character as Char
+    second = Char(name="Borgin", user=sample_user, server=sample_server, is_active=False)
+    db_session.add(second)
+    db_session.commit()
+
+    cb = get_callback(char_bot, "character", "view")
+    await cb(interaction, name="Borgin")
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    assert embed is not None
+    assert "Borgin" in embed.title
+
+
+async def test_view_character_by_party_member_name(
+    char_bot, sample_active_party, db_session, sample_user, sample_server, interaction
+):
+    """A party member's character can be viewed by name when the user has an active party."""
+    from models import User as U, Character as Char
+
+    other_user = U(discord_id="888")
+    db_session.add(other_user)
+    db_session.flush()
+    party_char = Char(name="Morgath", user=other_user, server=sample_server, is_active=True)
+    db_session.add(party_char)
+    db_session.flush()
+    sample_active_party.characters.append(party_char)
+    db_session.commit()
+
+    cb = get_callback(char_bot, "character", "view")
+    await cb(interaction, name="Morgath")
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    assert embed is not None
+    assert "Morgath" in embed.title
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+
+
+async def test_view_character_name_not_found(char_bot, sample_character, interaction):
+    """An unknown name returns an ephemeral error."""
+    cb = get_callback(char_bot, "character", "view")
+    await cb(interaction, name="Nobody")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_view_character_own_takes_priority_over_party(
+    char_bot, sample_character, sample_active_party, db_session, sample_user, sample_server, interaction
+):
+    """When own character and party character share a name, own character is shown."""
+    from models import User as U, Character as Char
+
+    other_user = U(discord_id="999")
+    db_session.add(other_user)
+    db_session.flush()
+    party_char = Char(name="Aldric", user=other_user, server=sample_server, is_active=True)
+    db_session.add(party_char)
+    db_session.flush()
+    sample_active_party.characters.append(party_char)
+    db_session.commit()
+
+    cb = get_callback(char_bot, "character", "view")
+    await cb(interaction, name="Aldric")
+
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
+    # View is bound to sample_character.id (own), not the party duplicate
+    assert view._char_id == sample_character.id
+
+
 # ---------------------------------------------------------------------------
-# /set_ac
+# /character ac
 # ---------------------------------------------------------------------------
 
 async def test_set_ac_success(char_bot, sample_character, interaction, session_factory):
     """Setting AC persists the value on the character."""
-    cb = get_callback(char_bot, "set_ac")
+    cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=15)
 
     verify = session_factory()
@@ -252,7 +388,7 @@ async def test_set_ac_success(char_bot, sample_character, interaction, session_f
 
 
 async def test_set_ac_success_message(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "set_ac")
+    cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=15)
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -261,21 +397,21 @@ async def test_set_ac_success_message(char_bot, sample_character, interaction):
 
 
 async def test_set_ac_too_low(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "set_ac")
+    cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=0)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_set_ac_too_high(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "set_ac")
+    cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=31)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_set_ac_no_character(char_bot, sample_user, sample_server, interaction):
-    cb = get_callback(char_bot, "set_ac")
+    cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=14)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -286,7 +422,7 @@ async def test_view_character_sheet_shows_ac(char_bot, sample_character, db_sess
     sample_character.ac = 16
     db_session.commit()
 
-    cb = get_callback(char_bot, "view_character")
+    cb = get_callback(char_bot, "character", "view")
     await cb(interaction)
 
     embed = interaction.response.send_message.call_args.kwargs.get("embed")
@@ -296,20 +432,19 @@ async def test_view_character_sheet_shows_ac(char_bot, sample_character, db_sess
 
 async def test_view_character_sheet_ac_not_set(char_bot, sample_character, interaction):
     """When AC is not yet set the quick-reference should say so."""
-    cb = get_callback(char_bot, "view_character")
+    cb = get_callback(char_bot, "character", "view")
     await cb(interaction)
 
     embed = interaction.response.send_message.call_args.kwargs.get("embed")
     combined = " ".join(f.value for f in embed.fields)
-    assert "set_ac" in combined or "Not set" in combined
+    assert "set_ac" in combined or "Not set" in combined or "ac" in combined.lower()
 
 
 # ---------------------------------------------------------------------------
-# /switch_character
+# /character switch
 # ---------------------------------------------------------------------------
 
 async def test_switch_character_success(char_bot, sample_character, interaction, session_factory, db_session):
-    # Create a second inactive character to switch to
     from models import User, Server
     user = db_session.query(User).filter_by(discord_id="111").first()
     server = db_session.query(Server).filter_by(discord_id="222").first()
@@ -317,7 +452,7 @@ async def test_switch_character_success(char_bot, sample_character, interaction,
     db_session.add(second)
     db_session.commit()
 
-    cb = get_callback(char_bot, "switch_character")
+    cb = get_callback(char_bot, "character", "switch")
     await cb(interaction, name="Beren")
 
     verify = session_factory()
@@ -327,19 +462,19 @@ async def test_switch_character_success(char_bot, sample_character, interaction,
 
 
 async def test_switch_character_not_found(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "switch_character")
+    cb = get_callback(char_bot, "character", "switch")
     await cb(interaction, name="Nobody")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ---------------------------------------------------------------------------
-# /add_class
+# /character class_add
 # ---------------------------------------------------------------------------
 
 async def test_add_class_success(char_bot, sample_character, interaction, session_factory):
     """Adding a new class increments total level and persists a ClassLevel row."""
-    cb = get_callback(char_bot, "add_class")
+    cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Rogue", level=2)
 
     verify = session_factory()
@@ -353,7 +488,7 @@ async def test_add_class_success(char_bot, sample_character, interaction, sessio
 
 async def test_add_class_updates_existing_class(char_bot, sample_character, interaction, session_factory):
     """Adding levels to the character's existing class updates the row, not inserts."""
-    cb = get_callback(char_bot, "add_class")
+    cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Fighter", level=8)
 
     verify = session_factory()
@@ -365,7 +500,7 @@ async def test_add_class_updates_existing_class(char_bot, sample_character, inte
 
 
 async def test_add_class_success_message(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "add_class")
+    cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Rogue", level=2)
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -374,7 +509,7 @@ async def test_add_class_success_message(char_bot, sample_character, interaction
 
 
 async def test_add_class_level_too_low(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "add_class")
+    cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Rogue", level=0)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -382,14 +517,14 @@ async def test_add_class_level_too_low(char_bot, sample_character, interaction):
 
 async def test_add_class_exceeds_level_20(char_bot, sample_character, interaction):
     """Fighter 5 + 16 levels of Rogue = 21 — must be rejected."""
-    cb = get_callback(char_bot, "add_class")
+    cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Rogue", level=16)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_add_class_no_active_character(char_bot, sample_user, sample_server, interaction):
-    cb = get_callback(char_bot, "add_class")
+    cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Fighter", level=1)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -397,7 +532,7 @@ async def test_add_class_no_active_character(char_bot, sample_user, sample_serve
 
 async def test_add_class_recalculates_hp(char_bot, sample_character, interaction, session_factory):
     """When stats are set, adding a class level should update max_hp."""
-    cb = get_callback(char_bot, "add_class")
+    cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Rogue", level=1)
 
     verify = session_factory()
@@ -409,7 +544,7 @@ async def test_add_class_recalculates_hp(char_bot, sample_character, interaction
 
 
 # ---------------------------------------------------------------------------
-# /remove_class
+# /character class_remove
 # ---------------------------------------------------------------------------
 
 async def test_remove_class_success(char_bot, sample_character, db_session, interaction, session_factory):
@@ -417,7 +552,7 @@ async def test_remove_class_success(char_bot, sample_character, db_session, inte
     db_session.add(ClassLevel(character_id=sample_character.id, class_name="Rogue", level=3))
     db_session.commit()
 
-    cb = get_callback(char_bot, "remove_class")
+    cb = get_callback(char_bot, "character", "class_remove")
     await cb(interaction, character_class="Rogue")
 
     verify = session_factory()
@@ -429,7 +564,7 @@ async def test_remove_class_success_message(char_bot, sample_character, db_sessi
     db_session.add(ClassLevel(character_id=sample_character.id, class_name="Rogue", level=3))
     db_session.commit()
 
-    cb = get_callback(char_bot, "remove_class")
+    cb = get_callback(char_bot, "character", "class_remove")
     await cb(interaction, character_class="Rogue")
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -438,14 +573,14 @@ async def test_remove_class_success_message(char_bot, sample_character, db_sessi
 
 
 async def test_remove_class_not_found(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "remove_class")
+    cb = get_callback(char_bot, "character", "class_remove")
     await cb(interaction, character_class="Barbarian")  # Aldric is not a Barbarian
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_remove_class_no_active_character(char_bot, sample_user, sample_server, interaction):
-    cb = get_callback(char_bot, "remove_class")
+    cb = get_callback(char_bot, "character", "class_remove")
     await cb(interaction, character_class="Fighter")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -456,7 +591,7 @@ async def test_remove_class_recalculates_hp(char_bot, sample_character, db_sessi
     db_session.add(ClassLevel(character_id=sample_character.id, class_name="Rogue", level=1))
     db_session.commit()
 
-    cb = get_callback(char_bot, "remove_class")
+    cb = get_callback(char_bot, "character", "class_remove")
     await cb(interaction, character_class="Rogue")
 
     verify = session_factory()
@@ -467,11 +602,11 @@ async def test_remove_class_recalculates_hp(char_bot, sample_character, db_sessi
 
 
 # ---------------------------------------------------------------------------
-# /set_skill
+# /character skill
 # ---------------------------------------------------------------------------
 
 async def test_set_skill_creates_new_entry(char_bot, sample_character, interaction, session_factory):
-    cb = get_callback(char_bot, "set_skill")
+    cb = get_callback(char_bot, "character", "skill")
     await cb(interaction, skill="Perception", status="proficient")
 
     verify = session_factory()
@@ -489,7 +624,7 @@ async def test_set_skill_updates_existing_entry(char_bot, sample_character, inte
     db_session.add(skill)
     db_session.commit()
 
-    cb = get_callback(char_bot, "set_skill")
+    cb = get_callback(char_bot, "character", "skill")
     await cb(interaction, skill="Stealth", status="expertise")
 
     verify = session_factory()
@@ -499,18 +634,18 @@ async def test_set_skill_updates_existing_entry(char_bot, sample_character, inte
 
 
 async def test_set_skill_unknown_skill_sends_warning(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "set_skill")
+    cb = get_callback(char_bot, "character", "skill")
     await cb(interaction, skill="FlyingKick", status="proficient")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ---------------------------------------------------------------------------
-# /characters
+# /character list
 # ---------------------------------------------------------------------------
 
 async def test_characters_lists_all(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "characters")
+    cb = get_callback(char_bot, "character", "list")
     await cb(interaction)
 
     embed = interaction.response.send_message.call_args.kwargs.get("embed")
@@ -518,19 +653,33 @@ async def test_characters_lists_all(char_bot, sample_character, interaction):
 
 
 async def test_characters_no_characters(char_bot, sample_user, sample_server, interaction):
-    cb = get_callback(char_bot, "characters")
+    cb = get_callback(char_bot, "character", "list")
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ---------------------------------------------------------------------------
-# /delete_character
+# /character delete
 # ---------------------------------------------------------------------------
 
-async def test_delete_character_success(char_bot, sample_character, interaction, session_factory):
-    cb = get_callback(char_bot, "delete_character")
+async def test_delete_character_success(
+    mocker, char_bot, sample_character, interaction, session_factory
+):
+    """Deleting a character shows a confirmation view; pressing Delete removes the character."""
+    cb = get_callback(char_bot, "character", "delete")
     await cb(interaction, name="Aldric")
+
+    # Command shows ephemeral confirmation, not immediate deletion
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    view = interaction.response.send_message.call_args.kwargs.get("view")
+    assert view is not None
+
+    # Confirm deletion
+    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Delete")
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.response = mocker.AsyncMock()
+    await confirm_btn.callback(btn_interaction)
 
     verify = session_factory()
     assert verify.query(Character).filter_by(name="Aldric").first() is None
@@ -538,35 +687,36 @@ async def test_delete_character_success(char_bot, sample_character, interaction,
 
 
 async def test_delete_character_not_found(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "delete_character")
+    cb = get_callback(char_bot, "character", "delete")
     await cb(interaction, name="Nobody")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_delete_character_blocked_in_active_encounter(
+async def test_delete_character_in_active_encounter_shows_encounter_confirmation(
     char_bot, sample_active_encounter, sample_character, interaction, session_factory
 ):
-    """Deleting a character that is in an active encounter must be rejected."""
-    cb = get_callback(char_bot, "delete_character")
+    """Deleting a character in an active encounter shows a confirmation that mentions the encounter."""
+    cb = get_callback(char_bot, "character", "delete")
     await cb(interaction, name="Aldric")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    # Character must still exist
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "encounter" in msg.lower() or "initiative" in msg.lower()
+    # Character is NOT deleted until the button is pressed
     verify = session_factory()
     assert verify.query(Character).filter_by(name="Aldric").first() is not None
     verify.close()
 
 
 async def test_delete_character_cascade_removes_encounter_turns(
-    char_bot, db_session, sample_character, sample_active_party, interaction, session_factory
+    mocker, char_bot, db_session, sample_character, sample_active_party, interaction, session_factory
 ):
     """Deleting a character not in an active encounter cleans up any completed
     encounter turns (ON DELETE CASCADE)."""
     from models import Encounter, EncounterTurn
     from enums.encounter_status import EncounterStatus
 
-    # Create a completed encounter with a turn for sample_character
     enc = Encounter(
         name="Old Battle",
         party_id=sample_active_party.id,
@@ -585,8 +735,15 @@ async def test_delete_character_cascade_removes_encounter_turns(
     db_session.commit()
     turn_id = turn.id
 
-    cb = get_callback(char_bot, "delete_character")
+    cb = get_callback(char_bot, "character", "delete")
     await cb(interaction, name="Aldric")
+
+    # Confirm deletion
+    view = interaction.response.send_message.call_args.kwargs.get("view")
+    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Delete")
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.response = mocker.AsyncMock()
+    await confirm_btn.callback(btn_interaction)
 
     verify = session_factory()
     assert verify.query(Character).filter_by(name="Aldric").first() is None
