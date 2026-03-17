@@ -5,9 +5,22 @@ class Strings:
     SERVER_ERROR = "❌ An unexpected error occurred."
     
     # Meta Commands
-    HELP_TITLE = "Thank you for using ORC (the Open-Source Roleplaying Companion) bot for D&D 5e"
+    HELP_TITLE = "Thank you for using [ORC](https://github.com/C-Norton/orc) (the Open-Source Roleplaying Companion) bot for D&D 5e"
     HELP_DESCRIPTION = "Check out our shared setting: [Open Source Gaming and Roleplaying environment (OGRE)](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)"
     HELP_FOOTER = "Tip: Use autocomplete for character, party, and skill names!"
+    HELP_TOC_DESCRIPTION = (
+        "{description}\n\n"
+        "Click a reaction below to see more information about each command category:\n\n"
+        "⭐ **QuickStart Guide**\n"
+        "👤 **Character Management**\n"
+        "⚔️ **Combat**\n"
+        "🎲 **Rolling**\n"
+        "❤️ **Health & HP**\n"
+        "👥 **Parties & GM Tools**\n"
+        "🤼 **Encounter & Initiative**\n"
+         "👨‍🔧 **Credits & Support**\n"
+        "🏠 **Back to Home**"
+    )
     
     HELP_CHAR_MGMT_NAME = "👤 Character Management"
     HELP_CHAR_MGMT_VALUE = (
@@ -50,7 +63,9 @@ class Strings:
         "**/party_add <party> <character>**: Add a character to a party (GM only).\n"
         "**/active_party <name>**: Set your current active party for quick rolling.\n"
         "**/rollas <member> <notation>**: Roll as a member of your active party.\n"
-        "**/partyroll <notation>**: Roll for every member of your active party at once (e.g., `/partyroll stealth`)."
+        "**/partyroll <notation>**: Roll for every member of your active party at once (e.g., `/partyroll stealth`).\n"
+        "**/add_gm <party> <user>**: Add a Discord user as a GM of a party (GM only).\n"
+        "**/remove_gm <party> <user>**: Remove a Discord user as a GM of a party (GM only).\n"
         "**/delete_party <name>**: Delete a party (GM only)."
     )
     
@@ -72,6 +87,38 @@ class Strings:
         "\n"
         "**Turn order** is determined by each character's initiative roll (d20 + DEX modifier, or a custom bonus set with `/set_stats`). "
         "Enemies use their initiative modifier. Tied rolls give priority to players."
+    )
+
+    HELP_GETTING_STARTED_NAME = "⭐ QuickStart Guide"
+    HELP_GETTING_STARTED_VALUE = (
+        "**FOR PLAYERS**\n"
+        "You can roll at any time with `/roll <dice notation>`.\n"
+        "If you want to store a character sheet in ORC, you'll need a character.\n"
+        "To get started, create a character with `/create_character` and set their stats with `/set_stats`.\n"
+        "For accurate rolls, set your character's proficiencies with `/set_skill` and `/set_saving_throws`.\n"
+        "Finally, set your Max HP with `/set_max_hp`.\n"
+        "**FOR GMs**\n"
+        "It is recommended that you read all pages of the help command.\n"
+        "That said for the very basics, if you want to create a party, do /create_party, and add characters with /party_add.\n"
+        "Once you have a party, you can create encounters with /create_encounter.\n"
+        "Add monsters with /add_enemy\n"
+        "Roll initiative and start the encounter with /start_encounter"
+    )
+    GUILD_JOIN_WELCOME = (
+        "Hi! I'm **ORC** (Open-Source Roleplaying Companion), a D&D 5e assistant bot.\n\n"
+        "Use `/help` to see everything I can do — character sheets, dice rolls, party management, "
+        "initiative tracking, and more!\n\n"
+        "Check out the [GitHub](https://github.com/C-Norton/orc) and the "
+        "[OGRE WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)."
+    )
+
+    HELP_CREDITS_NAME = "👨‍🔧 Credits & Support"
+    HELP_CREDITS_VALUE = (
+        "ORC was created by Channing Norton (Wobbix on Discord) and is open-source.\n"
+        "Feel free to contribute, request features, or report issues on [GitHub](https://github.com/C-Norton/orc).\n"
+        "As a measure of support, it would be appreciated if you checked out the Open Source Gaming and Roleplaying Environment (OGRE) "
+        "[WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/) "
+        "and [Discord Server](https://discord.gg/2cBKmVTpHR)."
     )
 
     # Health Commands
@@ -114,7 +161,7 @@ class Strings:
     # Character Commands
     CHAR_CREATE_NAME_LIMIT = "Character name cannot exceed 100 characters."
     CHAR_EXISTS = "You already have a character named **{name}** in this server."
-    CHAR_CREATED_ACTIVE = "Character **{name}** created successfully and set as active!\nNext, set your stats with '/set_stats', your skill proficiencies with 'set_skill', your saving throw proficiencies with '/set_saving_throws'\n View your character at any time with '/view_character', and switch with '/switch_character'"
+    CHAR_CREATED_ACTIVE = "Character **{name}** created successfully at level **{level}** and set as active!\nNext, set your stats with '/set_stats', your skill proficiencies with 'set_skill', your saving throw proficiencies with '/set_saving_throws'\n View your character at any time with '/view_character', and switch with '/switch_character'"
     CHAR_STATS_FIRST_TIME = "This is your first time setting stats for this character. Please provide all core stats (strength, dexterity, constitution, intelligence, wisdom, charisma)."
     CHAR_STAT_LIMIT = "{stat_name} score must be between 1 and 30."
     CHAR_STATS_UPDATED = "Stats updated for **{char_name}**!"
@@ -151,24 +198,33 @@ class Strings:
     PARTY_ACTIVE_MEMBER_NOT_FOUND = "Member '**{member_name}**' not found in your active party."
     PARTY_ROLL_HEADER = "🎲 **Party Roll: {notation}** (Party: {party_name})\n"
     PARTY_VIEW_TITLE = "Party: {party_name}"
-    PARTY_VIEW_GM = "GM"
+    PARTY_VIEW_GM = "GMs"
     PARTY_VIEW_MEMBERS = "Members"
     PARTY_VIEW_EMPTY = "This party has no members."
     PARTY_VIEW_MEMBER_LINE = "● **{char_name}** (Level {char_level}) - Controlled by <@{discord_id}>"
     PARTY_DELETE_SUCCESS = "Party '**{party_name}**' deleted successfully."
     PARTY_ROLL_EMPTY = "Your active party is empty."
-    
-    ERROR_GM_ONLY_PARTY_CREATE = "Only the GM of the party can create an encounter." # reused in encounter
-    ERROR_GM_ONLY_PARTY_ADD = "Only the GM of the party can add members."
-    ERROR_GM_ONLY_PARTY_REMOVE = "Only the GM of the party can remove members."
-    ERROR_GM_ONLY_PARTY_DELETE = "Only the GM can delete the party."
+
+    GM_ADDED = "Added <@{discord_id}> as a GM of '**{party_name}**'."
+    GM_REMOVED = "Removed <@{discord_id}> as a GM of '**{party_name}**'."
+    ERROR_GM_ALREADY = "<@{discord_id}> is already a GM of '**{party_name}**'."
+    ERROR_GM_NOT_IN_PARTY = "<@{discord_id}> is not a GM of '**{party_name}**'."
+    ERROR_GM_LAST = "Cannot remove the last GM from a party."
+    ERROR_GM_TARGET_NOT_REGISTERED = "That user has no account in this bot. They need to use a command first."
+    ERROR_GM_ONLY_ADD_GM = "Only a GM of this party can add other GMs."
+    ERROR_GM_ONLY_REMOVE_GM = "Only a GM of this party can remove GMs."
+
+    ERROR_GM_ONLY_PARTY_CREATE = "Only the GM of the party can create an encounter."  # reused in encounter
+    ERROR_GM_ONLY_PARTY_ADD = "Only a GM of the party can add members."
+    ERROR_GM_ONLY_PARTY_REMOVE = "Only a GM of the party can remove members."
+    ERROR_GM_ONLY_PARTY_DELETE = "Only a GM can delete the party."
     ERROR_USER_SERVER_NOT_INIT = "User or Server not initialized."
     ERROR_PARTY_CHAR_NOT_FOUND = "\nCharacters not found: {names}"
     ERROR_PARTY_SET_ACTIVE_FIRST = "Set an active party first with `/active_party`."
 
     # Encounter Commands
     ENCOUNTER_ORDER_HEADER = "⚔️ **{name}** | Round {round_number}"
-    ENCOUNTER_TURN_PING = "<@{discord_id}> It is now **{name}**'s turn. When you have described your actions and made your rolls, end your turn with `/next_turn`."
+    ENCOUNTER_TURN_PING = "{ping} It is now **{name}**'s turn. When you have described your actions and made your rolls, end your turn with `/next_turn`."
     ENCOUNTER_CREATED = "⚔️ Encounter **{name}** created! Add enemies with `/add_enemy`, then start combat with `/start_encounter`."
     ENCOUNTER_ALREADY_OPEN = "This party already has an open encounter. End it with `/end_encounter` first."
     ENCOUNTER_ENEMY_ADDED = "Added **{name}** (Initiative +{init_mod}, HP {hp}) to **{encounter_name}**."
@@ -189,3 +245,11 @@ class Strings:
     ERROR_GM_ONLY_ENEMY_ADD = "Only the GM can add enemies."
     ERROR_GM_ONLY_ENCOUNTER_END = "Only the GM can end the encounter."
     ERROR_NO_PENDING_ENCOUNTER = "No pending encounter found. Create one with `/create_encounter`."
+
+
+    NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]
+    NAT_1_ATTACK = ["That'll be a miss", "Oops; did you intend to hit an ally? Or was that just happenstance?"]
+    NAT_20_SKILLCHECK = []
+    NAT_1_SKILLCHECK = []
+    NAT_20_SAVE = []
+    NAT_1_SAVE = []

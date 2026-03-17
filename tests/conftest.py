@@ -45,6 +45,7 @@ def make_interaction(mocker, user_id=111, guild_id=222, channel_id=333, guild_na
 
     user = mocker.Mock()
     user.id = user_id
+    user.bot = False
     user.display_name = username
     user.__str__ = mocker.Mock(return_value=f"{username}#{user_id}")
     interaction.user = user

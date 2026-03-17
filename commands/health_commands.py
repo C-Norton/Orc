@@ -66,7 +66,7 @@ def register_health_commands(bot: commands.Bot) -> None:
                 if not party:
                     await interaction.response.send_message(Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True)
                     return
-                if party.gm_id != user.id:
+                if user not in party.gms:
                     await interaction.response.send_message(
                         Strings.ERROR_GM_ONLY_DAMAGE, ephemeral=True
                     )

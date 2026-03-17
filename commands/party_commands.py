@@ -53,7 +53,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(Strings.PARTY_ALREADY_EXISTS.format(party_name=party_name), ephemeral=True)
                 return
 
-            new_party = Party(name=party_name, gm=user, server=server)
+            new_party = Party(name=party_name, gms=[user], server=server)
 
             found_chars = []
             not_found = []
@@ -125,7 +125,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True)
                 return
 
-            if not user or party.gm_id != user.id:
+            if not user or user not in party.gms:
                 await interaction.response.send_message(Strings.ERROR_GM_ONLY_PARTY_ADD, ephemeral=True)
                 return
 
@@ -184,7 +184,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True)
                 return
 
-            if not user or party.gm_id != user.id:
+            if not user or user not in party.gms:
                 await interaction.response.send_message(Strings.ERROR_GM_ONLY_PARTY_REMOVE, ephemeral=True)
                 return
 
@@ -378,7 +378,8 @@ def register_party_commands(bot: commands.Bot) -> None:
                 return
 
             embed = discord.Embed(title=Strings.PARTY_VIEW_TITLE.format(party_name=party.name), color=discord.Color.blue())
-            embed.add_field(name=Strings.PARTY_VIEW_GM, value=f"<@{party.gm.discord_id}>", inline=False)
+            gm_mentions = " ".join(f"<@{gm.discord_id}>" for gm in party.gms)
+            embed.add_field(name=Strings.PARTY_VIEW_GM, value=gm_mentions or "None", inline=False)
 
             if not party.characters:
                 embed.description = Strings.PARTY_VIEW_EMPTY
@@ -410,7 +411,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True)
                 return
 
-            if not user or party.gm_id != user.id:
+            if not user or user not in party.gms:
                 await interaction.response.send_message(Strings.ERROR_GM_ONLY_PARTY_DELETE, ephemeral=True)
                 return
 
@@ -423,4 +424,114 @@ def register_party_commands(bot: commands.Bot) -> None:
 
     @delete_party.autocomplete("party_name")
     async def delete_party_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        return await party_name_autocomplete(interaction, current)
+
+    @bot.tree.command(name="add_gm", description="Add a Discord user as a GM of a party (GM only)")
+    @app_commands.describe(
+        party_name="The name of the party",
+        new_gm="The Discord user to add as a GM"
+    )
+    async def add_gm(interaction: discord.Interaction, party_name: str, new_gm: discord.Member) -> None:
+        """Add a new GM to the party. Only existing GMs may use this command."""
+        logger.debug(
+            f"Command /add_gm called by {interaction.user} (ID: {interaction.user.id}) "
+            f"for guild {interaction.guild_id} - party: {party_name}, new_gm: {new_gm.id}"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True
+                )
+                return
+
+            if not user or user not in party.gms:
+                await interaction.response.send_message(Strings.ERROR_GM_ONLY_ADD_GM, ephemeral=True)
+                return
+
+            target = db.query(User).filter_by(discord_id=str(new_gm.id)).first()
+            if not target:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_TARGET_NOT_REGISTERED, ephemeral=True
+                )
+                return
+
+            if target in party.gms:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_ALREADY.format(discord_id=new_gm.id, party_name=party_name),
+                    ephemeral=True,
+                )
+                return
+
+            party.gms.append(target)
+            db.commit()
+            logger.info(
+                f"/add_gm completed: user {interaction.user.id} added {new_gm.id} as GM of '{party_name}'"
+            )
+            await interaction.response.send_message(
+                Strings.GM_ADDED.format(discord_id=new_gm.id, party_name=party_name)
+            )
+        finally:
+            db.close()
+
+    @add_gm.autocomplete("party_name")
+    async def add_gm_party_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
+        return await party_name_autocomplete(interaction, current)
+
+    @bot.tree.command(name="remove_gm", description="Remove a GM from a party (GM only)")
+    @app_commands.describe(
+        party_name="The name of the party",
+        target_gm="The Discord user to remove as a GM"
+    )
+    async def remove_gm(interaction: discord.Interaction, party_name: str, target_gm: discord.Member) -> None:
+        """Remove a GM from the party. The last GM cannot be removed."""
+        logger.debug(
+            f"Command /remove_gm called by {interaction.user} (ID: {interaction.user.id}) "
+            f"for guild {interaction.guild_id} - party: {party_name}, target_gm: {target_gm.id}"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True
+                )
+                return
+
+            if not user or user not in party.gms:
+                await interaction.response.send_message(Strings.ERROR_GM_ONLY_REMOVE_GM, ephemeral=True)
+                return
+
+            target = db.query(User).filter_by(discord_id=str(target_gm.id)).first()
+            if not target or target not in party.gms:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_NOT_IN_PARTY.format(discord_id=target_gm.id, party_name=party_name),
+                    ephemeral=True,
+                )
+                return
+
+            if len(party.gms) == 1:
+                await interaction.response.send_message(Strings.ERROR_GM_LAST, ephemeral=True)
+                return
+
+            party.gms.remove(target)
+            db.commit()
+            logger.info(
+                f"/remove_gm completed: user {interaction.user.id} removed {target_gm.id} as GM of '{party_name}'"
+            )
+            await interaction.response.send_message(
+                Strings.GM_REMOVED.format(discord_id=target_gm.id, party_name=party_name)
+            )
+        finally:
+            db.close()
+
+    @remove_gm.autocomplete("party_name")
+    async def remove_gm_party_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
         return await party_name_autocomplete(interaction, current)

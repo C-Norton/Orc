@@ -1,4 +1,4 @@
-from models.base import Base, user_server_association, party_character_association
+from models.base import Base, user_server_association, party_character_association, party_gm_association
 from models.user import User
 from models.server import Server
 from models.character import Character
@@ -22,4 +22,5 @@ __all__ = [
     "EncounterTurn",
     "user_server_association",
     "party_character_association",
+    "party_gm_association",
 ]

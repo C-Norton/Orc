@@ -83,13 +83,21 @@ def encounter_bot(session_factory, mocker):
     yield bot
 
 
+@pytest.fixture
+def meta_bot():
+    bot = make_bot()
+    from commands.meta_commands import register_meta_commands
+    register_meta_commands(bot)
+    yield bot
+
+
 # ---------------------------------------------------------------------------
 # Party-specific seed fixtures
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
 def sample_party(db_session, sample_user, sample_server):
-    party = Party(name="The Fellowship", gm=sample_user, server=sample_server)
+    party = Party(name="The Fellowship", gms=[sample_user], server=sample_server)
     db_session.add(party)
     db_session.commit()
     db_session.refresh(party)

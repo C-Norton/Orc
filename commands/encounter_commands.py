@@ -62,12 +62,12 @@ def _ping_for_turn(encounter: Encounter) -> str:
     turns = sorted(encounter.turns, key=lambda t: t.order_position)
     turn = turns[encounter.current_turn_index]
     if turn.character_id:
-        discord_id = turn.character.user.discord_id
+        ping = f"<@{turn.character.user.discord_id}>"
         name = turn.character.name
     else:
-        discord_id = encounter.party.gm.discord_id
+        ping = " ".join(f"<@{gm.discord_id}>" for gm in encounter.party.gms)
         name = turn.enemy.name
-    return Strings.ENCOUNTER_TURN_PING.format(discord_id=discord_id, name=name)
+    return Strings.ENCOUNTER_TURN_PING.format(ping=ping, name=name)
 
 
 def register_encounter_commands(bot: commands.Bot) -> None:
@@ -92,7 +92,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            if not user or party.gm_id != user.id:
+            if not user or user not in party.gms:
                 await interaction.response.send_message(
                     Strings.ERROR_GM_ONLY_ENCOUNTER_CREATE, ephemeral=True
                 )
@@ -149,7 +149,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            if not user or party.gm_id != user.id:
+            if not user or user not in party.gms:
                 await interaction.response.send_message(
                     Strings.ERROR_GM_ONLY_ENEMY_ADD, ephemeral=True
                 )
@@ -311,7 +311,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             turns = sorted(encounter.turns, key=lambda t: t.order_position)
             current_turn = turns[encounter.current_turn_index]
             party = encounter.party
-            is_gm = user and party.gm_id == user.id
+            is_gm = user is not None and user in party.gms
 
             # Determine if the caller is allowed to advance
             if current_turn.character_id:
@@ -389,7 +389,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            if not user or party.gm_id != user.id:
+            if not user or user not in party.gms:
                 await interaction.response.send_message(
                     Strings.ERROR_GM_ONLY_ENCOUNTER_END, ephemeral=True
                 )
