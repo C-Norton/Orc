@@ -55,9 +55,9 @@ async def test_create_character_new_char_becomes_active(char_bot, sample_charact
     verify.close()
 
 
-async def test_create_character_auto_creates_user_record(char_bot, sample_server, session_factory):
+async def test_create_character_auto_creates_user_record(mocker, char_bot, sample_server, session_factory):
     """A brand-new Discord user should have a User record created automatically."""
-    new_user_interaction = make_interaction(user_id=999)
+    new_user_interaction = make_interaction(mocker, user_id=999)
     cb = get_callback(char_bot, "create_character")
     await cb(new_user_interaction, name="Ghost")
 
@@ -298,3 +298,53 @@ async def test_delete_character_not_found(char_bot, sample_character, interactio
     await cb(interaction, name="Nobody")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_delete_character_blocked_in_active_encounter(
+    char_bot, sample_active_encounter, sample_character, interaction, session_factory
+):
+    """Deleting a character that is in an active encounter must be rejected."""
+    cb = get_callback(char_bot, "delete_character")
+    await cb(interaction, name="Aldric")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    # Character must still exist
+    verify = session_factory()
+    assert verify.query(Character).filter_by(name="Aldric").first() is not None
+    verify.close()
+
+
+async def test_delete_character_cascade_removes_encounter_turns(
+    char_bot, db_session, sample_character, sample_active_party, interaction, session_factory
+):
+    """Deleting a character not in an active encounter cleans up any completed
+    encounter turns (ON DELETE CASCADE)."""
+    from models import Encounter, EncounterTurn
+    from enums.encounter_status import EncounterStatus
+
+    # Create a completed encounter with a turn for sample_character
+    enc = Encounter(
+        name="Old Battle",
+        party_id=sample_active_party.id,
+        server_id=sample_active_party.server_id,
+        status=EncounterStatus.COMPLETE,
+    )
+    db_session.add(enc)
+    db_session.flush()
+    turn = EncounterTurn(
+        encounter_id=enc.id,
+        character_id=sample_character.id,
+        initiative_roll=10,
+        order_position=0,
+    )
+    db_session.add(turn)
+    db_session.commit()
+    turn_id = turn.id
+
+    cb = get_callback(char_bot, "delete_character")
+    await cb(interaction, name="Aldric")
+
+    verify = session_factory()
+    assert verify.query(Character).filter_by(name="Aldric").first() is None
+    assert verify.query(EncounterTurn).filter_by(id=turn_id).first() is None
+    verify.close()

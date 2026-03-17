@@ -2,7 +2,6 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from unittest.mock import AsyncMock, MagicMock
 import discord
 
 from models import Base, User, Server, Character
@@ -38,34 +37,46 @@ def db_session(session_factory):
 # Discord interaction mock
 # ---------------------------------------------------------------------------
 
-def make_interaction(user_id=111, guild_id=222, guild_name="Test Server", username="TestUser"):
+def make_interaction(mocker, user_id=111, guild_id=222, channel_id=333, guild_name="Test Server", username="TestUser"):
     """Build a mock discord.Interaction. Usable both as a helper and via the
     `interaction` fixture below."""
-    interaction = MagicMock(spec=discord.Interaction)
+    interaction = mocker.Mock(spec=discord.Interaction)
     interaction.type = discord.InteractionType.application_command
 
-    user = MagicMock()
+    user = mocker.Mock()
     user.id = user_id
     user.display_name = username
-    user.__str__ = MagicMock(return_value=f"{username}#{user_id}")
+    user.__str__ = mocker.Mock(return_value=f"{username}#{user_id}")
     interaction.user = user
 
-    guild = MagicMock()
+    guild = mocker.Mock()
     guild.id = guild_id
     guild.name = guild_name
     interaction.guild = guild
     interaction.guild_id = guild_id
+    interaction.channel_id = channel_id
 
-    interaction.response = AsyncMock()
-    interaction.followup = AsyncMock()
-    interaction.namespace = MagicMock()
+    # Mock message object — returned by followup.send and by channel.fetch_message.
+    # Tests can inspect mock_message.edit.call_args to verify the edited content.
+    mock_message = mocker.Mock()
+    mock_message.id = 99999
+    mock_message.edit = mocker.AsyncMock()
+
+    channel = mocker.Mock()
+    channel.fetch_message = mocker.AsyncMock(return_value=mock_message)
+    interaction.channel = channel
+
+    interaction.response = mocker.AsyncMock()
+    interaction.followup = mocker.AsyncMock()
+    interaction.followup.send = mocker.AsyncMock(return_value=mock_message)
+    interaction.namespace = mocker.Mock()
 
     return interaction
 
 
 @pytest.fixture
-def interaction():
-    return make_interaction()
+def interaction(mocker):
+    return make_interaction(mocker)
 
 
 # ---------------------------------------------------------------------------

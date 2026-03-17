@@ -9,6 +9,8 @@ from commands.roll_commands import register_roll_commands
 from commands.character_commands import register_character_commands
 from commands.attack_commands import register_attack_commands
 from commands.party_commands import register_party_commands
+from commands.encounter_commands import register_encounter_commands
+from commands.health_commands import register_health_commands
 from utils.logging_config import setup_logging, get_logger
 from utils.rate_limiter import check_rate_limit
 
@@ -36,7 +38,8 @@ class DnDBot(commands.Bot):
         register_character_commands(self)
         register_attack_commands(self)
         register_party_commands(self)
-        
+        register_encounter_commands(self)
+        register_health_commands(self)
         # This syncs the slash commands globally (or to specific guilds if needed)
         # Note: Global sync can take up to an hour to propagate.
         await self.tree.sync()

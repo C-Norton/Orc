@@ -1,7 +1,7 @@
 from sqlalchemy import Integer, String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base, party_character_association
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from models.user import User
@@ -42,5 +42,9 @@ class Character(Base):
     skills: Mapped[list["CharacterSkill"]] = relationship("CharacterSkill", back_populates="character", cascade="all, delete-orphan")
     attacks: Mapped[list["Attack"]] = relationship("Attack", back_populates="character", cascade="all, delete-orphan")
     parties: Mapped[list["Party"]] = relationship("Party", secondary=party_character_association, back_populates="characters")
+
+    max_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=-1)
+    current_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=-1)
+    temp_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     __table_args__ = (UniqueConstraint('user_id', 'server_id', 'name', name='_user_server_name_uc'),)

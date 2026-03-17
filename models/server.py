@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from models.user import User
     from models.character import Character
     from models.party import Party
+    from models.encounter import Encounter
 
 class Server(Base):
     __tablename__ = 'servers'
@@ -17,3 +18,4 @@ class Server(Base):
     users: Mapped[list["User"]] = relationship("User", secondary=user_server_association, back_populates="servers")
     characters: Mapped[list["Character"]] = relationship("Character", back_populates="server")
     parties: Mapped[list["Party"]] = relationship("Party", back_populates="server")
+    encounters: Mapped[list["Encounter"]] = relationship("Encounter", back_populates="server")

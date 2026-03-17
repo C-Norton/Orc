@@ -1,113 +1,123 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List
+from typing import List, Optional
 from database import SessionLocal
 from models import User, Server, Character
-from dice_roller import roll_dice
+from dice_roller import (
+    parse_expression_tokens,
+    has_named_tokens,
+    evaluate_expression,
+)
 from utils.constants import SKILL_TO_STAT, STAT_NAMES
 from utils.dnd_logic import perform_roll
 from utils.logging_config import get_logger
+from utils.strings import Strings
 
 logger = get_logger(__name__)
 
+
+def _needs_character(notation: str) -> bool:
+    """Return True if the notation requires an active character to resolve."""
+    clean = notation.lower().strip()
+
+    # Simple named checks (skill / save / stat / initiative)
+    if clean in ("initiative", "init"):
+        return True
+    if "save" in clean:
+        stat_part = clean.replace("save", "").replace("_", "").strip()
+        if stat_part in STAT_NAMES:
+            return True
+    if next((s for s in SKILL_TO_STAT if s.lower() == clean), None):
+        return True
+    if clean in STAT_NAMES:
+        return True
+
+    # Complex expression: any named token requires a character
+    tokens = parse_expression_tokens(notation)
+    return has_named_tokens(tokens)
+
+
 def register_roll_commands(bot: commands.Bot) -> None:
-    @bot.tree.command(name="roll", description="Roll a d20 skill check, Save, or standard dice notation.")
-    @app_commands.describe(notation="Skill, attribute, save name or dice notation (e.g., 'insight', 'str', 'str save', '1d20+5')")
-    async def roll(interaction: discord.Interaction, notation: str) -> None:
-        """Unified roll command for skills, attributes, saves and dice notation."""
-        logger.debug(f"Command /roll called by {interaction.user} (ID: {interaction.user.id}) in guild {interaction.guild_id} with notation: {notation}")
+
+    @bot.tree.command(name="roll", description="Roll dice, a skill check, a save, or a complex expression.")
+    @app_commands.describe(
+        notation=(
+            "Dice, skill, stat, save, or a complex expression "
+            "(e.g. 'perception', '2d8+perception', '1d20+5', '2d8-initiative+8+2d6')"
+        ),
+        advantage="Roll with advantage or disadvantage",
+    )
+    @app_commands.choices(advantage=[
+        app_commands.Choice(name="Advantage", value="advantage"),
+        app_commands.Choice(name="Disadvantage", value="disadvantage"),
+    ])
+    async def roll(
+        interaction: discord.Interaction,
+        notation: str,
+        advantage: str = None,
+    ) -> None:
+        logger.debug(
+            f"Command /roll called by {interaction.user} (ID: {interaction.user.id}) "
+            f"in guild {interaction.guild_id} — notation={notation!r} advantage={advantage}"
+        )
         db = SessionLocal()
         try:
-            # Normalize notation for matching
-            clean_notation = notation.lower().strip()
-
-            # Check if it's a saving throw
-            is_save = False
-            if "save" in clean_notation:
-                stat_part = clean_notation.replace("save", "").replace("_", "").strip()
-                if stat_part in STAT_NAMES:
-                    is_save = True
-
-            # Check if the notation matches a skill name (case-insensitive)
-            matched_skill = next((s for s in SKILL_TO_STAT.keys() if s.lower() == clean_notation), None)
-
-            # Check if it's a flat attribute roll
-            matched_stat = STAT_NAMES.get(clean_notation) if not is_save and not matched_skill else None
-
-            # Check if it's initiative
-            is_initiative = clean_notation in ["initiative", "init"]
-
-            if matched_skill or is_save or matched_stat or is_initiative:
-                # Character-based roll logic
+            if _needs_character(notation):
                 user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
                 server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
                 char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
-                logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
-
+                logger.debug(
+                    f"Character lookup: {'found: ' + char.name if char else 'not found'}"
+                )
                 if not char:
-                    await interaction.response.send_message("You don't have a character in this server. Use `/create_character` first.", ephemeral=True)
+                    await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
                     return
 
-                response = await perform_roll(char, notation, db)
+                response = await perform_roll(char, notation, db, advantage=advantage)
                 await interaction.response.send_message(response)
-                logger.info(f"/roll completed for user {interaction.user.id}")
+                logger.info(f"/roll (character) completed for user {interaction.user.id}")
+
             else:
-                # Standard dice notation logic
-                rolls, modifier, total = roll_dice(notation)
-
-                # Build a nice response message
-                rolls_str = ", ".join(map(str, rolls))
-                mod_str = f" {modifier:+d}" if modifier != 0 else ""
-
-                response = f"🎲 **{notation}**\n"
-                response += f"Rolls: `({rolls_str}){mod_str}`\n"
-                response += f"**Total: {total}**"
-
+                # Pure dice / number expression — no character needed
+                tokens = parse_expression_tokens(notation)
+                result = evaluate_expression(tokens, advantage=advantage)
+                response = Strings.ROLL_RESULT_DICE_EXPR.format(
+                    notation=notation,
+                    breakdown=result.breakdown(),
+                    total=result.total,
+                )
                 await interaction.response.send_message(response)
-                logger.info(f"/roll completed for user {interaction.user.id}")
+                logger.info(f"/roll (dice) completed for user {interaction.user.id}")
 
         except ValueError as e:
-            logger.warning(f"ValueError in /roll (notation: {notation}): {e}")
-            await interaction.response.send_message(f"❌ Error: {str(e)}", ephemeral=True)
+            logger.warning(f"ValueError in /roll (notation={notation!r}): {e}")
+            await interaction.response.send_message(f"❌ Error: {e}", ephemeral=True)
         except Exception as e:
-            logger.error(f"Unexpected error in /roll (notation: {notation}): {e}", exc_info=True)
-            await interaction.response.send_message(f"❌ An unexpected error occurred.", ephemeral=True)
+            logger.error(f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True)
+            await interaction.response.send_message(Strings.SERVER_ERROR, ephemeral=True)
         finally:
             db.close()
 
     @roll.autocomplete("notation")
-    async def roll_autocomplete(interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
-        """Autocomplete for the roll command suggesting skill names, stats, and saves."""
+    async def roll_autocomplete(
+        interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
         suggestions = []
-
-        # Add skills
         skills = sorted(SKILL_TO_STAT.keys())
-        suggestions.extend([skill for skill in skills])
-
-        # Add initiative
+        suggestions.extend(skills)
         suggestions.append("Initiative")
-
-        # Add attributes
         stats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
         suggestions.extend(stats)
-
-        # Add common abbreviations
         suggestions.extend(["Str", "Dex", "Con", "Int", "Wis", "Cha"])
-
-        # Add saving throws
         for stat in stats:
             suggestions.append(f"{stat} Save")
         for stat in ["Str", "Dex", "Con", "Int", "Wis", "Cha"]:
             suggestions.append(f"{stat} Save")
 
-        # Filter based on current input
         filtered = [
             app_commands.Choice(name=s, value=s)
             for s in suggestions if current.lower() in s.lower()
         ]
-
-        # Sort: put matches starting with the input first
         filtered.sort(key=lambda c: (not c.name.lower().startswith(current.lower()), c.name))
-
         return filtered[:25]

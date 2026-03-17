@@ -1,5 +1,4 @@
 import pytest
-from unittest.mock import patch
 from models import Attack
 from tests.commands.conftest import get_callback
 
@@ -129,3 +128,4 @@ async def test_attacks_list_no_character(attack_bot, sample_user, sample_server,
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+

@@ -8,6 +8,8 @@ __pycache__/
 *.so
 .Python
 
+dnd_bot.db
+*.db
 # Virtual environments
 .venv/
 venv/
