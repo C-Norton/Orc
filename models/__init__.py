@@ -8,6 +8,7 @@ from models.party import Party
 from models.encounter import Encounter
 from models.enemy import Enemy
 from models.encounter_turn import EncounterTurn
+from models.class_level import ClassLevel
 
 __all__ = [
     "Base",
@@ -20,6 +21,7 @@ __all__ = [
     "Encounter",
     "Enemy",
     "EncounterTurn",
+    "ClassLevel",
     "user_server_association",
     "party_character_association",
     "party_gm_association",

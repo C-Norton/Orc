@@ -6,6 +6,7 @@ import random
 from database import SessionLocal
 from models import User, Server, Character, Attack
 from dice_roller import roll_dice
+from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
@@ -40,6 +41,15 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 attack.damage_formula = damage_formula
                 msg = Strings.ATTACK_UPDATED.format(attack_name=name, char_name=char.name)
             else:
+                attack_count = db.query(Attack).filter_by(character_id=char.id).count()
+                if attack_count >= MAX_ATTACKS_PER_CHARACTER:
+                    await interaction.response.send_message(
+                        Strings.ERROR_LIMIT_ATTACKS.format(
+                            char_name=char.name, limit=MAX_ATTACKS_PER_CHARACTER
+                        ),
+                        ephemeral=True,
+                    )
+                    return
                 attack = Attack(character_id=char.id, name=name, hit_modifier=hit_mod, damage_formula=damage_formula)
                 db.add(attack)
                 msg = Strings.ATTACK_ADDED.format(attack_name=name, char_name=char.name)

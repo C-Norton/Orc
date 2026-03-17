@@ -6,6 +6,7 @@ from sqlalchemy import update, select
 from database import SessionLocal
 from models import User, Server, Character, Party, user_server_association
 from utils.dnd_logic import perform_roll
+from utils.limits import MAX_GM_PARTIES_PER_USER, MAX_CHARACTERS_PER_PARTY, MAX_PARTIES_PER_SERVER
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
@@ -46,6 +47,21 @@ def register_party_commands(bot: commands.Bot) -> None:
 
             if not user or not server:
                 await interaction.response.send_message(Strings.ERROR_USER_SERVER_NOT_INIT, ephemeral=True)
+                return
+
+            if len(user.gm_parties) >= MAX_GM_PARTIES_PER_USER:
+                await interaction.response.send_message(
+                    Strings.ERROR_LIMIT_GM_PARTIES.format(limit=MAX_GM_PARTIES_PER_USER),
+                    ephemeral=True,
+                )
+                return
+
+            server_party_count = db.query(Party).filter_by(server_id=server.id).count()
+            if server_party_count >= MAX_PARTIES_PER_SERVER:
+                await interaction.response.send_message(
+                    Strings.ERROR_LIMIT_PARTIES_SERVER.format(limit=MAX_PARTIES_PER_SERVER),
+                    ephemeral=True,
+                )
                 return
 
             existing_party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
@@ -149,6 +165,13 @@ def register_party_commands(bot: commands.Bot) -> None:
             char = chars[0]
             if char in party.characters:
                 await interaction.response.send_message(Strings.PARTY_MEMBER_ALREADY_IN.format(character_name=character_name), ephemeral=True)
+                return
+
+            if len(party.characters) >= MAX_CHARACTERS_PER_PARTY:
+                await interaction.response.send_message(
+                    Strings.ERROR_LIMIT_PARTY_MEMBERS.format(limit=MAX_CHARACTERS_PER_PARTY),
+                    ephemeral=True,
+                )
                 return
 
             party.characters.append(char)

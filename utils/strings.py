@@ -3,6 +3,26 @@ class Strings:
     CHARACTER_NOT_FOUND = "You don't have a character in this server. Use `/create_character` first."
     ACTIVE_CHARACTER_NOT_FOUND = "You don't have an active character."
     SERVER_ERROR = "❌ An unexpected error occurred."
+
+    # Resource limits
+    ERROR_LIMIT_CHARACTERS = (
+        "You have reached the maximum number of characters ({limit}) across all servers."
+    )
+    ERROR_LIMIT_GM_PARTIES = (
+        "You are already a GM of the maximum number of parties ({limit})."
+    )
+    ERROR_LIMIT_PARTY_MEMBERS = (
+        "This party has reached the maximum number of characters ({limit})."
+    )
+    ERROR_LIMIT_ATTACKS = (
+        "**{char_name}** already has the maximum number of saved attacks ({limit})."
+    )
+    ERROR_LIMIT_ENEMIES = (
+        "This encounter has reached the maximum number of enemies ({limit})."
+    )
+    ERROR_LIMIT_PARTIES_SERVER = (
+        "This server has reached the maximum number of parties ({limit})."
+    )
     
     # Meta Commands
     HELP_TITLE = "Thank you for using [ORC](https://github.com/C-Norton/orc) (the Open-Source Roleplaying Companion) bot for D&D 5e"
@@ -24,13 +44,15 @@ class Strings:
     
     HELP_CHAR_MGMT_NAME = "👤 Character Management"
     HELP_CHAR_MGMT_VALUE = (
-        "**/create_character <name>**: Create a new character for this server.\n"
+        "**/create_character <name> <class> <level>**: Create a new character for this server. Class save proficiencies are set automatically.\n"
+        "**/add_class <class> <level>**: Add or update a class on your active character (for levelling up or multiclassing).\n"
+        "**/remove_class <class>**: Remove a class from your active character.\n"
         "**/characters**: View all your characters in this server.\n"
         "**/view_character**: See your active character's stats, skills, and saving throws.\n"
         "**/switch_character <name>**: Change which character is currently active.\n"
         "**/delete_character <name>**: Permanently delete one of your characters.\n"
-        "**/set_level <level>**: Set your active character's level (1-20).\n"
         "**/set_stats**: Set your active character's 6 core ability scores, and initiative bonus.\n"
+        "**/set_ac <ac>**: Set your active character's Armor Class (1-30).\n"
         "**/set_saving_throws**: Mark which saves your active character is proficient in.\n"
         "**/set_skill <skill> <status>**: Set proficiency for your active character."
     )
@@ -94,8 +116,10 @@ class Strings:
         "**FOR PLAYERS**\n"
         "You can roll at any time with `/roll <dice notation>`.\n"
         "If you want to store a character sheet in ORC, you'll need a character.\n"
-        "To get started, create a character with `/create_character` and set their stats with `/set_stats`.\n"
-        "For accurate rolls, set your character's proficiencies with `/set_skill` and `/set_saving_throws`.\n"
+        "To get started, create a character with `/create_character` (pick your class — save proficiencies are set automatically!).\n"
+        "Then set your stats with `/set_stats` — Max HP will be calculated automatically.\n"
+        "For accurate rolls, set your skill proficiencies with `/set_skill`.\n"
+        "When you level up or multiclass, use `/add_class`.\n"
         "Finally, set your Max HP with `/set_max_hp`.\n"
         "**FOR GMs**\n"
         "It is recommended that you read all pages of the help command.\n"
@@ -161,21 +185,56 @@ class Strings:
     # Character Commands
     CHAR_CREATE_NAME_LIMIT = "Character name cannot exceed 100 characters."
     CHAR_EXISTS = "You already have a character named **{name}** in this server."
-    CHAR_CREATED_ACTIVE = "Character **{name}** created successfully at level **{level}** and set as active!\nNext, set your stats with '/set_stats', your skill proficiencies with 'set_skill', your saving throw proficiencies with '/set_saving_throws'\n View your character at any time with '/view_character', and switch with '/switch_character'"
+    CHAR_CREATED_ACTIVE = (
+        "Character **{name}** created as a level **{level}** **{char_class}** and set as active!\n"
+        "Saving throw proficiencies have been set from your class.\n"
+        "Next, set your stats with `/set_stats`, your skill proficiencies with `/set_skill`, "
+        "and your Max HP with `/set_max_hp`.\n"
+        "View your character at any time with `/view_character`, and switch with `/switch_character`."
+    )
     CHAR_STATS_FIRST_TIME = "This is your first time setting stats for this character. Please provide all core stats (strength, dexterity, constitution, intelligence, wisdom, charisma)."
     CHAR_STAT_LIMIT = "{stat_name} score must be between 1 and 30."
     CHAR_STATS_UPDATED = "Stats updated for **{char_name}**!"
     CHAR_SAVES_UPDATED = "Saving throw proficiencies updated for **{char_name}**!"
     CHAR_VIEW_TITLE = "👤 {char_name}"
-    CHAR_VIEW_DESC = "Level {char_level} Character"
+    CHAR_VIEW_DESC = "Level {char_level} {class_summary}"
     CHAR_VIEW_INIT = "\n**Initiative:** {init_bonus:+d}"
     CHAR_VIEW_STATS_FIELD = "Ability Scores"
-    CHAR_VIEW_SAVES_FIELD = "Saving throws"
+    CHAR_VIEW_SAVES_FIELD = "Saving Throws"
     CHAR_VIEW_SKILLS_FIELD = "Skills"
     CHAR_VIEW_SKILLS_CONT_FIELD = "Skills (cont.)"
+
+    # Character Sheet — multi-page (4 pages)
+    CHAR_SHEET_FOOTER = "🏠 Overview  |  📊 Stats & Saves  |  🎯 Skills  |  ⚔️ Attacks"
+    CHAR_SHEET_HP_FIELD = "HP"
+    CHAR_SHEET_PROF_FIELD = "Proficiency Bonus"
+    CHAR_SHEET_NO_STATS = "*Stats not set — use `/set_stats`*"
+    CHAR_SHEET_NO_ATTACKS = "*No attacks saved — use `/add_attack`*"
+    CHAR_SHEET_AC_NOT_SET = "🛡 AC: *Not set — use `/set_ac`*"
+    CHAR_SHEET_AC = "🛡 AC: **{ac}**"
+    CHAR_SHEET_INTRO_TITLE = "👤 {char_name} — Character Sheet"
+    CHAR_SHEET_INTRO_DESC = (
+        "**Level {char_level}** — {class_summary}\n\n"
+        "Use the reactions below to navigate:\n\n"
+        "🏠 **This page** — overview & quick-reference\n"
+        "📊 **Stats & Saves** — ability scores and saving throws\n"
+        "🎯 **Skills** — all skill modifiers and proficiency marks\n"
+        "⚔️ **Attacks** — saved attack entries"
+    )
+    CHAR_SHEET_INTRO_QUICK_REF = "Quick Reference"
     CHAR_SWITCH_SUCCESS = "Switched to character **{name}**!"
+    CHAR_AC_UPDATED = "**{char_name}**'s Armor Class set to **{ac}**."
+    CHAR_AC_LIMIT = "AC must be between 1 and 30."
     CHAR_LEVEL_LIMIT = "Level must be between 1 and 20."
     CHAR_LEVEL_UPDATED = "**{char_name}** is now level **{level}**!"
+
+    # Class Commands
+    CHAR_CLASS_ADDED = "**{char_name}** is now a level **{level}** **{char_class}**! (Total level: {total_level})"
+    CHAR_CLASS_UPDATED = "**{char_name}**'s **{char_class}** level updated to **{level}**. (Total level: {total_level})"
+    CHAR_CLASS_REMOVED = "Removed **{char_class}** from **{char_name}**. (Total level: {total_level})"
+    CHAR_CLASS_NOT_FOUND = "**{char_name}** does not have the **{char_class}** class."
+    CHAR_CLASS_TOTAL_LEVEL_EXCEEDED = "Adding {level} level(s) of **{char_class}** would bring **{char_name}** above level 20 (current total: {current_total})."
+    ERROR_CHAR_NO_CLASSES = "**{char_name}** has no class assigned yet. Use `/add_class` first."
     CHAR_SKILL_UNKNOWN = "Unknown skill: {skill}"
     CHAR_SKILL_UPDATED = "Updated **{skill}** for **{char_name}** to **{status}**"
     CHAR_LIST_NONE = "You don't have any characters in this server."

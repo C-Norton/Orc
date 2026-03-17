@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from models.character_skill import CharacterSkill
     from models.attack import Attack
     from models.party import Party
+    from models.class_level import ClassLevel
+
 
 class Character(Base):
     __tablename__ = 'characters'
@@ -16,7 +18,7 @@ class Character(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
     server_id: Mapped[int] = mapped_column(Integer, ForeignKey('servers.id'), nullable=False)
-    
+
     # Core Stats
     strength: Mapped[int] = mapped_column(Integer, nullable=True)
     dexterity: Mapped[int] = mapped_column(Integer, nullable=True)
@@ -24,11 +26,10 @@ class Character(Base):
     intelligence: Mapped[int] = mapped_column(Integer, nullable=True)
     wisdom: Mapped[int] = mapped_column(Integer, nullable=True)
     charisma: Mapped[int] = mapped_column(Integer, nullable=True)
-    
-    level: Mapped[int] = mapped_column(Integer, default=1)
+
     initiative_bonus: Mapped[int] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    
+
     # Saving Throw Proficiency Status
     st_prof_strength: Mapped[bool] = mapped_column(Boolean, default=False)
     st_prof_dexterity: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -39,12 +40,31 @@ class Character(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="characters")
     server: Mapped["Server"] = relationship("Server", back_populates="characters")
-    skills: Mapped[list["CharacterSkill"]] = relationship("CharacterSkill", back_populates="character", cascade="all, delete-orphan")
-    attacks: Mapped[list["Attack"]] = relationship("Attack", back_populates="character", cascade="all, delete-orphan")
-    parties: Mapped[list["Party"]] = relationship("Party", secondary=party_character_association, back_populates="characters")
+    skills: Mapped[list["CharacterSkill"]] = relationship(
+        "CharacterSkill", back_populates="character", cascade="all, delete-orphan"
+    )
+    attacks: Mapped[list["Attack"]] = relationship(
+        "Attack", back_populates="character", cascade="all, delete-orphan"
+    )
+    parties: Mapped[list["Party"]] = relationship(
+        "Party", secondary=party_character_association, back_populates="characters"
+    )
+    class_levels: Mapped[list["ClassLevel"]] = relationship(
+        "ClassLevel", back_populates="character", cascade="all, delete-orphan"
+    )
 
     max_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=-1)
     current_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=-1)
     temp_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    ac: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (UniqueConstraint('user_id', 'server_id', 'name', name='_user_server_name_uc'),)
+
+    @property
+    def level(self) -> int:
+        """Total character level — sum of all class levels."""
+        return sum(cl.level for cl in self.class_levels)
+
+    @level.setter
+    def level(self, value: int) -> None:  # noqa: F811
+        """No-op setter so ORM assignment like ``Character(level=5)`` doesn't crash."""
