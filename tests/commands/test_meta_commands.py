@@ -1,24 +1,17 @@
 import pytest
 import discord
 from tests.commands.conftest import get_callback
-from commands.meta_commands import HELP_PAGES, help_message_owners, on_reaction_add, on_guild_join
+from commands.meta_commands import HELP_PAGES, HelpView, on_guild_join
 from utils.strings import Strings
 
 
-@pytest.fixture(autouse=True)
-def clear_owners():
-    """Ensure help_message_owners is clean before and after every test."""
-    help_message_owners.clear()
-    yield
-    help_message_owners.clear()
-
-
 # ---------------------------------------------------------------------------
-# /help
+# /help — initial response
 # ---------------------------------------------------------------------------
 
-async def test_help_command_sends_embed_and_adds_reactions(meta_bot, interaction, mocker):
-    """The /help command sends a TOC embed and adds one reaction per page plus 🏠."""
+
+async def test_help_command_sends_toc_embed(meta_bot, interaction, mocker):
+    """The /help command sends a TOC embed."""
     cb = get_callback(meta_bot, "help")
 
     mock_message = mocker.AsyncMock(spec=discord.Message)
@@ -34,160 +27,209 @@ async def test_help_command_sends_embed_and_adds_reactions(meta_bot, interaction
     assert Strings.HELP_DESCRIPTION in embed.description
     assert embed.footer.text == Strings.HELP_FOOTER
 
-    # Owner recorded
-    assert help_message_owners[12345] == interaction.user.id
 
-    # One reaction per HELP_PAGES entry plus the 🏠 home button
-    expected_emojis = list(HELP_PAGES.keys()) + ["🏠"]
-    assert mock_message.add_reaction.call_count == len(expected_emojis)
-    actual_emojis = [call.args[0] for call in mock_message.add_reaction.call_args_list]
-    assert actual_emojis == expected_emojis
+async def test_help_command_sends_help_view(meta_bot, interaction, mocker):
+    """The /help command attaches a HelpView with the correct owner."""
+    cb = get_callback(meta_bot, "help")
+
+    mock_message = mocker.AsyncMock(spec=discord.Message)
+    mock_message.id = 12345
+    interaction.original_response.return_value = mock_message
+
+    await cb(interaction)
+
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
+    assert isinstance(view, HelpView)
+    assert view._owner_id == interaction.user.id
+
+
+async def test_help_command_has_button_per_page_plus_home(meta_bot, interaction, mocker):
+    """HelpView contains one button per HELP_PAGES entry plus a Home button."""
+    cb = get_callback(meta_bot, "help")
+
+    mock_message = mocker.AsyncMock(spec=discord.Message)
+    mock_message.id = 12345
+    interaction.original_response.return_value = mock_message
+
+    await cb(interaction)
+
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
+    button_labels = [item.label for item in view.children]
+    # One page button per HELP_PAGES entry
+    for _, label, _, _ in HELP_PAGES:
+        assert label in button_labels
+    assert "Home" in button_labels
+
+
+async def test_help_command_stores_message_reference(meta_bot, interaction, mocker):
+    """The view's .message is set after the response is sent."""
+    cb = get_callback(meta_bot, "help")
+
+    mock_message = mocker.AsyncMock(spec=discord.Message)
+    mock_message.id = 12345
+    interaction.original_response.return_value = mock_message
+
+    await cb(interaction)
+
+    _, kwargs = interaction.response.send_message.call_args
+    view = kwargs.get("view")
+    assert view.message is mock_message
 
 
 # ---------------------------------------------------------------------------
-# on_reaction_add
+# HelpView — page navigation buttons
 # ---------------------------------------------------------------------------
 
-async def test_on_reaction_add_switches_to_category_page(mocker):
-    """Reacting with a category emoji edits the message to show that page."""
-    user_id = 111
-    message_id = 12345
-    help_message_owners[message_id] = user_id
 
-    mock_user = mocker.MagicMock(spec=discord.User)
-    mock_user.id = user_id
-    mock_user.bot = False
+async def test_page_button_edits_to_page_embed(mocker):
+    """Clicking a page button edits the message to show that page's embed."""
+    owner_id = 111
+    view = HelpView(owner_id=owner_id)
 
-    mock_message = mocker.AsyncMock(spec=discord.Message)
-    mock_message.id = message_id
+    # Pick the first page button (not Home)
+    emoji, label, embed_title, embed_content = HELP_PAGES[0]
+    page_btn = next(item for item in view.children if getattr(item, "label", "") == label)
 
-    emoji = "👤"
-    mock_reaction = mocker.MagicMock(spec=discord.Reaction)
-    mock_reaction.emoji = emoji
-    mock_reaction.message = mock_message
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.user = mocker.MagicMock()
+    btn_interaction.user.id = owner_id
+    btn_interaction.response = mocker.AsyncMock()
 
-    await on_reaction_add(mock_reaction, mock_user)
+    await page_btn.callback(btn_interaction)
 
-    mock_message.edit.assert_called_once()
-    embed = mock_message.edit.call_args.kwargs.get("embed")
-    title, content = HELP_PAGES[emoji]
-    assert embed.title == f"{emoji} {title}"
-    assert embed.description == content
-
-    # Reaction removed using the same user object that was passed in
-    mock_message.remove_reaction.assert_called_once_with(emoji, mock_user)
+    btn_interaction.response.edit_message.assert_called_once()
+    _, kwargs = btn_interaction.response.edit_message.call_args
+    embed = kwargs.get("embed")
+    assert embed_title in embed.title
+    assert embed.description == embed_content
+    assert embed.footer.text == Strings.HELP_FOOTER
 
 
-async def test_on_reaction_add_switches_to_home_page(mocker):
-    """Reacting with 🏠 returns to the Table of Contents embed."""
-    user_id = 111
-    message_id = 12345
-    help_message_owners[message_id] = user_id
+async def test_home_button_returns_to_toc(mocker):
+    """Clicking the Home button edits the message back to the TOC embed."""
+    owner_id = 111
+    view = HelpView(owner_id=owner_id)
 
-    mock_user = mocker.MagicMock(spec=discord.User)
-    mock_user.id = user_id
-    mock_user.bot = False
+    home_btn = next(item for item in view.children if getattr(item, "label", "") == "Home")
 
-    mock_message = mocker.AsyncMock(spec=discord.Message)
-    mock_message.id = message_id
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.user = mocker.MagicMock()
+    btn_interaction.user.id = owner_id
+    btn_interaction.response = mocker.AsyncMock()
 
-    mock_reaction = mocker.MagicMock(spec=discord.Reaction)
-    mock_reaction.emoji = "🏠"
-    mock_reaction.message = mock_message
+    await home_btn.callback(btn_interaction)
 
-    await on_reaction_add(mock_reaction, mock_user)
-
-    mock_message.edit.assert_called_once()
-    embed = mock_message.edit.call_args.kwargs.get("embed")
+    btn_interaction.response.edit_message.assert_called_once()
+    _, kwargs = btn_interaction.response.edit_message.call_args
+    embed = kwargs.get("embed")
     assert embed.title == Strings.HELP_TITLE
     assert Strings.HELP_DESCRIPTION in embed.description
 
-    mock_message.remove_reaction.assert_called_once_with("🏠", mock_user)
+
+async def test_all_page_buttons_produce_distinct_embeds(mocker):
+    """Every page button renders a different embed title."""
+    owner_id = 111
+    view = HelpView(owner_id=owner_id)
+
+    titles = []
+    for emoji, label, embed_title, embed_content in HELP_PAGES:
+        btn = next(item for item in view.children if getattr(item, "label", "") == label)
+        btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+        btn_interaction.user = mocker.MagicMock()
+        btn_interaction.user.id = owner_id
+        btn_interaction.response = mocker.AsyncMock()
+
+        await btn.callback(btn_interaction)
+
+        _, kwargs = btn_interaction.response.edit_message.call_args
+        titles.append(kwargs["embed"].title)
+
+    assert len(set(titles)) == len(HELP_PAGES), "Each page button must render a unique embed title"
 
 
-async def test_on_reaction_add_ignores_bots(mocker):
-    """Reactions from bot accounts are silently ignored."""
-    mock_user = mocker.MagicMock(spec=discord.User)
-    mock_user.bot = True
-
-    mock_reaction = mocker.MagicMock(spec=discord.Reaction)
-
-    await on_reaction_add(mock_reaction, mock_user)
-
-    assert not mock_reaction.message.edit.called
+# ---------------------------------------------------------------------------
+# HelpView — interaction_check
+# ---------------------------------------------------------------------------
 
 
-async def test_on_reaction_add_ignores_different_user(meta_bot, interaction, mocker):
-    """A reaction from a user who didn't open the help menu is ignored."""
-    message_id = 12345
-    help_message_owners[message_id] = interaction.user.id  # owner is 111
+async def test_interaction_check_allows_owner(mocker):
+    """The owner's interactions pass the check."""
+    owner_id = 111
+    view = HelpView(owner_id=owner_id)
 
-    different_user = mocker.MagicMock(spec=discord.User)
-    different_user.id = 99999
-    different_user.bot = False
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.user = mocker.MagicMock()
+    btn_interaction.user.id = owner_id
 
+    result = await view.interaction_check(btn_interaction)
+
+    assert result is True
+    btn_interaction.response.send_message.assert_not_called()
+
+
+async def test_interaction_check_blocks_other_users(mocker):
+    """Non-owner interactions are rejected with an ephemeral message."""
+    owner_id = 111
+    view = HelpView(owner_id=owner_id)
+
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.user = mocker.MagicMock()
+    btn_interaction.user.id = 99999
+    btn_interaction.response = mocker.AsyncMock()
+
+    result = await view.interaction_check(btn_interaction)
+
+    assert result is False
+    btn_interaction.response.send_message.assert_called_once()
+    _, kwargs = btn_interaction.response.send_message.call_args
+    assert kwargs.get("ephemeral") is True
+    assert Strings.HELP_NOT_YOUR_MENU in btn_interaction.response.send_message.call_args.args[0]
+
+
+# ---------------------------------------------------------------------------
+# HelpView — on_timeout
+# ---------------------------------------------------------------------------
+
+
+async def test_on_timeout_disables_all_buttons(mocker):
+    """All buttons are disabled when the view times out."""
+    view = HelpView(owner_id=111)
     mock_message = mocker.AsyncMock(spec=discord.Message)
-    mock_message.id = message_id
+    view.message = mock_message
 
-    mock_reaction = mocker.MagicMock(spec=discord.Reaction)
-    mock_reaction.message = mock_message
+    await view.on_timeout()
 
-    # Drive the registered listener directly to avoid double-registering
-    listener = meta_bot.extra_events.get("on_reaction_add")[0]
-    await listener(mock_reaction, different_user)
-
-    assert not mock_message.edit.called
+    for item in view.children:
+        assert item.disabled is True
+    mock_message.edit.assert_called_once()
 
 
-async def test_on_reaction_add_ignores_unknown_emoji(mocker):
-    """An emoji not in HELP_PAGES and not 🏠 produces no edit."""
-    user_id = 111
-    message_id = 12345
-    help_message_owners[message_id] = user_id
+async def test_on_timeout_without_message_does_not_raise(mocker):
+    """on_timeout is safe when no message reference has been stored."""
+    view = HelpView(owner_id=111)
+    view.message = None
 
-    mock_user = mocker.MagicMock(spec=discord.User)
-    mock_user.id = user_id
-    mock_user.bot = False
+    # Must not raise
+    await view.on_timeout()
 
+
+async def test_on_timeout_swallows_http_exception(mocker):
+    """An HTTPException while editing is swallowed and not re-raised."""
+    view = HelpView(owner_id=111)
     mock_message = mocker.AsyncMock(spec=discord.Message)
-    mock_message.id = message_id
+    mock_message.edit.side_effect = discord.HTTPException(mocker.MagicMock(), "error")
+    view.message = mock_message
 
-    mock_reaction = mocker.MagicMock(spec=discord.Reaction)
-    mock_reaction.emoji = "🤔"
-    mock_reaction.message = mock_message
-
-    await on_reaction_add(mock_reaction, mock_user)
-
-    assert not mock_message.edit.called
-
-
-async def test_on_reaction_add_handles_remove_reaction_error(mocker):
-    """A Forbidden error on remove_reaction is swallowed; the edit still happens."""
-    user_id = 111
-    message_id = 12345
-    help_message_owners[message_id] = user_id
-
-    mock_user = mocker.MagicMock(spec=discord.User)
-    mock_user.id = user_id
-    mock_user.bot = False
-
-    mock_message = mocker.AsyncMock(spec=discord.Message)
-    mock_message.id = message_id
-    mock_message.remove_reaction.side_effect = discord.Forbidden(mocker.MagicMock(), "Forbidden")
-
-    mock_reaction = mocker.MagicMock(spec=discord.Reaction)
-    mock_reaction.emoji = "🏠"
-    mock_reaction.message = mock_message
-
-    await on_reaction_add(mock_reaction, mock_user)
-
-    assert mock_message.edit.called
-    mock_message.remove_reaction.assert_called_once()
+    # Must not raise
+    await view.on_timeout()
 
 
 # ---------------------------------------------------------------------------
 # on_guild_join
 # ---------------------------------------------------------------------------
+
 
 async def test_on_guild_join_sends_welcome_to_system_channel(mocker):
     """Welcome message is sent to the guild's system channel when one exists."""

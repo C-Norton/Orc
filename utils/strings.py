@@ -1,6 +1,6 @@
 class Strings:
     # Common
-    CHARACTER_NOT_FOUND = "You don't have a character in this server. Use `/create_character` first."
+    CHARACTER_NOT_FOUND = "You don't have a character in this server. Use `/character create` first."
     ACTIVE_CHARACTER_NOT_FOUND = "You don't have an active character."
     SERVER_ERROR = "❌ An unexpected error occurred."
 
@@ -25,9 +25,10 @@ class Strings:
     )
     
     # Meta Commands
-    HELP_TITLE = "Thank you for using [ORC](https://github.com/C-Norton/orc) (the Open-Source Roleplaying Companion) bot for D&D 5e"
+    HELP_TITLE = "Thank you for using ORC - the Opensource Roleplaying Companion bot for D&D 5e"
     HELP_DESCRIPTION = "Check out our shared setting: [Open Source Gaming and Roleplaying environment (OGRE)](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)"
     HELP_FOOTER = "Tip: Use autocomplete for character, party, and skill names!"
+    HELP_NOT_YOUR_MENU = "This help menu belongs to someone else. Use `/help` to open your own."
     HELP_TOC_DESCRIPTION = (
         "{description}\n\n"
         "Click a reaction below to see more information about each command category:\n\n"
@@ -44,24 +45,24 @@ class Strings:
     
     HELP_CHAR_MGMT_NAME = "👤 Character Management"
     HELP_CHAR_MGMT_VALUE = (
-        "**/create_character <name> <class> <level>**: Create a new character for this server. Class save proficiencies are set automatically.\n"
-        "**/add_class <class> <level>**: Add or update a class on your active character (for levelling up or multiclassing).\n"
-        "**/remove_class <class>**: Remove a class from your active character.\n"
-        "**/characters**: View all your characters in this server.\n"
-        "**/view_character**: See your active character's stats, skills, and saving throws.\n"
-        "**/switch_character <name>**: Change which character is currently active.\n"
-        "**/delete_character <name>**: Permanently delete one of your characters.\n"
-        "**/set_stats**: Set your active character's 6 core ability scores, and initiative bonus.\n"
-        "**/set_ac <ac>**: Set your active character's Armor Class (1-30).\n"
-        "**/set_saving_throws**: Mark which saves your active character is proficient in.\n"
-        "**/set_skill <skill> <status>**: Set proficiency for your active character."
+        "**/character create <name> <class> <level>**: Create a new character for this server. Class save proficiencies are set automatically.\n"
+        "**/character class_add <class> <level>**: Add or update a class on your active character (for levelling up or multiclassing).\n"
+        "**/character class_remove <class>**: Remove a class from your active character.\n"
+        "**/character list**: View all your characters in this server.\n"
+        "**/character view**: See your active character's stats, skills, and saving throws.\n"
+        "**/character switch <name>**: Change which character is currently active.\n"
+        "**/character delete <name>**: Permanently delete one of your characters.\n"
+        "**/character stats**: Set your active character's 6 core ability scores, and initiative bonus.\n"
+        "**/character ac <ac>**: Set your active character's Armor Class (1-30).\n"
+        "**/character saves**: Mark which saves your active character is proficient in.\n"
+        "**/character skill <skill> <status>**: Set proficiency for your active character."
     )
     
     HELP_COMBAT_NAME = "⚔️ Combat"
     HELP_COMBAT_VALUE = (
-        "**/add_attack <name> <hit_mod> <damage>**: Save an attack (e.g., `/add_attack Longsword 5 1d8+3`).\n"
-        "**/attacks**: List all your saved attacks.\n"
-        "**/attack <name>**: Roll a to-hit and damage roll for a saved attack."
+        "**/attack add <name> <hit_mod> <damage>**: Save an attack (e.g., `/attack add Longsword 5 1d8+3`).\n"
+        "**/attack list**: List all your saved attacks.\n"
+        "**/attack roll <name>**: Roll a to-hit and damage roll for a saved attack."
     )
     
     HELP_ROLLING_NAME = "🎲 Rolling"
@@ -81,33 +82,35 @@ class Strings:
     
     HELP_PARTIES_NAME = "👥 Parties & GM Tools"
     HELP_PARTIES_VALUE = (
-        "**/create_party <name>**: Create a new group of characters.\n"
-        "**/party_add <party> <character>**: Add a character to a party (GM only).\n"
-        "**/active_party <name>**: Set your current active party for quick rolling.\n"
-        "**/rollas <member> <notation>**: Roll as a member of your active party.\n"
-        "**/partyroll <notation>**: Roll for every member of your active party at once (e.g., `/partyroll stealth`).\n"
-        "**/add_gm <party> <user>**: Add a Discord user as a GM of a party (GM only).\n"
-        "**/remove_gm <party> <user>**: Remove a Discord user as a GM of a party (GM only).\n"
-        "**/delete_party <name>**: Delete a party (GM only)."
+        "**/party create <name>**: Create a new group of characters.\n"
+        "**/party character_add <party> <character>**: Add a character to a party (GM only).\n"
+        "**/party character_remove <party> <character>**: Remove a character from a party (GM only).\n"
+        "**/party active <name>**: Set your current active party for quick rolling.\n"
+        "**/party roll_as <member> <notation>**: Roll as a member of your active party.\n"
+        "**/party roll <notation>**: Roll for every member of your active party at once (e.g., `/party roll stealth`).\n"
+        "**/party gm_add <party> <user>**: Add a Discord user as a GM of a party (GM only).\n"
+        "**/party gm_remove <party> <user>**: Remove a Discord user as a GM of a party (GM only).\n"
+        "**/party view <name>**: View a party's members and GMs.\n"
+        "**/party delete <name>**: Delete a party (GM only)."
     )
     
     HELP_ENCOUNTER_NAME = "⚔️ Encounter & Initiative Tracking"
     HELP_ENCOUNTER_VALUE = (
         "**Setup (GM only)**\n"
-        "**/create_encounter <name>**: Open a new encounter for your active party.\n"
-        "**/add_enemy <name> <init_mod> <max_hp>**: Add an enemy before combat starts. Repeat for each enemy.\n"
-        "**/start_encounter**: Roll initiative for all party members and enemies, post the turn order, and ping whoever acts first.\n"
+        "**/encounter create <name>**: Open a new encounter for your active party.\n"
+        "**/encounter enemy <name> <init_mod> <max_hp>**: Add an enemy before combat starts. Repeat for each enemy.\n"
+        "**/encounter start**: Roll initiative for all party members and enemies, post the turn order, and ping whoever acts first.\n"
         "\n"
         "**During Combat**\n"
-        "**/next_turn**: End the current turn and advance the order. Can only be used by the player whose turn it is, or the GM. "
+        "**/encounter next**: End the current turn and advance the order. Can only be used by the player whose turn it is, or the GM. "
         "The bot will edit the live turn-order message to show the new current actor and ping them. "
         "The round counter increments automatically when the order wraps.\n"
-        "**/view_encounter**: Show the current initiative order and round number at any time.\n"
+        "**/encounter view**: Show the current initiative order and round number at any time.\n"
         "\n"
         "**Ending Combat**\n"
-        "**/end_encounter**: Mark the encounter complete (GM only).\n"
+        "**/encounter end**: Mark the encounter complete (GM only).\n"
         "\n"
-        "**Turn order** is determined by each character's initiative roll (d20 + DEX modifier, or a custom bonus set with `/set_stats`). "
+        "**Turn order** is determined by each character's initiative roll (d20 + DEX modifier, or a custom bonus set with `/character stats`). "
         "Enemies use their initiative modifier. Tied rolls give priority to players."
     )
 
@@ -116,17 +119,17 @@ class Strings:
         "**FOR PLAYERS**\n"
         "You can roll at any time with `/roll <dice notation>`.\n"
         "If you want to store a character sheet in ORC, you'll need a character.\n"
-        "To get started, create a character with `/create_character` (pick your class — save proficiencies are set automatically!).\n"
-        "Then set your stats with `/set_stats` — Max HP will be calculated automatically.\n"
-        "For accurate rolls, set your skill proficiencies with `/set_skill`.\n"
-        "When you level up or multiclass, use `/add_class`.\n"
+        "To get started, create a character with `/character create` (pick your class — save proficiencies are set automatically!).\n"
+        "Then set your stats with `/character stats` — Max HP will be calculated automatically.\n"
+        "For accurate rolls, set your skill proficiencies with `/character skill`.\n"
+        "When you level up or multiclass, use `/character class_add`.\n"
         "Finally, set your Max HP with `/set_max_hp`.\n"
         "**FOR GMs**\n"
         "It is recommended that you read all pages of the help command.\n"
-        "That said for the very basics, if you want to create a party, do /create_party, and add characters with /party_add.\n"
-        "Once you have a party, you can create encounters with /create_encounter.\n"
-        "Add monsters with /add_enemy\n"
-        "Roll initiative and start the encounter with /start_encounter"
+        "That said for the very basics, if you want to create a party, do `/party create`, and add characters with `/party character_add`.\n"
+        "Once you have a party, you can create encounters with `/encounter create`.\n"
+        "Add monsters with `/encounter enemy`.\n"
+        "Roll initiative and start the encounter with `/encounter start`."
     )
     GUILD_JOIN_WELCOME = (
         "Hi! I'm **ORC** (Open-Source Roleplaying Companion), a D&D 5e assistant bot.\n\n"
@@ -166,7 +169,7 @@ class Strings:
     ATTACK_ADDED = "Added attack **{attack_name}** to **{char_name}**."
     ATTACK_UPDATED = "Updated attack **{attack_name}** for **{char_name}**."
     ATTACK_NOT_FOUND = "Attack '**{attack_name}**' not found."
-    ATTACK_NO_ATTACKS = "**{char_name}** has no attacks saved. Use `/add_attack` to add some!"
+    ATTACK_NO_ATTACKS = "**{char_name}** has no attacks saved. Use `/attack add` to add some!"
     ATTACK_LIST_TITLE = "Attacks for {char_name}"
     ATTACK_ROLL_MSG = "⚔️ **{char_name}** attacks with **{attack_obj_name}**!\n**To Hit**: `d20({d20_roll}) + {hit_modifier}` = **{hit_total}**\n**Damage**: `{damage_formula}` -> `{damage_detail}` = **{damage_total}**"
     
@@ -188,9 +191,9 @@ class Strings:
     CHAR_CREATED_ACTIVE = (
         "Character **{name}** created as a level **{level}** **{char_class}** and set as active!\n"
         "Saving throw proficiencies have been set from your class.\n"
-        "Next, set your stats with `/set_stats`, your skill proficiencies with `/set_skill`, "
+        "Next, set your stats with `/character stats`, your skill proficiencies with `/character skill`, "
         "and your Max HP with `/set_max_hp`.\n"
-        "View your character at any time with `/view_character`, and switch with `/switch_character`."
+        "View your character at any time with `/character view`, and switch with `/character switch`."
     )
     CHAR_STATS_FIRST_TIME = "This is your first time setting stats for this character. Please provide all core stats (strength, dexterity, constitution, intelligence, wisdom, charisma)."
     CHAR_STAT_LIMIT = "{stat_name} score must be between 1 and 30."
@@ -206,11 +209,13 @@ class Strings:
 
     # Character Sheet — multi-page (4 pages)
     CHAR_SHEET_FOOTER = "🏠 Overview  |  📊 Stats & Saves  |  🎯 Skills  |  ⚔️ Attacks"
+    CHAR_SHEET_NOT_YOUR_SHEET = "This character sheet belongs to someone else. Use `/character view` to open your own."
+    CHAR_VIEW_NOT_FOUND = "No character named **{name}** found among your characters or your active party."
     CHAR_SHEET_HP_FIELD = "HP"
     CHAR_SHEET_PROF_FIELD = "Proficiency Bonus"
-    CHAR_SHEET_NO_STATS = "*Stats not set — use `/set_stats`*"
-    CHAR_SHEET_NO_ATTACKS = "*No attacks saved — use `/add_attack`*"
-    CHAR_SHEET_AC_NOT_SET = "🛡 AC: *Not set — use `/set_ac`*"
+    CHAR_SHEET_NO_STATS = "*Stats not set — use `/character stats`*"
+    CHAR_SHEET_NO_ATTACKS = "*No attacks saved — use `/attack add`*"
+    CHAR_SHEET_AC_NOT_SET = "🛡 AC: *Not set — use `/character ac`*"
     CHAR_SHEET_AC = "🛡 AC: **{ac}**"
     CHAR_SHEET_INTRO_TITLE = "👤 {char_name} — Character Sheet"
     CHAR_SHEET_INTRO_DESC = (
@@ -234,7 +239,7 @@ class Strings:
     CHAR_CLASS_REMOVED = "Removed **{char_class}** from **{char_name}**. (Total level: {total_level})"
     CHAR_CLASS_NOT_FOUND = "**{char_name}** does not have the **{char_class}** class."
     CHAR_CLASS_TOTAL_LEVEL_EXCEEDED = "Adding {level} level(s) of **{char_class}** would bring **{char_name}** above level 20 (current total: {current_total})."
-    ERROR_CHAR_NO_CLASSES = "**{char_name}** has no class assigned yet. Use `/add_class` first."
+    ERROR_CHAR_NO_CLASSES = "**{char_name}** has no class assigned yet. Use `/character class_add` first."
     CHAR_SKILL_UNKNOWN = "Unknown skill: {skill}"
     CHAR_SKILL_UPDATED = "Updated **{skill}** for **{char_name}** to **{status}**"
     CHAR_LIST_NONE = "You don't have any characters in this server."
@@ -279,20 +284,63 @@ class Strings:
     ERROR_GM_ONLY_PARTY_DELETE = "Only a GM can delete the party."
     ERROR_USER_SERVER_NOT_INIT = "User or Server not initialized."
     ERROR_PARTY_CHAR_NOT_FOUND = "\nCharacters not found: {names}"
-    ERROR_PARTY_SET_ACTIVE_FIRST = "Set an active party first with `/active_party`."
+    ERROR_PARTY_SET_ACTIVE_FIRST = "Set an active party first with `/party active`."
+
+    # Character deletion confirmations
+    CHAR_DELETE_CONFIRM = (
+        "⚠️ Are you sure you want to permanently delete **{name}**? This cannot be undone."
+    )
+    CHAR_DELETE_ENCOUNTER_CONFIRM = (
+        "⚠️ **{name}** is currently in the active encounter '**{encounter_name}**'.\n"
+        "Deleting them will also remove their turn from the initiative order.\n\n"
+        "This cannot be undone. Are you sure?"
+    )
+    CHAR_DELETE_CANCELLED = "Deletion cancelled."
+
+    # Party — encounter-guard strings
+    PARTY_REMOVE_ENCOUNTER_WARNING = (
+        "⚠️ **{char_name}** is currently in the active encounter '**{encounter_name}**'.\n"
+        "Removing them will also remove their turn from the initiative order.\n\n"
+        "Do you want to proceed?"
+    )
+    PARTY_CHAR_REMOVE_CONFIRM = (
+        "⚠️ Are you sure you want to remove **{char_name}** from '**{party_name}**'?"
+    )
+    PARTY_REMOVE_ENCOUNTER_CONFIRMED = (
+        "Removed **{char_name}** from party '**{party_name}**' and from the initiative order."
+    )
+    PARTY_REMOVE_CANCELLED = "Removal cancelled."
+    PARTY_DELETE_CONFIRM = (
+        "⚠️ Are you sure you want to permanently delete party '**{party_name}**'? "
+        "This cannot be undone."
+    )
+    PARTY_DELETE_ENCOUNTER_CONFIRM = (
+        "⚠️ Party '**{party_name}**' has an open encounter: **{encounter_names}**.\n"
+        "Deleting the party will automatically complete and remove it.\n\n"
+        "Are you sure?"
+    )
+    PARTY_DELETE_CANCELLED = "Deletion cancelled."
+    PARTY_DELETE_ENCOUNTER_COMPLETED = (
+        "Open encounter '**{encounter_name}**' was automatically completed before the party was deleted."
+    )
+    PARTY_GM_REMOVE_SELF_CONFIRM = (
+        "⚠️ Are you sure you want to remove yourself as GM of '**{party_name}**'? "
+        "You will no longer be able to manage this party."
+    )
+    PARTY_GM_REMOVE_SELF_CANCELLED = "GM removal cancelled."
 
     # Encounter Commands
     ENCOUNTER_ORDER_HEADER = "⚔️ **{name}** | Round {round_number}"
-    ENCOUNTER_TURN_PING = "{ping} It is now **{name}**'s turn. When you have described your actions and made your rolls, end your turn with `/next_turn`."
-    ENCOUNTER_CREATED = "⚔️ Encounter **{name}** created! Add enemies with `/add_enemy`, then start combat with `/start_encounter`."
-    ENCOUNTER_ALREADY_OPEN = "This party already has an open encounter. End it with `/end_encounter` first."
+    ENCOUNTER_TURN_PING = "{ping} It is now **{name}**'s turn. When you have described your actions and made your rolls, end your turn with `/encounter next`."
+    ENCOUNTER_CREATED = "⚔️ Encounter **{name}** created! Add enemies with `/encounter enemy`, then start combat with `/encounter start`."
+    ENCOUNTER_ALREADY_OPEN = "This party already has an open encounter. End it with `/encounter end` first."
     ENCOUNTER_ENEMY_ADDED = "Added **{name}** (Initiative +{init_mod}, HP {hp}) to **{encounter_name}**."
     ENCOUNTER_ALREADY_STARTED = "The encounter has already started."
     ENCOUNTER_NOT_STARTED = "Enemies can only be added before the encounter starts."
-    ENCOUNTER_NO_ENEMIES = "Add at least one enemy with `/add_enemy` before starting."
+    ENCOUNTER_NO_ENEMIES = "Add at least one enemy with `/encounter enemy` before starting."
     ENCOUNTER_PARTY_NO_MEMBERS = "The party has no members."
     ENCOUNTER_NOT_ACTIVE = "There is no active encounter on this server."
-    ENCOUNTER_NEXT_TURN_DENIED = "You can only use `/next_turn` on your own turn, or if you are the GM."
+    ENCOUNTER_NEXT_TURN_DENIED = "You can only use `/encounter next` on your own turn, or if you are the GM."
     ENCOUNTER_TURN_ADVANCED = "Turn advanced."
     ENCOUNTER_ENDED = "⚔️ Encounter **{encounter_name}** has ended."
     ENCOUNTER_NO_ACTIVE_TO_END = "No active encounter to end."
@@ -303,7 +351,7 @@ class Strings:
     ERROR_GM_ONLY_ENCOUNTER_CREATE = "Only the GM of the party can create an encounter."
     ERROR_GM_ONLY_ENEMY_ADD = "Only the GM can add enemies."
     ERROR_GM_ONLY_ENCOUNTER_END = "Only the GM can end the encounter."
-    ERROR_NO_PENDING_ENCOUNTER = "No pending encounter found. Create one with `/create_encounter`."
+    ERROR_NO_PENDING_ENCOUNTER = "No pending encounter found. Create one with `/encounter create`."
 
 
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]

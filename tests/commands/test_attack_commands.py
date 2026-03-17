@@ -4,11 +4,11 @@ from tests.commands.conftest import get_callback
 
 
 # ---------------------------------------------------------------------------
-# /add_attack
+# /attack add
 # ---------------------------------------------------------------------------
 
 async def test_add_attack_creates_new(attack_bot, sample_character, interaction, session_factory):
-    cb = get_callback(attack_bot, "add_attack")
+    cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Longsword", hit_mod=5, damage_formula="1d8+3")
 
     interaction.response.send_message.assert_called_once()
@@ -29,7 +29,7 @@ async def test_add_attack_updates_existing(attack_bot, sample_character, interac
     db_session.add(existing)
     db_session.commit()
 
-    cb = get_callback(attack_bot, "add_attack")
+    cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Dagger", hit_mod=7, damage_formula="1d4+5")
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -42,7 +42,7 @@ async def test_add_attack_updates_existing(attack_bot, sample_character, interac
 
 
 async def test_add_attack_invalid_formula_rejected(attack_bot, sample_character, interaction):
-    cb = get_callback(attack_bot, "add_attack")
+    cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Sword", hit_mod=5, damage_formula="notadice")
 
     kwargs = interaction.response.send_message.call_args.kwargs
@@ -50,7 +50,7 @@ async def test_add_attack_invalid_formula_rejected(attack_bot, sample_character,
 
 
 async def test_add_attack_no_character(attack_bot, sample_user, sample_server, interaction):
-    cb = get_callback(attack_bot, "add_attack")
+    cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Sword", hit_mod=5, damage_formula="1d8")
 
     kwargs = interaction.response.send_message.call_args.kwargs
@@ -58,14 +58,14 @@ async def test_add_attack_no_character(attack_bot, sample_user, sample_server, i
 
 
 # ---------------------------------------------------------------------------
-# /attack
+# /attack roll
 # ---------------------------------------------------------------------------
 
 async def test_attack_success(attack_bot, sample_character, interaction, db_session):
     db_session.add(Attack(character_id=sample_character.id, name="Longsword", hit_modifier=5, damage_formula="1d8+3"))
     db_session.commit()
 
-    cb = get_callback(attack_bot, "attack")
+    cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Longsword")
 
     interaction.response.send_message.assert_called_once()
@@ -79,35 +79,35 @@ async def test_attack_case_insensitive_lookup(attack_bot, sample_character, inte
     db_session.add(Attack(character_id=sample_character.id, name="Longsword", hit_modifier=5, damage_formula="1d8"))
     db_session.commit()
 
-    cb = get_callback(attack_bot, "attack")
+    cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="longsword")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
 
 
 async def test_attack_not_found(attack_bot, sample_character, interaction):
-    cb = get_callback(attack_bot, "attack")
+    cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Vorpal Blade")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_attack_no_character(attack_bot, sample_user, sample_server, interaction):
-    cb = get_callback(attack_bot, "attack")
+    cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Sword")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ---------------------------------------------------------------------------
-# /attacks (list)
+# /attack list
 # ---------------------------------------------------------------------------
 
 async def test_attacks_list_sends_embed(attack_bot, sample_character, interaction, db_session):
     db_session.add(Attack(character_id=sample_character.id, name="Bow", hit_modifier=4, damage_formula="1d6+2"))
     db_session.commit()
 
-    cb = get_callback(attack_bot, "attacks")
+    cb = get_callback(attack_bot, "attack", "list")
     await cb(interaction)
 
     embed = interaction.response.send_message.call_args.kwargs.get("embed")
@@ -116,7 +116,7 @@ async def test_attacks_list_sends_embed(attack_bot, sample_character, interactio
 
 
 async def test_attacks_list_empty(attack_bot, sample_character, interaction):
-    cb = get_callback(attack_bot, "attacks")
+    cb = get_callback(attack_bot, "attack", "list")
     await cb(interaction)
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -124,7 +124,7 @@ async def test_attacks_list_empty(attack_bot, sample_character, interaction):
 
 
 async def test_attacks_list_no_character(attack_bot, sample_user, sample_server, interaction):
-    cb = get_callback(attack_bot, "attacks")
+    cb = get_callback(attack_bot, "attack", "list")
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -149,7 +149,7 @@ async def test_add_attack_over_limit_rejected(
         ))
     db_session.commit()
 
-    cb = get_callback(attack_bot, "add_attack")
+    cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="NewAttack", hit_mod=0, damage_formula="1d6")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -171,8 +171,7 @@ async def test_add_attack_update_existing_ignores_limit(
     ))
     db_session.commit()
 
-    cb = get_callback(attack_bot, "add_attack")
+    cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Longsword", hit_mod=5, damage_formula="1d8+5")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
-

@@ -44,7 +44,12 @@ def _open_encounter(db, party: Party) -> Optional[Encounter]:
 def _build_order_message(encounter: Encounter) -> str:
     """Render the initiative order as a Discord message string."""
     turns = sorted(encounter.turns, key=lambda t: t.order_position)
-    lines = [Strings.ENCOUNTER_ORDER_HEADER.format(name=encounter.name, round_number=encounter.round_number), "─" * 32]
+    lines = [
+        Strings.ENCOUNTER_ORDER_HEADER.format(
+            name=encounter.name, round_number=encounter.round_number
+        ),
+        "─" * 32,
+    ]
     for i, turn in enumerate(turns):
         is_current = i == encounter.current_turn_index
         if turn.character_id:
@@ -72,15 +77,21 @@ def _ping_for_turn(encounter: Encounter) -> str:
 
 
 def register_encounter_commands(bot: commands.Bot) -> None:
+    """Register the /encounter command group."""
+    encounter_group = app_commands.Group(
+        name="encounter", description="Manage combat encounters"
+    )
 
     # ------------------------------------------------------------------
-    # /create_encounter
+    # /encounter create
     # ------------------------------------------------------------------
 
-    @bot.tree.command(name="create_encounter", description="Create a new encounter for your active party")
+    @encounter_group.command(
+        name="create", description="Create a new encounter for your active party"
+    )
     @app_commands.describe(name="Name for this encounter (e.g. 'Goblin Ambush')")
-    async def create_encounter(interaction: discord.Interaction, name: str) -> None:
-        logger.debug(f"Command /create_encounter called by {interaction.user.id}")
+    async def encounter_create(interaction: discord.Interaction, name: str) -> None:
+        logger.debug(f"Command /encounter create called by {interaction.user.id}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
@@ -89,7 +100,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             if not party:
                 await interaction.response.send_message(
-                    Strings.ERROR_NO_ACTIVE_PARTY + " Use `/active_party` first.", ephemeral=True
+                    Strings.ERROR_NO_ACTIVE_PARTY + " Use `/party active` first.",
+                    ephemeral=True,
                 )
                 return
 
@@ -101,8 +113,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             if _open_encounter(db, party):
                 await interaction.response.send_message(
-                    Strings.ENCOUNTER_ALREADY_OPEN,
-                    ephemeral=True,
+                    Strings.ENCOUNTER_ALREADY_OPEN, ephemeral=True
                 )
                 return
 
@@ -114,7 +125,9 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             )
             db.add(encounter)
             db.commit()
-            logger.info(f"/create_encounter completed for user {interaction.user.id}: '{name}'")
+            logger.info(
+                f"/encounter create completed for user {interaction.user.id}: '{name}'"
+            )
             await interaction.response.send_message(
                 Strings.ENCOUNTER_CREATED.format(name=name)
             )
@@ -122,22 +135,24 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             db.close()
 
     # ------------------------------------------------------------------
-    # /add_enemy
+    # /encounter enemy
     # ------------------------------------------------------------------
 
-    @bot.tree.command(name="add_enemy", description="Add an enemy to the current pending encounter")
+    @encounter_group.command(
+        name="enemy", description="Add an enemy to the current pending encounter"
+    )
     @app_commands.describe(
         name="Enemy name (e.g. 'Goblin Chief')",
         initiative_modifier="Initiative modifier (DEX mod + any bonuses)",
         max_hp="Maximum hit points",
     )
-    async def add_enemy(
+    async def encounter_enemy(
         interaction: discord.Interaction,
         name: str,
         initiative_modifier: int,
         max_hp: int,
     ) -> None:
-        logger.debug(f"Command /add_enemy called by {interaction.user.id}")
+        logger.debug(f"Command /encounter enemy called by {interaction.user.id}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
@@ -184,20 +199,30 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             )
             db.add(enemy)
             db.commit()
-            logger.info(f"/add_enemy completed for user {interaction.user.id}: '{name}' added to '{encounter.name}'")
+            logger.info(
+                f"/encounter enemy completed for user {interaction.user.id}: "
+                f"'{name}' added to '{encounter.name}'"
+            )
             await interaction.response.send_message(
-                Strings.ENCOUNTER_ENEMY_ADDED.format(name=name, init_mod=initiative_modifier, hp=max_hp, encounter_name=encounter.name)
+                Strings.ENCOUNTER_ENEMY_ADDED.format(
+                    name=name,
+                    init_mod=initiative_modifier,
+                    hp=max_hp,
+                    encounter_name=encounter.name,
+                )
             )
         finally:
             db.close()
 
     # ------------------------------------------------------------------
-    # /start_encounter
+    # /encounter start
     # ------------------------------------------------------------------
 
-    @bot.tree.command(name="start_encounter", description="Roll initiative and begin the encounter")
-    async def start_encounter(interaction: discord.Interaction) -> None:
-        logger.debug(f"Command /start_encounter called by {interaction.user.id}")
+    @encounter_group.command(
+        name="start", description="Roll initiative and begin the encounter"
+    )
+    async def encounter_start(interaction: discord.Interaction) -> None:
+        logger.debug(f"Command /encounter start called by {interaction.user.id}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
@@ -205,7 +230,9 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             party = _active_party_for_user(db, user, server)
 
             if not party:
-                await interaction.response.send_message(Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True
+                )
                 return
 
             encounter = _open_encounter(db, party)
@@ -236,25 +263,29 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             await interaction.response.defer()
 
-            # Roll initiative for every participant and collect (roll, turn_obj)
             participants: list[tuple[int, EncounterTurn]] = []
 
             for char in members:
                 total, bonus = roll_initiative_for_character(char)
                 participants.append((
                     total,
-                    EncounterTurn(encounter_id=encounter.id, character_id=char.id, initiative_roll=total),
+                    EncounterTurn(
+                        encounter_id=encounter.id, character_id=char.id, initiative_roll=total
+                    ),
                 ))
 
             for enemy in encounter.enemies:
                 roll = random.randint(1, 20) + enemy.initiative_modifier
                 participants.append((
                     roll,
-                    EncounterTurn(encounter_id=encounter.id, enemy_id=enemy.id, initiative_roll=roll),
+                    EncounterTurn(
+                        encounter_id=encounter.id, enemy_id=enemy.id, initiative_roll=roll
+                    ),
                 ))
 
-            # Sort descending by roll; characters beat enemies on a tie
-            participants.sort(key=lambda x: (x[0], 1 if x[1].character_id else 0), reverse=True)
+            participants.sort(
+                key=lambda x: (x[0], 1 if x[1].character_id else 0), reverse=True
+            )
 
             for pos, (_, turn) in enumerate(participants):
                 turn.order_position = pos
@@ -263,9 +294,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             encounter.status = EncounterStatus.ACTIVE
             encounter.current_turn_index = 0
             encounter.round_number = 1
-            db.flush()  # populate turn.character / turn.enemy before building message
+            db.flush()
 
-            # Re-query encounter with relationships populated
             db.refresh(encounter)
             for t in encounter.turns:
                 if t.character_id:
@@ -282,29 +312,37 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             ping = _ping_for_turn(encounter)
             await interaction.followup.send(ping)
-            logger.info(f"/start_encounter completed: '{encounter.name}' is now ACTIVE")
+            logger.info(
+                f"/encounter start completed: '{encounter.name}' is now ACTIVE"
+            )
         finally:
             db.close()
 
     # ------------------------------------------------------------------
-    # /next_turn
+    # /encounter next
     # ------------------------------------------------------------------
 
-    @bot.tree.command(name="next_turn", description="End your turn and advance initiative order")
-    async def next_turn(interaction: discord.Interaction) -> None:
-        logger.debug(f"Command /next_turn called by {interaction.user.id}")
+    @encounter_group.command(
+        name="next", description="End your turn and advance the initiative order"
+    )
+    async def encounter_next(interaction: discord.Interaction) -> None:
+        logger.debug(f"Command /encounter next called by {interaction.user.id}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
             server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = _active_party_for_user(db, user, server)
 
-            # Find the active encounter on this server
+            if not party:
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
+                )
+                return
+
             encounter = (
                 db.query(Encounter)
-                .join(Party, Encounter.party_id == Party.id)
-                .join(Server, Encounter.server_id == Server.id)
                 .filter(
-                    Server.discord_id == str(interaction.guild_id),
+                    Encounter.party_id == party.id,
                     Encounter.status == EncounterStatus.ACTIVE,
                 )
                 .first()
@@ -318,25 +356,20 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             turns = sorted(encounter.turns, key=lambda t: t.order_position)
             current_turn = turns[encounter.current_turn_index]
-            party = encounter.party
             is_gm = user is not None and user in party.gms
 
-            # Determine if the caller is allowed to advance
             if current_turn.character_id:
                 owner_discord_id = current_turn.character.user.discord_id
                 is_owner = user and str(user.discord_id) == str(owner_discord_id)
             else:
-                # Enemy turn — only GM can advance
                 is_owner = False
 
             if not is_gm and not is_owner:
                 await interaction.response.send_message(
-                    Strings.ENCOUNTER_NEXT_TURN_DENIED,
-                    ephemeral=True,
+                    Strings.ENCOUNTER_NEXT_TURN_DENIED, ephemeral=True
                 )
                 return
 
-            # Advance the turn counter
             next_index = encounter.current_turn_index + 1
             if next_index >= len(turns):
                 encounter.round_number += 1
@@ -347,31 +380,29 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             db.commit()
             db.refresh(encounter)
 
-            # Edit the original order message
             order_msg = _build_order_message(encounter)
             original = await interaction.channel.fetch_message(int(encounter.message_id))
             await original.edit(content=order_msg)
 
-            # Ping the next participant
             ping = _ping_for_turn(encounter)
             await interaction.followup.send(ping)
             await interaction.response.send_message(
                 Strings.ENCOUNTER_TURN_ADVANCED, ephemeral=True
             )
             logger.info(
-                f"/next_turn: '{encounter.name}' advanced to index {encounter.current_turn_index} "
-                f"(round {encounter.round_number})"
+                f"/encounter next: '{encounter.name}' advanced to index "
+                f"{encounter.current_turn_index} (round {encounter.round_number})"
             )
         finally:
             db.close()
 
     # ------------------------------------------------------------------
-    # /end_encounter
+    # /encounter end
     # ------------------------------------------------------------------
 
-    @bot.tree.command(name="end_encounter", description="End the current encounter")
-    async def end_encounter(interaction: discord.Interaction) -> None:
-        logger.debug(f"Command /end_encounter called by {interaction.user.id}")
+    @encounter_group.command(name="end", description="End the current encounter")
+    async def encounter_end(interaction: discord.Interaction) -> None:
+        logger.debug(f"Command /encounter end called by {interaction.user.id}")
         db = SessionLocal()
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
@@ -379,7 +410,9 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             party = _active_party_for_user(db, user, server)
 
             if not party:
-                await interaction.response.send_message(Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True
+                )
                 return
 
             encounter = (
@@ -405,7 +438,9 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             encounter.status = EncounterStatus.COMPLETE
             db.commit()
-            logger.info(f"/end_encounter completed: '{encounter.name}' marked COMPLETE")
+            logger.info(
+                f"/encounter end completed: '{encounter.name}' marked COMPLETE"
+            )
             await interaction.response.send_message(
                 Strings.ENCOUNTER_ENDED.format(encounter_name=encounter.name)
             )
@@ -413,22 +448,30 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             db.close()
 
     # ------------------------------------------------------------------
-    # /view_encounter
+    # /encounter view
     # ------------------------------------------------------------------
 
-    @bot.tree.command(name="view_encounter", description="View the current encounter's initiative order")
-    async def view_encounter(interaction: discord.Interaction) -> None:
-        logger.debug(f"Command /view_encounter called by {interaction.user.id}")
+    @encounter_group.command(
+        name="view", description="View the current encounter's initiative order"
+    )
+    async def encounter_view(interaction: discord.Interaction) -> None:
+        logger.debug(f"Command /encounter view called by {interaction.user.id}")
         db = SessionLocal()
         try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
             server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = _active_party_for_user(db, user, server)
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
+                )
+                return
 
             encounter = (
                 db.query(Encounter)
-                .join(Party, Encounter.party_id == Party.id)
-                .join(Server, Encounter.server_id == Server.id)
                 .filter(
-                    Server.discord_id == str(interaction.guild_id),
+                    Encounter.party_id == party.id,
                     Encounter.status == EncounterStatus.ACTIVE,
                 )
                 .first()
@@ -443,7 +486,9 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             turns = sorted(encounter.turns, key=lambda t: t.order_position)
             embed = discord.Embed(
                 title=Strings.ENCOUNTER_VIEW_TITLE.format(name=encounter.name),
-                description=Strings.ENCOUNTER_VIEW_DESC.format(round_number=encounter.round_number),
+                description=Strings.ENCOUNTER_VIEW_DESC.format(
+                    round_number=encounter.round_number
+                ),
                 color=discord.Color.dark_red(),
             )
             for i, turn in enumerate(turns):
@@ -460,6 +505,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
 
             await interaction.response.send_message(embed=embed)
-            logger.info(f"/view_encounter served for '{encounter.name}'")
+            logger.info(f"/encounter view served for '{encounter.name}'")
         finally:
             db.close()
+
+    bot.tree.add_command(encounter_group)
