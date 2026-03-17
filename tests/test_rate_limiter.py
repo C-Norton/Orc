@@ -1,5 +1,4 @@
 import pytest
-from unittest.mock import patch
 import utils.rate_limiter as rl
 
 
@@ -38,17 +37,17 @@ def test_continues_true_while_in_window():
 # Sliding window expiry
 # ---------------------------------------------------------------------------
 
-def test_old_entries_expire_and_window_resets():
+def test_old_entries_expire_and_window_resets(mocker):
     now = 1000.0
 
     # Fill window at t=0
-    with patch("utils.rate_limiter.time.monotonic", return_value=now):
-        for _ in range(9):
-            rl.check_rate_limit("user1", "guild1")
+    mock_mono = mocker.patch("utils.rate_limiter.time.monotonic", return_value=now)
+    for _ in range(9):
+        rl.check_rate_limit("user1", "guild1")
 
     # Advance past the 10-second window
-    with patch("utils.rate_limiter.time.monotonic", return_value=now + 11):
-        result = rl.check_rate_limit("user1", "guild1")
+    mock_mono.return_value = now + 11
+    result = rl.check_rate_limit("user1", "guild1")
 
     assert result is False  # old entries evicted, window contains only 1 new command
 

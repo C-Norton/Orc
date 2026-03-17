@@ -86,9 +86,9 @@ async def test_party_add_party_not_found(party_bot, sample_user, sample_server, 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_party_add_not_gm(party_bot, sample_party, sample_character, db_session, session_factory):
+async def test_party_add_not_gm(mocker, party_bot, sample_party, sample_character, db_session, session_factory):
     """A user who isn't the GM cannot add members."""
-    other_interaction = make_interaction(user_id=999)
+    other_interaction = make_interaction(mocker, user_id=999)
     cb = get_callback(party_bot, "party_add")
     await cb(other_interaction, party_name="The Fellowship", character_name="Aldric")
 
@@ -129,11 +129,11 @@ async def test_party_remove_success(party_bot, sample_party, sample_character, d
     verify.close()
 
 
-async def test_party_remove_not_gm(party_bot, sample_party, sample_character, db_session):
+async def test_party_remove_not_gm(mocker, party_bot, sample_party, sample_character, db_session):
     sample_party.characters.append(sample_character)
     db_session.commit()
 
-    other_interaction = make_interaction(user_id=999)
+    other_interaction = make_interaction(mocker, user_id=999)
     cb = get_callback(party_bot, "party_remove")
     await cb(other_interaction, party_name="The Fellowship", character_name="Aldric")
 
@@ -180,14 +180,13 @@ async def test_active_party_view_none_set(party_bot, sample_user, sample_server,
 # /rollas
 # ---------------------------------------------------------------------------
 
-async def test_rollas_success(party_bot, sample_active_party, sample_character, db_session, interaction):
+async def test_rollas_success(mocker, party_bot, sample_active_party, sample_character, db_session, interaction):
     sample_active_party.characters.append(sample_character)
     db_session.commit()
 
     cb = get_callback(party_bot, "rollas")
-    from unittest.mock import patch
-    with patch("utils.dnd_logic.random.randint", return_value=10):
-        await cb(interaction, member_name="Aldric", notation="1d20")
+    mocker.patch("utils.dnd_logic.random.randint", return_value=10)
+    await cb(interaction, member_name="Aldric", notation="1d20")
 
     interaction.response.send_message.assert_called_once()
 
@@ -210,14 +209,13 @@ async def test_rollas_member_not_found(party_bot, sample_active_party, interacti
 # /partyroll
 # ---------------------------------------------------------------------------
 
-async def test_partyroll_success(party_bot, sample_active_party, sample_character, db_session, interaction):
+async def test_partyroll_success(mocker, party_bot, sample_active_party, sample_character, db_session, interaction):
     sample_active_party.characters.append(sample_character)
     db_session.commit()
 
     cb = get_callback(party_bot, "partyroll")
-    from unittest.mock import patch
-    with patch("utils.dnd_logic.random.randint", return_value=10):
-        await cb(interaction, notation="1d20")
+    mocker.patch("utils.dnd_logic.random.randint", return_value=10)
+    await cb(interaction, notation="1d20")
 
     interaction.response.defer.assert_called_once()
     interaction.followup.send.assert_called_once()
@@ -270,8 +268,8 @@ async def test_delete_party_success(party_bot, sample_party, interaction, sessio
     verify.close()
 
 
-async def test_delete_party_not_gm(party_bot, sample_party, session_factory):
-    other_interaction = make_interaction(user_id=999)
+async def test_delete_party_not_gm(mocker, party_bot, sample_party, session_factory):
+    other_interaction = make_interaction(mocker, user_id=999)
     cb = get_callback(party_bot, "delete_party")
     await cb(other_interaction, party_name="The Fellowship")
 

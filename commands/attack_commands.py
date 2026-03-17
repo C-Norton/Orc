@@ -7,6 +7,7 @@ from database import SessionLocal
 from models import User, Server, Character, Attack
 from dice_roller import roll_dice
 from utils.logging_config import get_logger
+from utils.strings import Strings
 
 logger = get_logger(__name__)
 
@@ -29,7 +30,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
             roll_dice(damage_formula) #raises a ValueError
 
             if not char:
-                await interaction.response.send_message("You don't have a character in this server.", ephemeral=True)
+                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
                 return
 
             # Check if attack already exists
@@ -37,11 +38,11 @@ def register_attack_commands(bot: commands.Bot) -> None:
             if attack:
                 attack.hit_modifier = hit_mod
                 attack.damage_formula = damage_formula
-                msg = f"Updated attack **{name}** for **{char.name}**."
+                msg = Strings.ATTACK_UPDATED.format(attack_name=name, char_name=char.name)
             else:
                 attack = Attack(character_id=char.id, name=name, hit_modifier=hit_mod, damage_formula=damage_formula)
                 db.add(attack)
-                msg = f"Added attack **{name}** to **{char.name}**."
+                msg = Strings.ATTACK_ADDED.format(attack_name=name, char_name=char.name)
             
             db.commit()
             logger.info(f"/add_attack completed for user {interaction.user.id}: {msg}")
@@ -64,7 +65,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
             logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
 
             if not char:
-                await interaction.response.send_message("You don't have a character in this server.", ephemeral=True)
+                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
                 return
 
             attack_obj = db.query(Attack).filter_by(character_id=char.id, name=attack_name).first()
@@ -72,7 +73,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 # Try case-insensitive match
                 attack_obj = next((a for a in char.attacks if a.name.lower() == attack_name.lower()), None)
                 if not attack_obj:
-                    await interaction.response.send_message(f"Attack '**{attack_name}**' not found.", ephemeral=True)
+                    await interaction.response.send_message(Strings.ATTACK_NOT_FOUND.format(attack_name=attack_name), ephemeral=True)
                     return
 
             # Hit roll
@@ -90,9 +91,16 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(f"❌ Error in damage formula: {str(e)}", ephemeral=True)
                 return
 
-            response = f"⚔️ **{char.name}** attacks with **{attack_obj.name}**!\n"
-            response += f"**To Hit**: `d20({d20_roll}) + {attack_obj.hit_modifier}` = **{hit_total}**\n"
-            response += f"**Damage**: `{attack_obj.damage_formula}` -> `{damage_detail}` = **{damage_total}**"
+            response = Strings.ATTACK_ROLL_MSG.format(
+                char_name=char.name,
+                attack_obj_name=attack_obj.name,
+                d20_roll=d20_roll,
+                hit_modifier=attack_obj.hit_modifier,
+                hit_total=hit_total,
+                damage_formula=attack_obj.damage_formula,
+                damage_detail=damage_detail,
+                damage_total=damage_total
+            )
             
             await interaction.response.send_message(response)
             logger.info(f"/attack completed for user {interaction.user.id}: {char.name} used {attack_obj.name}")
@@ -128,14 +136,14 @@ def register_attack_commands(bot: commands.Bot) -> None:
             logger.debug(f"Character lookup for user {interaction.user.id}: {'found: ' + char.name if char else 'not found'}")
 
             if not char:
-                await interaction.response.send_message("You don't have a character in this server.", ephemeral=True)
+                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
                 return
 
             if not char.attacks:
-                await interaction.response.send_message(f"**{char.name}** has no attacks saved. Use `/add_attack` to add some!")
+                await interaction.response.send_message(Strings.ATTACK_NO_ATTACKS.format(char_name=char.name))
                 return
 
-            embed = discord.Embed(title=f"Attacks for {char.name}", color=discord.Color.red())
+            embed = discord.Embed(title=Strings.ATTACK_LIST_TITLE.format(char_name=char.name), color=discord.Color.red())
             for attack_obj in char.attacks:
                 embed.add_field(
                     name=attack_obj.name,
