@@ -1,6 +1,6 @@
 import pytest
 from sqlalchemy import select
-from models import Party, Character, user_server_association
+from models import Party, Character, User, user_server_association
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
 
@@ -278,3 +278,200 @@ async def test_delete_party_not_gm(mocker, party_bot, sample_party, session_fact
     verify = session_factory()
     assert verify.query(Party).filter_by(name="The Fellowship").first() is not None
     verify.close()
+
+
+# ---------------------------------------------------------------------------
+# /add_gm
+# ---------------------------------------------------------------------------
+
+async def test_add_gm_success(mocker, party_bot, sample_party, sample_server, db_session, interaction, session_factory):
+    """A GM can add another Discord user as a GM."""
+    # Register a second user in the DB (the target)
+    target_user = User(discord_id="555")
+    db_session.add(target_user)
+    db_session.commit()
+
+    mock_member = mocker.Mock()
+    mock_member.id = 555
+
+    cb = get_callback(party_bot, "add_gm")
+    await cb(interaction, party_name="The Fellowship", new_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "555" in msg
+
+    verify = session_factory()
+    party = verify.query(Party).filter_by(name="The Fellowship").first()
+    assert any(gm.discord_id == "555" for gm in party.gms)
+    verify.close()
+
+
+async def test_add_gm_not_gm(mocker, party_bot, sample_party, db_session):
+    """A non-GM cannot add GMs."""
+    target_user = User(discord_id="555")
+    db_session.add(target_user)
+    db_session.commit()
+
+    non_gm_interaction = make_interaction(mocker, user_id=999)
+    mock_member = mocker.Mock()
+    mock_member.id = 555
+
+    cb = get_callback(party_bot, "add_gm")
+    await cb(non_gm_interaction, party_name="The Fellowship", new_gm=mock_member)
+
+    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_add_gm_target_not_registered(mocker, party_bot, sample_party, interaction):
+    """Adding a user who has never used the bot is rejected."""
+    mock_member = mocker.Mock()
+    mock_member.id = 9999  # no DB record
+
+    cb = get_callback(party_bot, "add_gm")
+    await cb(interaction, party_name="The Fellowship", new_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_add_gm_already_gm(mocker, party_bot, sample_party, sample_user, interaction):
+    """Adding a user who is already a GM is rejected."""
+    mock_member = mocker.Mock()
+    mock_member.id = int(sample_user.discord_id)  # user 111 is already the GM
+
+    cb = get_callback(party_bot, "add_gm")
+    await cb(interaction, party_name="The Fellowship", new_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_add_gm_party_not_found(mocker, party_bot, sample_user, sample_server, interaction):
+    """add_gm on a nonexistent party returns an error."""
+    mock_member = mocker.Mock()
+    mock_member.id = 555
+
+    cb = get_callback(party_bot, "add_gm")
+    await cb(interaction, party_name="Ghost Party", new_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+# ---------------------------------------------------------------------------
+# /remove_gm
+# ---------------------------------------------------------------------------
+
+async def test_remove_gm_success(mocker, party_bot, sample_party, sample_user, db_session, interaction, session_factory):
+    """A GM can remove another GM from the party."""
+    second_gm = User(discord_id="555")
+    db_session.add(second_gm)
+    db_session.flush()
+    sample_party.gms.append(second_gm)
+    db_session.commit()
+
+    mock_member = mocker.Mock()
+    mock_member.id = 555
+
+    cb = get_callback(party_bot, "remove_gm")
+    await cb(interaction, party_name="The Fellowship", target_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+
+    verify = session_factory()
+    party = verify.query(Party).filter_by(name="The Fellowship").first()
+    assert not any(gm.discord_id == "555" for gm in party.gms)
+    verify.close()
+
+
+async def test_remove_gm_self_success(mocker, party_bot, sample_party, sample_user, db_session, interaction, session_factory):
+    """A GM can remove themselves when at least one other GM exists."""
+    second_gm = User(discord_id="555")
+    db_session.add(second_gm)
+    db_session.flush()
+    sample_party.gms.append(second_gm)
+    db_session.commit()
+
+    # interaction user is 111 (sample_user), removing themselves
+    mock_member = mocker.Mock()
+    mock_member.id = int(sample_user.discord_id)
+
+    cb = get_callback(party_bot, "remove_gm")
+    await cb(interaction, party_name="The Fellowship", target_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+
+    verify = session_factory()
+    party = verify.query(Party).filter_by(name="The Fellowship").first()
+    assert not any(gm.discord_id == sample_user.discord_id for gm in party.gms)
+    verify.close()
+
+
+async def test_remove_gm_last_gm_blocked(mocker, party_bot, sample_party, sample_user, interaction):
+    """Removing the last GM is rejected to prevent orphaned parties."""
+    mock_member = mocker.Mock()
+    mock_member.id = int(sample_user.discord_id)
+
+    cb = get_callback(party_bot, "remove_gm")
+    await cb(interaction, party_name="The Fellowship", target_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "last" in msg.lower()
+
+
+async def test_remove_gm_not_gm(mocker, party_bot, sample_party, sample_user, db_session):
+    """A non-GM cannot remove GMs."""
+    non_gm_interaction = make_interaction(mocker, user_id=999)
+    mock_member = mocker.Mock()
+    mock_member.id = int(sample_user.discord_id)
+
+    cb = get_callback(party_bot, "remove_gm")
+    await cb(non_gm_interaction, party_name="The Fellowship", target_gm=mock_member)
+
+    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_remove_gm_target_not_a_gm(mocker, party_bot, sample_party, db_session, interaction):
+    """Trying to remove someone who isn't a GM returns an error."""
+    non_gm_user = User(discord_id="555")
+    db_session.add(non_gm_user)
+    db_session.commit()
+
+    mock_member = mocker.Mock()
+    mock_member.id = 555
+
+    cb = get_callback(party_bot, "remove_gm")
+    await cb(interaction, party_name="The Fellowship", target_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_remove_gm_party_not_found(mocker, party_bot, sample_user, sample_server, interaction):
+    """remove_gm on a nonexistent party returns an error."""
+    mock_member = mocker.Mock()
+    mock_member.id = 111
+
+    cb = get_callback(party_bot, "remove_gm")
+    await cb(interaction, party_name="Ghost Party", target_gm=mock_member)
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+# ---------------------------------------------------------------------------
+# view_party shows multiple GMs
+# ---------------------------------------------------------------------------
+
+async def test_view_party_shows_multiple_gms(mocker, party_bot, sample_party, sample_user, db_session, interaction):
+    """view_party embed lists all GMs when there are multiple."""
+    second_gm = User(discord_id="555")
+    db_session.add(second_gm)
+    db_session.flush()
+    sample_party.gms.append(second_gm)
+    db_session.commit()
+
+    cb = get_callback(party_bot, "view_party")
+    await cb(interaction, party_name="The Fellowship")
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    gm_field = next(f for f in embed.fields if f.name == "GMs")
+    assert "111" in gm_field.value
+    assert "555" in gm_field.value

@@ -17,3 +17,10 @@ party_character_association = Table(
     Column('party_id', Integer, ForeignKey('parties.id')),
     Column('character_id', Integer, ForeignKey('characters.id'))
 )
+
+party_gm_association = Table(
+    'party_gm',
+    Base.metadata,
+    Column('party_id', Integer, ForeignKey('parties.id', ondelete='CASCADE')),
+    Column('user_id', Integer, ForeignKey('users.id'))
+)

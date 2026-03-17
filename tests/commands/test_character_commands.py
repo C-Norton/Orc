@@ -11,7 +11,7 @@ from tests.commands.conftest import get_callback
 
 async def test_create_character_success(char_bot, sample_user, sample_server, interaction, session_factory):
     cb = get_callback(char_bot, "create_character")
-    await cb(interaction, name="Aldric")
+    await cb(interaction, name="Aldric", level=1)
 
     interaction.response.send_message.assert_called_once()
     msg = interaction.response.send_message.call_args.args[0]
@@ -27,7 +27,7 @@ async def test_create_character_success(char_bot, sample_user, sample_server, in
 
 async def test_create_character_name_too_long(char_bot, interaction):
     cb = get_callback(char_bot, "create_character")
-    await cb(interaction, name="A" * 101)
+    await cb(interaction, name="A" * 101, level=1)
 
     kwargs = interaction.response.send_message.call_args.kwargs
     assert kwargs.get("ephemeral") is True
@@ -35,7 +35,7 @@ async def test_create_character_name_too_long(char_bot, interaction):
 
 async def test_create_character_duplicate_name(char_bot, sample_character, interaction):
     cb = get_callback(char_bot, "create_character")
-    await cb(interaction, name="Aldric")  # sample_character is already named Aldric
+    await cb(interaction, name="Aldric", level=1)  # sample_character is already named Aldric
 
     kwargs = interaction.response.send_message.call_args.kwargs
     assert kwargs.get("ephemeral") is True
@@ -45,7 +45,7 @@ async def test_create_character_duplicate_name(char_bot, sample_character, inter
 async def test_create_character_new_char_becomes_active(char_bot, sample_character, interaction, session_factory):
     """Creating a second character should deactivate the first."""
     cb = get_callback(char_bot, "create_character")
-    await cb(interaction, name="Beren")
+    await cb(interaction, name="Beren", level=1)
 
     verify = session_factory()
     old = verify.query(Character).filter_by(name="Aldric").first()
@@ -59,7 +59,7 @@ async def test_create_character_auto_creates_user_record(mocker, char_bot, sampl
     """A brand-new Discord user should have a User record created automatically."""
     new_user_interaction = make_interaction(mocker, user_id=999)
     cb = get_callback(char_bot, "create_character")
-    await cb(new_user_interaction, name="Ghost")
+    await cb(new_user_interaction, name="Ghost", level=1)
 
     verify = session_factory()
     from models import User

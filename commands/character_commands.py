@@ -26,7 +26,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     """
     @bot.tree.command(name="create_character", description="Create a new D&D character for this server")
     @app_commands.describe(name="The name of your character")
-    async def create_character(interaction: discord.Interaction, name: str) -> None:
+    async def create_character(interaction: discord.Interaction, name: str, level: int) -> None:
         logger.debug(f"Command /create_character called by {interaction.user} (ID: {interaction.user.id}) in guild {interaction.guild_id} with name: {name}")
         db = SessionLocal()
 
@@ -52,15 +52,17 @@ def register_character_commands(bot: commands.Bot) -> None:
             if existing_char:
                 await interaction.response.send_message(Strings.CHAR_EXISTS.format(name=name), ephemeral=True)
                 return
-
+            if level < 1 or level > 20:
+                await interaction.response.send_message(Strings.CHAR_LEVEL_LIMIT, ephemeral=True)
+                return
             # Deactivate all other characters for this user in this server
             db.query(Character).filter_by(user=user, server=server).update({"is_active": False})
 
-            new_char = Character(name=name, user=user, server=server, is_active=True)
+            new_char = Character(name=name, user=user, server=server, level= level, is_active=True)
             db.add(new_char)
             db.commit()
-            logger.info(f"/create_character completed for user {interaction.user.id}: created '{name}'")
-            await interaction.response.send_message(Strings.CHAR_CREATED_ACTIVE.format(name=name))
+            logger.info(f"/create_character completed for user {interaction.user.id}: created '{name}' at level {level}")
+            await interaction.response.send_message(Strings.CHAR_CREATED_ACTIVE.format(name=name, level=level))
         finally:
             db.close()
 
