@@ -8,6 +8,8 @@ from database import SessionLocal
 from models import User, Server, Character, Attack, Party, Encounter, EncounterTurn, Enemy, user_server_association
 from enums.encounter_status import EncounterStatus
 from dice_roller import roll_dice
+from enums.crit_rule import CritRule
+from utils.crit_logic import apply_crit_damage
 from utils.encounter_utils import remove_enemy_turn_from_encounter, notify_gms_hp_update
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.logging_config import get_logger
@@ -144,9 +146,27 @@ def register_attack_commands(bot: commands.Bot) -> None:
 
             d20_roll = random.randint(1, 20)
             hit_total = d20_roll + attack_obj.hit_modifier
+            is_crit = (d20_roll == 20)
+
+            # ----------------------------------------------------------------
+            # Determine crit rule and roll damage
+            # ----------------------------------------------------------------
+            party = _active_party_for_user(db, user, server)
+            crit_rule = CritRule.DOUBLE_DICE
+            if is_crit and party and party.settings:
+                crit_rule = party.settings.crit_rule
 
             try:
-                rolls, modifier, damage_total = roll_dice(attack_obj.damage_formula)
+                if is_crit:
+                    crit_result = apply_crit_damage(attack_obj.damage_formula, crit_rule)
+                    rolls = crit_result.rolls
+                    modifier = crit_result.modifier
+                    damage_total = crit_result.total
+                    grants_inspiration = crit_result.grants_inspiration
+                else:
+                    rolls, modifier, damage_total = roll_dice(attack_obj.damage_formula)
+                    grants_inspiration = False
+
                 rolls_str = ", ".join(map(str, rolls))
                 mod_str = f" {modifier:+d}" if modifier != 0 else ""
                 damage_detail = f"({rolls_str}){mod_str}"
@@ -159,31 +179,38 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 )
                 return
 
+            crit_prefix = Strings.CRIT_HIT_HEADER if is_crit and crit_rule != CritRule.NONE else ""
+            inspiration_suffix = Strings.CRIT_PERKINS_INSPIRATION if grants_inspiration else ""
+
             # ----------------------------------------------------------------
-            # Untargeted path — original behaviour unchanged
+            # Untargeted path
             # ----------------------------------------------------------------
             if target is None:
-                response = Strings.ATTACK_ROLL_MSG.format(
-                    char_name=char.name,
-                    attack_obj_name=attack_obj.name,
-                    d20_roll=d20_roll,
-                    hit_modifier=attack_obj.hit_modifier,
-                    hit_total=hit_total,
-                    damage_formula=attack_obj.damage_formula,
-                    damage_detail=damage_detail,
-                    damage_total=damage_total,
+                response = (
+                    crit_prefix
+                    + Strings.ATTACK_ROLL_MSG.format(
+                        char_name=char.name,
+                        attack_obj_name=attack_obj.name,
+                        d20_roll=d20_roll,
+                        hit_modifier=attack_obj.hit_modifier,
+                        hit_total=hit_total,
+                        damage_formula=attack_obj.damage_formula,
+                        damage_detail=damage_detail,
+                        damage_total=damage_total,
+                    )
+                    + inspiration_suffix
                 )
                 await interaction.response.send_message(response)
                 logger.info(
                     f"/attack roll completed for user {interaction.user.id}: "
                     f"{char.name} used {attack_obj.name}"
+                    + (" (CRIT)" if is_crit else "")
                 )
                 return
 
             # ----------------------------------------------------------------
             # Targeted path — resolve against encounter enemy
             # ----------------------------------------------------------------
-            party = _active_party_for_user(db, user, server)
             if not party:
                 await interaction.response.send_message(
                     Strings.ATTACK_TARGET_NO_ENCOUNTER, ephemeral=True
@@ -228,22 +255,26 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            if hit_total >= enemy.ac:
-                # Hit — apply damage and notify GMs
+            if is_crit or hit_total >= enemy.ac:
+                # Hit (nat 20 always hits) — apply damage and notify GMs
                 new_hp = max(0, enemy.current_hp - damage_total)
                 enemy.current_hp = new_hp
 
-                hit_message = Strings.ATTACK_ROLL_HIT_TARGET.format(
-                    char_name=char.name,
-                    enemy_name=enemy.name,
-                    attack_name=attack_obj.name,
-                    d20_roll=d20_roll,
-                    hit_modifier=attack_obj.hit_modifier,
-                    hit_total=hit_total,
-                    ac=enemy.ac,
-                    damage_formula=attack_obj.damage_formula,
-                    damage_detail=damage_detail,
-                    damage_total=damage_total,
+                hit_message = (
+                    crit_prefix
+                    + Strings.ATTACK_ROLL_HIT_TARGET.format(
+                        char_name=char.name,
+                        enemy_name=enemy.name,
+                        attack_name=attack_obj.name,
+                        d20_roll=d20_roll,
+                        hit_modifier=attack_obj.hit_modifier,
+                        hit_total=hit_total,
+                        ac=enemy.ac,
+                        damage_formula=attack_obj.damage_formula,
+                        damage_detail=damage_detail,
+                        damage_total=damage_total,
+                    )
+                    + inspiration_suffix
                 )
 
                 if new_hp == 0:

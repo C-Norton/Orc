@@ -4,6 +4,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
+from enums.crit_rule import CritRule
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from models.base import Base
 
@@ -32,6 +33,11 @@ class PartySettings(Base):
     )
     enemy_ac_public: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
+    )
+    crit_rule: Mapped[CritRule] = mapped_column(
+        SAEnum(CritRule, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=CritRule.DOUBLE_DICE,
     )
 
     party: Mapped["Party"] = relationship("Party", back_populates="settings")
