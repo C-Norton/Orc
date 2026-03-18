@@ -1,13 +1,14 @@
 from sqlalchemy import Integer, String, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import Base, party_character_association, party_gm_association
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     from models.user import User
     from models.server import Server
     from models.character import Character
     from models.encounter import Encounter
+    from models.party_settings import PartySettings
 
 
 class Party(Base):
@@ -27,6 +28,9 @@ class Party(Base):
     )
     encounters: Mapped[list["Encounter"]] = relationship(
         "Encounter", back_populates="party", cascade="all, delete-orphan"
+    )
+    settings: Mapped[Optional["PartySettings"]] = relationship(
+        "PartySettings", back_populates="party", uselist=False, cascade="all, delete-orphan"
     )
 
     __table_args__ = (UniqueConstraint('server_id', 'name', name='_server_party_name_uc'),)

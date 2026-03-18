@@ -62,7 +62,9 @@ class Strings:
     HELP_COMBAT_VALUE = (
         "**/attack add <name> <hit_mod> <damage>**: Save an attack (e.g., `/attack add Longsword 5 1d8+3`).\n"
         "**/attack list**: List all your saved attacks.\n"
-        "**/attack roll <name>**: Roll a to-hit and damage roll for a saved attack."
+        "**/attack roll <name> [target]**: Roll a to-hit and damage roll for a saved attack. "
+        "In an active encounter, pass `target` as the enemy's position number to resolve the hit "
+        "against their AC and automatically update their HP."
     )
     
     HELP_ROLLING_NAME = "🎲 Rolling"
@@ -91,14 +93,17 @@ class Strings:
         "**/party gm_add <party> <user>**: Add a Discord user as a GM of a party (GM only).\n"
         "**/party gm_remove <party> <user>**: Remove a Discord user as a GM of a party (GM only).\n"
         "**/party view <name>**: View a party's members and GMs.\n"
-        "**/party delete <name>**: Delete a party (GM only)."
+        "**/party delete <name>**: Delete a party (GM only).\n"
+        "**/party settings view [party]**: View the current settings for a party.\n"
+        "**/party settings initiative_mode <party> <mode>**: Set how enemy initiative is rolled: `by_type` (default), `individual`, or `shared` (GM only).\n"
+        "**/party settings enemy_ac <party> <true/false>**: Set whether enemy AC values are visible to all players (GM only)."
     )
     
     HELP_ENCOUNTER_NAME = "⚔️ Encounter & Initiative Tracking"
     HELP_ENCOUNTER_VALUE = (
         "**Setup (GM only)**\n"
         "**/encounter create <name>**: Open a new encounter for your active party.\n"
-        "**/encounter enemy <name> <init_mod> <max_hp>**: Add an enemy before combat starts. Repeat for each enemy.\n"
+        "**/encounter enemy <name> <init_mod> <max_hp> [count] [ac]**: Add one or more enemies before combat starts. `max_hp` accepts a flat number (`15`) or dice formula (`2d8+4`). `count` defaults to 1 and creates numbered enemies (e.g. `Goblin 1`–`Goblin N`).\n"
         "**/encounter start**: Roll initiative for all party members and enemies, post the turn order, and ping whoever acts first.\n"
         "\n"
         "**During Combat**\n"
@@ -111,7 +116,11 @@ class Strings:
         "**/encounter end**: Mark the encounter complete (GM only).\n"
         "\n"
         "**Turn order** is determined by each character's initiative roll (d20 + DEX modifier, or a custom bonus set with `/character stats`). "
-        "Enemies use their initiative modifier. Tied rolls give priority to players."
+        "Enemies use their initiative modifier. Tied rolls give priority to players.\n"
+        "\n"
+        "**HP Management (GM only)**\n"
+        "**/encounter damage <position> <damage>**: Apply damage to an enemy by their position number in the initiative order. "
+        "The enemy is automatically removed from the order when their HP reaches 0, and a defeat announcement is posted publicly."
     )
 
     HELP_GETTING_STARTED_NAME = "⭐ QuickStart Guide"
@@ -172,7 +181,34 @@ class Strings:
     ATTACK_NO_ATTACKS = "**{char_name}** has no attacks saved. Use `/attack add` to add some!"
     ATTACK_LIST_TITLE = "Attacks for {char_name}"
     ATTACK_ROLL_MSG = "⚔️ **{char_name}** attacks with **{attack_obj_name}**!\n**To Hit**: `d20({d20_roll}) + {hit_modifier}` = **{hit_total}**\n**Damage**: `{damage_formula}` -> `{damage_detail}` = **{damage_total}**"
-    
+    ATTACK_ROLL_HIT_TARGET = (
+        "⚔️ **{char_name}** attacks **{enemy_name}** with **{attack_name}**!\n"
+        "**To Hit**: `d20({d20_roll}) + {hit_modifier}` = **{hit_total}** vs AC {ac} — **HIT!**\n"
+        "**Damage**: `{damage_formula}` → `{damage_detail}` = **{damage_total}**"
+    )
+    ATTACK_ROLL_MISS_TARGET = (
+        "⚔️ **{char_name}** attacks **{enemy_name}** with **{attack_name}**!\n"
+        "**To Hit**: `d20({d20_roll}) + {hit_modifier}` = **{hit_total}** vs AC {ac} — **MISS!**"
+    )
+    ATTACK_TARGET_NO_ENCOUNTER = (
+        "No active encounter found. Targeted attacks require an active combat encounter."
+    )
+    ATTACK_TARGET_NOT_FOUND = (
+        "❌ No enemy named **{enemy_name}** found in the current encounter."
+    )
+    ATTACK_TARGET_NO_AC = (
+        "❌ **{enemy_name}** has no AC set. Ask the GM to add it with `/encounter enemy`."
+    )
+    ATTACK_GM_DAMAGE_NOTIFY = (
+        "⚔️ **{enemy_name}** took {damage} damage from {char_name}'s {attack_name}. "
+        "HP: {current_hp}/{max_hp}"
+    )
+    ATTACK_GM_ENEMY_DEFEATED = (
+        "💀 **{enemy_name}** was defeated by {char_name}'s {attack_name}!"
+    )
+    ENCOUNTER_GM_DM_EMBED_TITLE = "⚔️ {encounter_name}"
+    ENCOUNTER_GM_DM_EMBED_FOOTER = "Party: {party_name}"
+
     ERROR_INVALID_DICE = "Invalid dice notation. Use format like '1d20' or '2d6+3'."
     ERROR_DICE_LIMIT = "Too many dice or too many sides! Keep it reasonable."
 
@@ -335,6 +371,11 @@ class Strings:
     ENCOUNTER_CREATED = "⚔️ Encounter **{name}** created! Add enemies with `/encounter enemy`, then start combat with `/encounter start`."
     ENCOUNTER_ALREADY_OPEN = "This party already has an open encounter. End it with `/encounter end` first."
     ENCOUNTER_ENEMY_ADDED = "Added **{name}** (Initiative +{init_mod}, HP {hp}) to **{encounter_name}**."
+    ENCOUNTER_ENEMY_ADDED_SINGLE = "Added **{name}** to **{encounter_name}** (Init: {init_mod:+d}, HP: {hp}, AC: {ac_str})."
+    ENCOUNTER_ENEMIES_ADDED_BULK = "Added {count}× **{type_name}** to **{encounter_name}**:\n{enemy_lines}"
+    ENCOUNTER_ENEMY_BULK_LINE = "• **{name}** — HP: {hp}{ac_part}"
+    ENCOUNTER_INVALID_HP = "❌ Invalid HP value `{value}`. Use a number (e.g. `15`) or dice formula (e.g. `2d8+4`)."
+    ENCOUNTER_ENEMY_COUNT_OVER_LIMIT = "❌ Cannot add {count} {enemy_word}: the encounter limit is {limit} and {remaining} slot(s) remain."
     ENCOUNTER_ALREADY_STARTED = "The encounter has already started."
     ENCOUNTER_NOT_STARTED = "Enemies can only be added before the encounter starts."
     ENCOUNTER_NO_ENEMIES = "Add at least one enemy with `/encounter enemy` before starting."
@@ -348,10 +389,36 @@ class Strings:
     ENCOUNTER_VIEW_DESC = "Round {round_number}"
     ENCOUNTER_VIEW_ORDER_FIELD = "Initiative Order"
     
+    ENCOUNTER_DAMAGE_HP_UPDATE = "⚔️ **{name}** takes {damage} damage. HP: {current_hp}/{max_hp}"
+    ENCOUNTER_DAMAGE_ENEMY_DEFEATED = "💀 **{name}** has been defeated and removed from the initiative order!"
+    ENCOUNTER_DAMAGE_INVALID_POSITION = "❌ Position {position} is not valid. The initiative order has {count} position(s)."
+    ENCOUNTER_DAMAGE_NOT_ENEMY = "❌ Position {position} is a player character. Use `/hp damage` for player characters."
+    ENCOUNTER_DAMAGE_MUST_BE_POSITIVE = "❌ Damage must be greater than zero."
+    ENCOUNTER_VIEW_ENEMY_HP = "HP: {current_hp}/{max_hp}"
+    ENCOUNTER_VIEW_ENEMY_HP_AC = "HP: {current_hp}/{max_hp} | AC: {ac}"
+    ENCOUNTER_VIEW_CHARACTER_HP = "HP: {current_hp}/{max_hp}"
+    ENCOUNTER_VIEW_CHARACTER_HP_UNKNOWN = "HP: unknown"
+    ENCOUNTER_VIEW_GM_DETAILS_TITLE = "GM Details — {name}"
+    ENCOUNTER_VIEW_GM_ENEMY_VALUE = "HP: {current_hp}/{max_hp} | AC: {ac_str} | Init mod: {init_mod:+d}"
     ERROR_GM_ONLY_ENCOUNTER_CREATE = "Only the GM of the party can create an encounter."
     ERROR_GM_ONLY_ENEMY_ADD = "Only the GM can add enemies."
+    ERROR_GM_ONLY_ENCOUNTER_DAMAGE = "Only a GM can apply damage to enemies."
     ERROR_GM_ONLY_ENCOUNTER_END = "Only the GM can end the encounter."
     ERROR_NO_PENDING_ENCOUNTER = "No pending encounter found. Create one with `/encounter create`."
+
+    # Party Settings
+    PARTY_SETTINGS_UPDATED = (
+        "✅ Setting **{setting}** updated to **{value}** for party '**{party_name}**'."
+    )
+    PARTY_SETTINGS_VIEW = (
+        "⚙️ **Settings for '{party_name}'**\n"
+        "Initiative Mode: **{initiative_mode}**\n"
+        "Enemy AC visible to players: **{enemy_ac_public}**"
+    )
+    PARTY_SETTINGS_INVALID_MODE = (
+        "❌ Invalid initiative mode. Choose from: `by_type`, `individual`, `shared`."
+    )
+    ERROR_GM_ONLY_PARTY_SETTINGS = "Only a GM of this party can change settings."
 
 
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]

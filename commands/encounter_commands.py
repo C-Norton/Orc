@@ -5,14 +5,81 @@ from discord.ext import commands
 from typing import List, Optional
 from sqlalchemy import select
 from database import SessionLocal
-from models import User, Server, Party, Character, Encounter, Enemy, EncounterTurn, user_server_association
+from models import User, Server, Party, PartySettings, Character, Encounter, Enemy, EncounterTurn, user_server_association
 from enums.encounter_status import EncounterStatus
+from enums.enemy_initiative_mode import EnemyInitiativeMode
 from utils.dnd_logic import roll_initiative_for_character, get_stat_modifier
+from utils.encounter_utils import remove_enemy_turn_from_encounter
 from utils.limits import MAX_ENEMIES_PER_ENCOUNTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
+from dice_roller import roll_dice
 
 logger = get_logger(__name__)
+
+
+def _get_or_create_party_settings(db, party: Party) -> PartySettings:
+    """Return the PartySettings for a party, creating with defaults if absent.
+
+    Args:
+        db: An active SQLAlchemy session.
+        party: The Party instance whose settings are needed.
+
+    Returns:
+        The existing or newly-created PartySettings for the party.
+    """
+    settings = db.query(PartySettings).filter_by(party_id=party.id).first()
+    if settings is None:
+        settings = PartySettings(party_id=party.id)
+        db.add(settings)
+        db.flush()
+    return settings
+
+
+def _validate_hp_format(value: str) -> None:
+    """Validate a max_hp input string without rolling any dice.
+
+    Checks that the value is either a positive integer string or a valid dice
+    notation formula.  Does not consume any randomness.
+
+    Raises:
+        ValueError: If the format is unrecognised.  The exception message
+            contains the original input for use in user-facing error messages.
+    """
+    import re as _re
+    stripped_value = value.strip()
+    if stripped_value.isdigit():
+        if int(stripped_value) <= 0:
+            raise ValueError(stripped_value)
+        return
+    # Accept standard dice notation: optional NdX, optional +/- modifier
+    dice_pattern = _re.compile(r'^(\d+)?d(\d+)([+-]\d+)?$', _re.IGNORECASE)
+    if not dice_pattern.match(stripped_value.replace(' ', '')):
+        raise ValueError(stripped_value)
+
+
+def _parse_hp_input(value: str) -> int:
+    """Parse a max_hp input string into a resolved integer HP value.
+
+    Accepts a flat integer string (e.g. ``"15"``) or a dice notation formula
+    (e.g. ``"2d8+4"``).  The dice formula is rolled once to produce the value.
+
+    Raises:
+        ValueError: If the string is neither a valid integer nor valid dice
+            notation.  The exception message contains the original input so
+            callers can embed it in user-facing error messages.
+    """
+    stripped_value = value.strip()
+    if stripped_value.isdigit():
+        resolved_hp = int(stripped_value)
+        if resolved_hp <= 0:
+            raise ValueError(stripped_value)
+        return resolved_hp
+    try:
+        _rolls, _modifier, total = roll_dice(stripped_value)
+        return max(total, 1)
+    except ValueError:
+        raise ValueError(stripped_value)
 
 
 def _active_party_for_user(db, user: User, server: Server) -> Optional[Party]:
@@ -42,7 +109,10 @@ def _open_encounter(db, party: Party) -> Optional[Encounter]:
 
 
 def _build_order_message(encounter: Encounter) -> str:
-    """Render the initiative order as a Discord message string."""
+    """Render the initiative order as a Discord message string.
+
+    Includes current HP for enemies and characters (when HP is set).
+    """
     turns = sorted(encounter.turns, key=lambda t: t.order_position)
     lines = [
         Strings.ENCOUNTER_ORDER_HEADER.format(
@@ -53,12 +123,24 @@ def _build_order_message(encounter: Encounter) -> str:
     for i, turn in enumerate(turns):
         is_current = i == encounter.current_turn_index
         if turn.character_id:
-            label = f"{turn.character.name} (Player)"
+            char = turn.character
+            label = f"{char.name} (Player)"
+            if char.current_hp is not None and char.max_hp is not None:
+                hp_part = f" — HP: {char.current_hp}/{char.max_hp}"
+            else:
+                hp_part = ""
         else:
-            label = f"{turn.enemy.name} (Enemy)"
+            enemy = turn.enemy
+            label = f"{enemy.name} (Enemy)"
+            if enemy.current_hp is not None and enemy.max_hp is not None:
+                hp_part = f" — HP: {enemy.current_hp}/{enemy.max_hp}"
+            else:
+                hp_part = ""
         arrow = "▶  " if is_current else "   "
         bold = "**" if is_current else ""
-        lines.append(f"{arrow}{i + 1}. {bold}{label}{bold} — {turn.initiative_roll}")
+        lines.append(
+            f"{arrow}{i + 1}. {bold}{label}{bold} — {turn.initiative_roll}{hp_part}"
+        )
     lines.append("─" * 32)
     return "\n".join(lines)
 
@@ -139,19 +221,29 @@ def register_encounter_commands(bot: commands.Bot) -> None:
     # ------------------------------------------------------------------
 
     @encounter_group.command(
-        name="enemy", description="Add an enemy to the current pending encounter"
+        name="enemy", description="Add one or more enemies to the current pending encounter"
     )
     @app_commands.describe(
-        name="Enemy name (e.g. 'Goblin Chief')",
+        name="Enemy name (e.g. 'Goblin')",
         initiative_modifier="Initiative modifier (DEX mod + any bonuses)",
-        max_hp="Maximum hit points",
+        max_hp="Hit points — flat number (e.g. 15) or dice formula (e.g. 2d8+4)",
+        count="Number of enemies to add (default 1)",
+        ac="Armor Class (optional)",
     )
     async def encounter_enemy(
         interaction: discord.Interaction,
         name: str,
         initiative_modifier: int,
-        max_hp: int,
+        max_hp: str,
+        count: int = 1,
+        ac: Optional[int] = None,
     ) -> None:
+        """Add one or more enemies to the current PENDING encounter.
+
+        Supports flat HP values (``"15"``) or dice formulas (``"2d8+4"``).
+        When count > 1 the enemies are named ``"<name> 1"`` through
+        ``"<name> <count>"``, all sharing the same ``type_name``.
+        """
         logger.debug(f"Command /encounter enemy called by {interaction.user.id}")
         db = SessionLocal()
         try:
@@ -184,33 +276,99 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            if len(encounter.enemies) >= MAX_ENEMIES_PER_ENCOUNTER:
+            # Validate the HP input format before any rolls or DB writes so the
+            # user gets a clear error if the formula is malformed.  This check
+            # does not consume any randomness.
+            try:
+                _validate_hp_format(max_hp)
+            except ValueError:
                 await interaction.response.send_message(
-                    Strings.ERROR_LIMIT_ENEMIES.format(limit=MAX_ENEMIES_PER_ENCOUNTER),
+                    Strings.ENCOUNTER_INVALID_HP.format(value=max_hp),
                     ephemeral=True,
                 )
                 return
 
-            enemy = Enemy(
-                encounter_id=encounter.id,
-                name=name,
-                initiative_modifier=initiative_modifier,
-                max_hp=max_hp,
-            )
-            db.add(enemy)
-            db.commit()
-            logger.info(
-                f"/encounter enemy completed for user {interaction.user.id}: "
-                f"'{name}' added to '{encounter.name}'"
-            )
-            await interaction.response.send_message(
-                Strings.ENCOUNTER_ENEMY_ADDED.format(
-                    name=name,
-                    init_mod=initiative_modifier,
-                    hp=max_hp,
-                    encounter_name=encounter.name,
+            # Ceiling check: total after add must not exceed the limit.
+            current_enemy_count = len(encounter.enemies)
+            if current_enemy_count + count > MAX_ENEMIES_PER_ENCOUNTER:
+                remaining_slots = MAX_ENEMIES_PER_ENCOUNTER - current_enemy_count
+                enemy_word = "enemy" if count == 1 else "enemies"
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_ENEMY_COUNT_OVER_LIMIT.format(
+                        count=count,
+                        enemy_word=enemy_word,
+                        limit=MAX_ENEMIES_PER_ENCOUNTER,
+                        remaining=remaining_slots,
+                    ),
+                    ephemeral=True,
                 )
-            )
+                return
+
+            if count == 1:
+                resolved_hp = _parse_hp_input(max_hp)
+                enemy = Enemy(
+                    encounter_id=encounter.id,
+                    name=name,
+                    type_name=name,
+                    initiative_modifier=initiative_modifier,
+                    max_hp=resolved_hp,
+                    current_hp=resolved_hp,
+                    ac=ac,
+                )
+                db.add(enemy)
+                db.commit()
+                logger.info(
+                    f"/encounter enemy completed for user {interaction.user.id}: "
+                    f"'{name}' added to '{encounter.name}'"
+                )
+                ac_str = str(ac) if ac is not None else "—"
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_ENEMY_ADDED_SINGLE.format(
+                        name=name,
+                        encounter_name=encounter.name,
+                        init_mod=initiative_modifier,
+                        hp=resolved_hp,
+                        ac_str=ac_str,
+                    )
+                )
+            else:
+                created_enemies: List[Enemy] = []
+                for enemy_index in range(1, count + 1):
+                    enemy_name = f"{name} {enemy_index}"
+                    resolved_hp = _parse_hp_input(max_hp)
+                    new_enemy = Enemy(
+                        encounter_id=encounter.id,
+                        name=enemy_name,
+                        type_name=name,
+                        initiative_modifier=initiative_modifier,
+                        max_hp=resolved_hp,
+                        current_hp=resolved_hp,
+                        ac=ac,
+                    )
+                    db.add(new_enemy)
+                    created_enemies.append(new_enemy)
+                db.commit()
+                logger.info(
+                    f"/encounter enemy completed for user {interaction.user.id}: "
+                    f"{count}× '{name}' added to '{encounter.name}'"
+                )
+                ac_part = f", AC: {ac}" if ac is not None else ""
+                enemy_lines = "\n".join(
+                    Strings.ENCOUNTER_ENEMY_BULK_LINE.format(
+                        name=created_enemy.name,
+                        hp=created_enemy.max_hp,
+                        ac_part=ac_part,
+                    )
+                    for created_enemy in created_enemies
+                )
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_ENEMIES_ADDED_BULK.format(
+                        count=count,
+                        type_name=name,
+                        encounter_name=encounter.name,
+                        enemy_lines=enemy_lines,
+                    )
+                )
         finally:
             db.close()
 
@@ -274,14 +432,55 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                     ),
                 ))
 
-            for enemy in encounter.enemies:
-                roll = random.randint(1, 20) + enemy.initiative_modifier
-                participants.append((
-                    roll,
-                    EncounterTurn(
-                        encounter_id=encounter.id, enemy_id=enemy.id, initiative_roll=roll
-                    ),
-                ))
+            encounter_settings = _get_or_create_party_settings(db, party)
+            initiative_mode = encounter_settings.initiative_mode
+
+            if initiative_mode == EnemyInitiativeMode.SHARED:
+                # All enemies share a single initiative roll.
+                # Use the highest initiative_modifier among all enemies.
+                shared_modifier = max(
+                    (enemy.initiative_modifier for enemy in encounter.enemies), default=0
+                )
+                shared_roll = random.randint(1, 20) + shared_modifier
+                for enemy in encounter.enemies:
+                    participants.append((
+                        shared_roll,
+                        EncounterTurn(
+                            encounter_id=encounter.id,
+                            enemy_id=enemy.id,
+                            initiative_roll=shared_roll,
+                        ),
+                    ))
+
+            elif initiative_mode == EnemyInitiativeMode.BY_TYPE:
+                # Enemies sharing the same type_name share one initiative roll.
+                type_rolls: dict[str, int] = {}
+                for enemy in encounter.enemies:
+                    if enemy.type_name not in type_rolls:
+                        type_rolls[enemy.type_name] = (
+                            random.randint(1, 20) + enemy.initiative_modifier
+                        )
+                    roll = type_rolls[enemy.type_name]
+                    participants.append((
+                        roll,
+                        EncounterTurn(
+                            encounter_id=encounter.id,
+                            enemy_id=enemy.id,
+                            initiative_roll=roll,
+                        ),
+                    ))
+
+            else:  # EnemyInitiativeMode.INDIVIDUAL
+                for enemy in encounter.enemies:
+                    roll = random.randint(1, 20) + enemy.initiative_modifier
+                    participants.append((
+                        roll,
+                        EncounterTurn(
+                            encounter_id=encounter.id,
+                            enemy_id=enemy.id,
+                            initiative_roll=roll,
+                        ),
+                    ))
 
             participants.sort(
                 key=lambda x: (x[0], 1 if x[1].character_id else 0), reverse=True
@@ -385,10 +584,10 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             await original.edit(content=order_msg)
 
             ping = _ping_for_turn(encounter)
-            await interaction.followup.send(ping)
             await interaction.response.send_message(
                 Strings.ENCOUNTER_TURN_ADVANCED, ephemeral=True
             )
+            await interaction.followup.send(ping)
             logger.info(
                 f"/encounter next: '{encounter.name}' advanced to index "
                 f"{encounter.current_turn_index} (round {encounter.round_number})"
@@ -448,6 +647,129 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             db.close()
 
     # ------------------------------------------------------------------
+    # /encounter damage
+    # ------------------------------------------------------------------
+
+    @encounter_group.command(
+        name="damage",
+        description="Apply damage to an enemy in the initiative order (GM only)",
+    )
+    @app_commands.describe(
+        position="The enemy's position number in the initiative order",
+        damage="Amount of damage to deal",
+    )
+    async def encounter_damage(
+        interaction: discord.Interaction,
+        position: int,
+        damage: int,
+    ) -> None:
+        """Apply damage to an enemy at the given initiative-order position.
+
+        Automatically removes the enemy from the turn order when HP reaches 0
+        and posts a public defeat announcement.
+        """
+        logger.debug(f"Command /encounter damage called by {interaction.user.id}")
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = _active_party_for_user(db, user, server)
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
+                )
+                return
+
+            encounter = (
+                db.query(Encounter)
+                .filter(
+                    Encounter.party_id == party.id,
+                    Encounter.status == EncounterStatus.ACTIVE,
+                )
+                .first()
+            )
+
+            if not encounter:
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
+                )
+                return
+
+            if not user or user not in party.gms:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_ONLY_ENCOUNTER_DAMAGE, ephemeral=True
+                )
+                return
+
+            if damage <= 0:
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_DAMAGE_MUST_BE_POSITIVE, ephemeral=True
+                )
+                return
+
+            turns = sorted(encounter.turns, key=lambda t: t.order_position)
+
+            if position < 1 or position > len(turns):
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_DAMAGE_INVALID_POSITION.format(
+                        position=position, count=len(turns)
+                    ),
+                    ephemeral=True,
+                )
+                return
+
+            target_turn = turns[position - 1]
+
+            if target_turn.character_id:
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_DAMAGE_NOT_ENEMY.format(position=position),
+                    ephemeral=True,
+                )
+                return
+
+            enemy = target_turn.enemy
+            new_hp = max(0, enemy.current_hp - damage)
+            enemy.current_hp = new_hp
+
+            if new_hp == 0:
+                remove_enemy_turn_from_encounter(db, encounter, target_turn)
+                db.commit()
+
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_DAMAGE_HP_UPDATE.format(
+                        name=enemy.name,
+                        damage=damage,
+                        current_hp=0,
+                        max_hp=enemy.max_hp,
+                    ),
+                    ephemeral=True,
+                )
+                await interaction.followup.send(
+                    Strings.ENCOUNTER_DAMAGE_ENEMY_DEFEATED.format(name=enemy.name)
+                )
+                logger.info(
+                    f"/encounter damage: '{enemy.name}' defeated in '{encounter.name}'"
+                )
+            else:
+                db.commit()
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_DAMAGE_HP_UPDATE.format(
+                        name=enemy.name,
+                        damage=damage,
+                        current_hp=new_hp,
+                        max_hp=enemy.max_hp,
+                    ),
+                    ephemeral=True,
+                )
+                logger.info(
+                    f"/encounter damage: '{enemy.name}' took {damage} damage, "
+                    f"HP {new_hp}/{enemy.max_hp} in '{encounter.name}'"
+                )
+        finally:
+            db.close()
+
+    # ------------------------------------------------------------------
     # /encounter view
     # ------------------------------------------------------------------
 
@@ -455,6 +777,12 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         name="view", description="View the current encounter's initiative order"
     )
     async def encounter_view(interaction: discord.Interaction) -> None:
+        """Show the initiative order to all players.
+
+        GMs also receive a second, ephemeral embed with full enemy details
+        (current HP, max HP, AC, initiative modifier) regardless of the
+        ``enemy_ac_public`` party setting.
+        """
         logger.debug(f"Command /encounter view called by {interaction.user.id}")
         db = SessionLocal()
         try:
@@ -483,6 +811,10 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
+            settings = _get_or_create_party_settings(db, party)
+            enemy_ac_public = settings.enemy_ac_public
+            is_gm = user is not None and user in party.gms
+
             turns = sorted(encounter.turns, key=lambda t: t.order_position)
             embed = discord.Embed(
                 title=Strings.ENCOUNTER_VIEW_TITLE.format(name=encounter.name),
@@ -494,17 +826,68 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             for i, turn in enumerate(turns):
                 is_current = i == encounter.current_turn_index
                 if turn.character_id:
-                    label = f"{turn.character.name} (Player)"
+                    char = turn.character
+                    label = f"{char.name} (Player)"
+                    if char.current_hp is not None and char.max_hp is not None:
+                        hp_str = Strings.ENCOUNTER_VIEW_CHARACTER_HP.format(
+                            current_hp=char.current_hp, max_hp=char.max_hp
+                        )
+                    else:
+                        hp_str = Strings.ENCOUNTER_VIEW_CHARACTER_HP_UNKNOWN
                 else:
-                    label = f"{turn.enemy.name} (Enemy)"
+                    enemy = turn.enemy
+                    label = f"{enemy.name} (Enemy)"
+                    if enemy.current_hp is not None and enemy.max_hp is not None:
+                        if enemy_ac_public and enemy.ac is not None:
+                            hp_str = Strings.ENCOUNTER_VIEW_ENEMY_HP_AC.format(
+                                current_hp=enemy.current_hp,
+                                max_hp=enemy.max_hp,
+                                ac=enemy.ac,
+                            )
+                        else:
+                            hp_str = Strings.ENCOUNTER_VIEW_ENEMY_HP.format(
+                                current_hp=enemy.current_hp,
+                                max_hp=enemy.max_hp,
+                            )
+                    else:
+                        hp_str = ""
                 prefix = "▶ " if is_current else ""
+                field_value = (
+                    f"Initiative: {turn.initiative_roll} | {hp_str}"
+                    if hp_str
+                    else f"Initiative: {turn.initiative_roll}"
+                )
                 embed.add_field(
                     name=f"{prefix}{i + 1}. {label}",
-                    value=f"Initiative: {turn.initiative_roll}",
+                    value=field_value,
                     inline=False,
                 )
 
             await interaction.response.send_message(embed=embed)
+
+            if is_gm:
+                gm_embed = discord.Embed(
+                    title=Strings.ENCOUNTER_VIEW_GM_DETAILS_TITLE.format(
+                        name=encounter.name
+                    ),
+                    color=discord.Color.gold(),
+                )
+                for i, turn in enumerate(turns):
+                    if turn.enemy_id:
+                        enemy = turn.enemy
+                        ac_str = str(enemy.ac) if enemy.ac is not None else "—"
+                        gm_embed.add_field(
+                            name=f"{i + 1}. {enemy.name}",
+                            value=Strings.ENCOUNTER_VIEW_GM_ENEMY_VALUE.format(
+                                current_hp=enemy.current_hp,
+                                max_hp=enemy.max_hp,
+                                ac_str=ac_str,
+                                init_mod=enemy.initiative_modifier,
+                            ),
+                            inline=False,
+                        )
+                await interaction.followup.send(embed=gm_embed, ephemeral=True)
+
             logger.info(f"/encounter view served for '{encounter.name}'")
         finally:
             db.close()
