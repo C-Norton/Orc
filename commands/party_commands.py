@@ -1,3 +1,5 @@
+import math
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -6,6 +8,7 @@ from sqlalchemy import update, select, insert
 from database import SessionLocal
 from models import User, Server, Character, Party, PartySettings, Encounter, EncounterTurn, user_server_association
 from enums.crit_rule import CritRule
+from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from utils.dnd_logic import perform_roll
@@ -244,6 +247,79 @@ class _ConfirmSelfGMRemoveView(discord.ui.View):
             content=Strings.PARTY_GM_REMOVE_SELF_CANCELLED, view=None
         )
         self.stop()
+
+
+class PartyListView(discord.ui.View):
+    """Paginated embed view for /party list.
+
+    Displays all parties on the server with their member counts, split into
+    pages of :attr:`PARTIES_PER_PAGE` entries each.  Previous/Next buttons
+    navigate between pages; both are disabled when only one page exists.
+    """
+
+    PARTIES_PER_PAGE: int = 10
+
+    def __init__(self, parties: List[tuple], server_name: str) -> None:
+        """Initialise the view with pre-loaded party data.
+
+        Args:
+            parties: Ordered list of ``(party_name, member_count)`` tuples.
+            server_name: Display name of the Discord server (used in embed title).
+        """
+        super().__init__(timeout=120)
+        self.parties = parties
+        self.server_name = server_name
+        self.current_page: int = 0
+        self.total_pages: int = max(1, math.ceil(len(parties) / self.PARTIES_PER_PAGE))
+        self._update_buttons()
+
+    def _update_buttons(self) -> None:
+        """Enable or disable navigation buttons based on the current page."""
+        self.prev_button.disabled = self.current_page == 0
+        self.next_button.disabled = self.current_page >= self.total_pages - 1
+
+    def build_embed(self) -> discord.Embed:
+        """Build and return the Discord Embed for the current page."""
+        start = self.current_page * self.PARTIES_PER_PAGE
+        page_parties = self.parties[start: start + self.PARTIES_PER_PAGE]
+
+        embed = discord.Embed(
+            title=Strings.PARTY_LIST_EMBED_TITLE.format(server_name=self.server_name),
+            color=discord.Color.blue(),
+        )
+        for name, count in page_parties:
+            plural = "s" if count != 1 else ""
+            embed.add_field(
+                name=name,
+                value=Strings.PARTY_LIST_MEMBER_COUNT.format(count=count, plural=plural),
+                inline=False,
+            )
+        embed.set_footer(
+            text=Strings.PARTY_LIST_EMBED_FOOTER.format(
+                page=self.current_page + 1,
+                total_pages=self.total_pages,
+                total_parties=len(self.parties),
+            )
+        )
+        return embed
+
+    @discord.ui.button(label="◀ Previous", style=discord.ButtonStyle.secondary)
+    async def prev_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Navigate to the previous page."""
+        self.current_page -= 1
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+
+    @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.secondary)
+    async def next_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Navigate to the next page."""
+        self.current_page += 1
+        self._update_buttons()
+        await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
 
 def register_party_commands(bot: commands.Bot) -> None:
@@ -1145,6 +1221,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 party_name=party.name,
                 initiative_mode=party_settings.initiative_mode.value,
                 enemy_ac_public=str(party_settings.enemy_ac_public),
+                death_save_nat20_mode=party_settings.death_save_nat20_mode.value,
             )
             logger.info(
                 f"/party settings view served for user {interaction.user.id}: '{party.name}'"
@@ -1380,5 +1457,127 @@ def register_party_commands(bot: commands.Bot) -> None:
     ) -> List[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
+    @settings_group.command(
+        name="death_save_nat20",
+        description="Set how a natural 20 on a death save is resolved (GM only)",
+    )
+    @app_commands.describe(
+        party_name="The party to update",
+        mode="regain_hp (5e 2024 RAW) or double_success (house rule)",
+    )
+    async def party_settings_death_save_nat20(
+        interaction: discord.Interaction,
+        party_name: str,
+        mode: str,
+    ) -> None:
+        """Update the nat-20 death save rule for a party.
+
+        Only the party GM can use this command.  Valid modes are
+        ``regain_hp`` (5e 2024 RAW: regain 1 HP) and ``double_success``
+        (house rule: count as 2 successes).
+
+        Args:
+            interaction: The Discord interaction.
+            party_name: Name of the party to update.
+            mode: One of the DeathSaveNat20Mode string values.
+        """
+        logger.debug(
+            f"Command /party settings death_save_nat20 called by {interaction.user.id} "
+            f"party='{party_name}' mode='{mode}'"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True
+                )
+                return
+
+            if not user or user not in party.gms:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
+                )
+                return
+
+            valid_modes = {member.value for member in DeathSaveNat20Mode}
+            if mode not in valid_modes:
+                await interaction.response.send_message(
+                    Strings.PARTY_SETTINGS_INVALID_NAT20_MODE, ephemeral=True
+                )
+                return
+
+            party_settings = _get_or_create_party_settings(db, party)
+            party_settings.death_save_nat20_mode = DeathSaveNat20Mode(mode)
+            db.commit()
+
+            logger.info(
+                f"/party settings death_save_nat20 updated for user {interaction.user.id}: "
+                f"'{party_name}' → {mode}"
+            )
+            await interaction.response.send_message(
+                Strings.PARTY_SETTINGS_NAT20_UPDATED.format(
+                    mode=mode,
+                    party_name=party.name,
+                )
+            )
+        finally:
+            db.close()
+
+    @party_settings_death_save_nat20.autocomplete("party_name")
+    async def party_settings_death_save_nat20_autocomplete(
+        interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
+        return await _party_name_autocomplete(interaction, current)
+
     party_group.add_command(settings_group)
+
+    # ------------------------------------------------------------------
+    # /party list
+    # ------------------------------------------------------------------
+
+    @party_group.command(
+        name="list",
+        description="List all parties on this server with their member counts",
+    )
+    async def party_list(interaction: discord.Interaction) -> None:
+        """Display a paginated list of all parties on this server.
+
+        Available to any user — no character or GM status required.
+        """
+        logger.debug(f"Command /party list called by {interaction.user.id}")
+        db = SessionLocal()
+        try:
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            if not server:
+                await interaction.response.send_message(
+                    Strings.PARTY_LIST_EMPTY, ephemeral=True
+                )
+                return
+
+            parties = (
+                db.query(Party)
+                .filter_by(server_id=server.id)
+                .order_by(Party.name)
+                .all()
+            )
+            if not parties:
+                await interaction.response.send_message(
+                    Strings.PARTY_LIST_EMPTY, ephemeral=True
+                )
+                return
+
+            party_data = [(p.name, len(p.characters)) for p in parties]
+            view = PartyListView(party_data, server_name=server.name)
+            logger.info(
+                f"/party list served for user {interaction.user.id}: "
+                f"{len(parties)} parties in server {server.discord_id}"
+            )
+            await interaction.response.send_message(embed=view.build_embed(), view=view)
+        finally:
+            db.close()
+
     bot.tree.add_command(party_group)

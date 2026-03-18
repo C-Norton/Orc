@@ -2,6 +2,7 @@ import pytest
 from models import Encounter, Enemy, EncounterTurn, PartySettings
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
+from enums.enemy_placement_mode import EnemyPlacementMode
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
 
@@ -94,14 +95,64 @@ async def test_add_enemy_not_gm(mocker, encounter_bot, sample_pending_encounter)
     assert other.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_add_enemy_cannot_add_to_active_encounter(
+async def test_add_enemy_to_active_encounter_shows_placement_view(
     encounter_bot, sample_active_encounter, interaction
 ):
-    """Enemies cannot be added once the encounter has started."""
+    """Adding an enemy to an ACTIVE encounter presents an ephemeral placement menu, not an error."""
+    from commands.encounter_commands import EnemyPlacementView
+
     cb = get_callback(encounter_bot, "encounter", "enemy")
     await cb(interaction, name="LateOrc", initiative_modifier=0, max_hp="10")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    call_kwargs = interaction.response.send_message.call_args.kwargs
+    assert call_kwargs.get("ephemeral") is True
+    assert isinstance(call_kwargs.get("view"), EnemyPlacementView)
+
+
+async def test_add_enemy_to_active_encounter_does_not_create_enemy_immediately(
+    encounter_bot, sample_active_encounter, interaction, session_factory
+):
+    """No Enemy row is written to the DB until a placement button is clicked."""
+    cb = get_callback(encounter_bot, "encounter", "enemy")
+    await cb(interaction, name="LateOrc", initiative_modifier=0, max_hp="10")
+
+    verify = session_factory()
+    count = verify.query(Enemy).filter_by(name="LateOrc").count()
+    assert count == 0
+    verify.close()
+
+
+async def test_add_enemy_to_active_encounter_validates_hp_format(
+    encounter_bot, sample_active_encounter, interaction
+):
+    """Malformed HP still triggers an ephemeral error even when encounter is ACTIVE."""
+    cb = get_callback(encounter_bot, "encounter", "enemy")
+    await cb(interaction, name="LateOrc", initiative_modifier=0, max_hp="invalid")
+
+    call_kwargs = interaction.response.send_message.call_args.kwargs
+    assert call_kwargs.get("ephemeral") is True
+    assert call_kwargs.get("view") is None
+
+
+async def test_add_enemy_to_active_encounter_validates_enemy_limit(
+    mocker, encounter_bot, sample_active_encounter, db_session, interaction
+):
+    """The enemy-count cap is enforced when adding to an active encounter."""
+    mocker.patch("commands.encounter_commands.MAX_ENEMIES_PER_ENCOUNTER", 2)
+    # sample_active_encounter already has 1 enemy (Goblin)
+    db_session.add(Enemy(
+        encounter_id=sample_active_encounter.id,
+        name="Filler", type_name="Filler",
+        initiative_modifier=0, max_hp=5, current_hp=5,
+    ))
+    db_session.commit()
+
+    cb = get_callback(encounter_bot, "encounter", "enemy")
+    await cb(interaction, name="OneMore", initiative_modifier=0, max_hp="5")
+
+    call_kwargs = interaction.response.send_message.call_args.kwargs
+    assert call_kwargs.get("ephemeral") is True
+    assert call_kwargs.get("view") is None
 
 
 async def test_add_enemy_over_limit_rejected(
@@ -366,6 +417,361 @@ async def test_add_enemy_bulk_message_shows_all_enemies(
     msg = interaction.response.send_message.call_args.args[0]
     assert "Skeleton 1" in msg
     assert "Skeleton 2" in msg
+
+
+# ---------------------------------------------------------------------------
+# EnemyPlacementView — mid-combat enemy placement
+# ---------------------------------------------------------------------------
+
+
+async def _get_placement_view(encounter_bot, interaction, **kwargs):
+    """Helper: call /encounter enemy on an active encounter and return the View."""
+    from commands.encounter_commands import EnemyPlacementView
+
+    cb = get_callback(encounter_bot, "encounter", "enemy")
+    params = dict(name="Troll", initiative_modifier=2, max_hp="20")
+    params.update(kwargs)
+    await cb(interaction, **params)
+    return interaction.response.send_message.call_args.kwargs["view"]
+
+
+async def test_enemy_placement_top_creates_enemy(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """TOP placement creates the enemy in the DB."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.TOP)
+
+    verify = session_factory()
+    assert verify.query(Enemy).filter_by(name="Troll").count() == 1
+    verify.close()
+
+
+async def test_enemy_placement_top_inserts_at_position_zero(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """TOP placement gives the new enemy order_position 0."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.TOP)
+
+    verify = session_factory()
+    troll_turn = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name == "Troll")
+        .first()
+    )
+    assert troll_turn is not None
+    assert troll_turn.order_position == 0
+    verify.close()
+
+
+async def test_enemy_placement_top_shifts_existing_turns(
+    encounter_bot, sample_active_encounter, sample_character, interaction, mocker, session_factory
+):
+    """Existing turns are shifted right by 1 when an enemy is added at the top."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.TOP)
+
+    verify = session_factory()
+    all_turns = verify.query(EncounterTurn).filter_by(
+        encounter_id=sample_active_encounter.id
+    ).all()
+    positions = sorted(t.order_position for t in all_turns)
+    assert positions == list(range(len(all_turns)))
+    # Original character was at 0 and goblin at 1 — both should now be ≥ 1
+    char_turn = next(t for t in all_turns if t.character_id is not None)
+    assert char_turn.order_position == 1
+    verify.close()
+
+
+async def test_enemy_placement_top_increments_current_turn_index(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """TOP placement increments current_turn_index to keep the same combatant active."""
+    assert sample_active_encounter.current_turn_index == 0
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.TOP)
+
+    verify = session_factory()
+    refreshed = verify.get(Encounter, sample_active_encounter.id)
+    assert refreshed.current_turn_index == 1
+    verify.close()
+
+
+async def test_enemy_placement_bottom_inserts_at_last_position(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """BOTTOM placement gives the new enemy the highest order_position."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.BOTTOM)
+
+    verify = session_factory()
+    all_turns = verify.query(EncounterTurn).filter_by(
+        encounter_id=sample_active_encounter.id
+    ).all()
+    max_position = max(t.order_position for t in all_turns)
+    troll_turn = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name == "Troll")
+        .first()
+    )
+    assert troll_turn.order_position == max_position
+    verify.close()
+
+
+async def test_enemy_placement_bottom_does_not_change_current_turn_index(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """BOTTOM placement leaves current_turn_index unchanged."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.BOTTOM)
+
+    verify = session_factory()
+    refreshed = verify.get(Encounter, sample_active_encounter.id)
+    assert refreshed.current_turn_index == sample_active_encounter.current_turn_index
+    verify.close()
+
+
+async def test_enemy_placement_after_current_inserts_after_current_index(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """AFTER_CURRENT places the new enemy immediately after the current turn."""
+    # current_turn_index = 0 (character), so new enemy should be at position 1
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.AFTER_CURRENT)
+
+    verify = session_factory()
+    troll_turn = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name == "Troll")
+        .first()
+    )
+    assert troll_turn.order_position == 1
+    verify.close()
+
+
+async def test_enemy_placement_after_current_does_not_change_current_turn_index(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """AFTER_CURRENT leaves current_turn_index unchanged."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.AFTER_CURRENT)
+
+    verify = session_factory()
+    refreshed = verify.get(Encounter, sample_active_encounter.id)
+    assert refreshed.current_turn_index == sample_active_encounter.current_turn_index
+    verify.close()
+
+
+async def test_enemy_placement_roll_high_roll_near_top(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """A rolled initiative of 20 places the enemy before existing lower-roll turns."""
+    mocker.patch("commands.encounter_commands.random.randint", return_value=20)
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.ROLL)
+
+    # Existing order: Aldric roll=15 (pos 0), Goblin roll=10 (pos 1)
+    # Troll rolls 20+2=22 → should be pos 0; Aldric shifts to 1; Goblin to 2
+    verify = session_factory()
+    troll_turn = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name == "Troll")
+        .first()
+    )
+    assert troll_turn.order_position == 0
+    verify.close()
+
+
+async def test_enemy_placement_roll_low_roll_at_bottom(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """A rolled initiative of 1 places the enemy at the end."""
+    mocker.patch("commands.encounter_commands.random.randint", return_value=1)
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.ROLL)
+
+    # Troll rolls 1+2=3 → last position (after Goblin's 10)
+    verify = session_factory()
+    all_turns = verify.query(EncounterTurn).filter_by(
+        encounter_id=sample_active_encounter.id
+    ).all()
+    troll_turn = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name == "Troll")
+        .first()
+    )
+    assert troll_turn.order_position == max(t.order_position for t in all_turns)
+    verify.close()
+
+
+async def test_enemy_placement_roll_individual_mode_each_gets_own_roll(
+    encounter_bot, sample_active_encounter, interaction, mocker, db_session, session_factory
+):
+    """INDIVIDUAL initiative mode: each enemy in a bulk add rolls separately."""
+    rolls = iter([5, 18])
+    mocker.patch("commands.encounter_commands.random.randint", side_effect=lambda a, b: next(rolls))
+
+    settings = PartySettings(
+        party_id=sample_active_encounter.party_id,
+        initiative_mode=EnemyInitiativeMode.INDIVIDUAL,
+    )
+    db_session.add(settings)
+    db_session.commit()
+
+    view = await _get_placement_view(encounter_bot, interaction, count=2)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.ROLL)
+
+    verify = session_factory()
+    troll_turns = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name.like("Troll%"))
+        .all()
+    )
+    rolls_recorded = sorted(t.initiative_roll for t in troll_turns)
+    # 5+2=7 and 18+2=20
+    assert rolls_recorded == [7, 20]
+    verify.close()
+
+
+async def test_enemy_placement_roll_by_type_mode_shared_roll(
+    encounter_bot, sample_active_encounter, interaction, mocker, db_session, session_factory
+):
+    """BY_TYPE initiative mode: all enemies in a bulk add share one roll."""
+    mocker.patch("commands.encounter_commands.random.randint", return_value=10)
+
+    settings = PartySettings(
+        party_id=sample_active_encounter.party_id,
+        initiative_mode=EnemyInitiativeMode.BY_TYPE,
+    )
+    db_session.add(settings)
+    db_session.commit()
+
+    view = await _get_placement_view(encounter_bot, interaction, count=2)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.ROLL)
+
+    verify = session_factory()
+    troll_turns = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name.like("Troll%"))
+        .all()
+    )
+    assert all(t.initiative_roll == 12 for t in troll_turns)  # 10+2=12
+    verify.close()
+
+
+async def test_enemy_placement_roll_shared_mode_all_get_same_roll(
+    encounter_bot, sample_active_encounter, interaction, mocker, db_session, session_factory
+):
+    """SHARED initiative mode: all enemies in a bulk add share one roll."""
+    mocker.patch("commands.encounter_commands.random.randint", return_value=8)
+
+    settings = PartySettings(
+        party_id=sample_active_encounter.party_id,
+        initiative_mode=EnemyInitiativeMode.SHARED,
+    )
+    db_session.add(settings)
+    db_session.commit()
+
+    view = await _get_placement_view(encounter_bot, interaction, count=3)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.ROLL)
+
+    verify = session_factory()
+    troll_turns = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name.like("Troll%"))
+        .all()
+    )
+    assert len(troll_turns) == 3
+    assert all(t.initiative_roll == 10 for t in troll_turns)  # 8+2=10
+    verify.close()
+
+
+async def test_enemy_placement_bulk_all_go_to_same_position(
+    encounter_bot, sample_active_encounter, interaction, mocker, session_factory
+):
+    """A bulk add with count=2 places both enemies consecutively at the bottom."""
+    view = await _get_placement_view(encounter_bot, interaction, count=2)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.BOTTOM)
+
+    verify = session_factory()
+    troll_turns = (
+        verify.query(EncounterTurn)
+        .join(Enemy, EncounterTurn.enemy_id == Enemy.id)
+        .filter(Enemy.name.like("Troll%"))
+        .order_by(EncounterTurn.order_position)
+        .all()
+    )
+    assert len(troll_turns) == 2
+    # The two new turns should be at consecutive positions at the end
+    positions = [t.order_position for t in troll_turns]
+    assert positions[1] == positions[0] + 1
+    verify.close()
+
+
+async def test_enemy_placement_updates_initiative_order_message(
+    encounter_bot, sample_active_encounter, interaction, mocker
+):
+    """After placement, the public initiative order message is edited."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.BOTTOM)
+
+    button_interaction.channel.fetch_message.assert_called_once()
+    mock_msg = button_interaction.channel.fetch_message.return_value
+    mock_msg.edit.assert_called_once()
+
+
+async def test_enemy_placement_sends_public_announcement(
+    encounter_bot, sample_active_encounter, interaction, mocker
+):
+    """A public followup announces the enemy joining the encounter."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.BOTTOM)
+
+    followup_calls = button_interaction.followup.send.call_args_list
+    public_messages = [
+        call.args[0] if call.args else call.kwargs.get("content", "")
+        for call in followup_calls
+        if not call.kwargs.get("ephemeral")
+    ]
+    assert any("Troll" in msg for msg in public_messages)
+
+
+async def test_enemy_placement_edits_prompt_message_with_confirmation(
+    encounter_bot, sample_active_encounter, interaction, mocker
+):
+    """The placement prompt is edited (not a new message) to confirm placement."""
+    view = await _get_placement_view(encounter_bot, interaction)
+    button_interaction = make_interaction(mocker)
+    await view._place_enemies(button_interaction, EnemyPlacementMode.TOP)
+
+    button_interaction.response.edit_message.assert_called_once()
+    call_kwargs = button_interaction.response.edit_message.call_args.kwargs
+    assert call_kwargs.get("view") is None  # buttons removed
 
 
 # ---------------------------------------------------------------------------
@@ -1027,11 +1433,99 @@ async def test_encounter_damage_enemy_death_sends_public_announcement(
     cb = get_callback(encounter_bot, "encounter", "damage")
     await cb(interaction, position=2, damage=7)
 
-    followup_call = interaction.followup.send.call_args
-    assert followup_call is not None
-    public_msg = followup_call.args[0] if followup_call.args else followup_call.kwargs.get("content", "")
-    assert "Goblin" in public_msg
-    assert followup_call.kwargs.get("ephemeral") is not True
+    followup_calls = interaction.followup.send.call_args_list
+    assert followup_calls, "Expected at least one followup call"
+    public_messages = [
+        (call.args[0] if call.args else call.kwargs.get("content", ""), call.kwargs)
+        for call in followup_calls
+    ]
+    defeat_msg, defeat_kwargs = next(
+        (msg, kwargs) for msg, kwargs in public_messages if "Goblin" in msg
+    )
+    assert "Goblin" in defeat_msg
+    assert defeat_kwargs.get("ephemeral") is not True
+
+
+async def test_encounter_damage_last_enemy_defeated_ends_encounter(
+    encounter_bot, sample_active_encounter, session_factory, interaction
+):
+    """When the last enemy is killed the encounter status becomes COMPLETE."""
+    cb = get_callback(encounter_bot, "encounter", "damage")
+    await cb(interaction, position=2, damage=7)  # Goblin has 7 HP; killing it leaves no enemies
+
+    verify = session_factory()
+    refreshed_encounter = verify.get(Encounter, sample_active_encounter.id)
+    assert refreshed_encounter.status == EncounterStatus.COMPLETE
+    verify.close()
+
+
+async def test_encounter_damage_last_enemy_defeated_sends_auto_end_message(
+    encounter_bot, sample_active_encounter, interaction
+):
+    """A public victory announcement is posted when the last enemy is killed."""
+    cb = get_callback(encounter_bot, "encounter", "damage")
+    await cb(interaction, position=2, damage=7)
+
+    followup_calls = interaction.followup.send.call_args_list
+    public_messages = [
+        call.args[0] if call.args else call.kwargs.get("content", "")
+        for call in followup_calls
+        if not call.kwargs.get("ephemeral")
+    ]
+    assert any("All enemies" in msg or "ended" in msg.lower() for msg in public_messages)
+
+
+async def test_encounter_damage_non_last_enemy_defeated_does_not_end_encounter(
+    encounter_bot, db_session, sample_active_party, sample_character, interaction, session_factory
+):
+    """When enemies still remain after a kill, the encounter stays ACTIVE."""
+    encounter = Encounter(
+        name="Two Enemy Fight",
+        party_id=sample_active_party.id,
+        server_id=sample_active_party.server_id,
+        status=EncounterStatus.ACTIVE,
+        current_turn_index=0,
+        round_number=1,
+        message_id="99999",
+        channel_id="333",
+    )
+    sample_active_party.characters.append(sample_character)
+    db_session.add(encounter)
+    db_session.flush()
+
+    enemy_one = Enemy(
+        encounter_id=encounter.id, name="Goblin A", type_name="Goblin",
+        initiative_modifier=0, max_hp=5, current_hp=5,
+    )
+    enemy_two = Enemy(
+        encounter_id=encounter.id, name="Goblin B", type_name="Goblin",
+        initiative_modifier=0, max_hp=10, current_hp=10,
+    )
+    db_session.add_all([enemy_one, enemy_two])
+    db_session.flush()
+
+    turn_char = EncounterTurn(
+        encounter_id=encounter.id, character_id=sample_character.id,
+        initiative_roll=20, order_position=0,
+    )
+    turn_enemy_one = EncounterTurn(
+        encounter_id=encounter.id, enemy_id=enemy_one.id,
+        initiative_roll=10, order_position=1,
+    )
+    turn_enemy_two = EncounterTurn(
+        encounter_id=encounter.id, enemy_id=enemy_two.id,
+        initiative_roll=5, order_position=2,
+    )
+    db_session.add_all([turn_char, turn_enemy_one, turn_enemy_two])
+    db_session.commit()
+
+    cb = get_callback(encounter_bot, "encounter", "damage")
+    await cb(interaction, position=2, damage=5)  # kill enemy_one; enemy_two still lives
+
+    verify = session_factory()
+    refreshed_encounter = verify.get(Encounter, encounter.id)
+    assert refreshed_encounter.status == EncounterStatus.ACTIVE
+    verify.close()
 
 
 async def test_encounter_damage_invalid_position_shows_error(
@@ -1212,3 +1706,140 @@ async def test_view_encounter_enemy_ac_shown_when_setting_on(
     embed = interaction.response.send_message.call_args.kwargs.get("embed")
     field_values = " ".join(f.value for f in embed.fields)
     assert "AC: 14" in field_values
+
+
+# ---------------------------------------------------------------------------
+# _build_order_message — dying character display and healthy character display
+# ---------------------------------------------------------------------------
+
+
+async def test_order_message_shows_dying_indicator(
+    encounter_bot, db_session, sample_active_encounter, sample_character, interaction, mocker,
+):
+    """A dying character in the initiative order has the (Dying: N✓ N✗) suffix."""
+    from commands.encounter_commands import _build_order_message
+
+    # Put the character at 0 HP with 1 success and 2 failures
+    sample_character.max_hp = 10
+    sample_character.current_hp = 0
+    sample_character.death_save_successes = 1
+    sample_character.death_save_failures = 2
+    db_session.commit()
+    db_session.refresh(sample_active_encounter)
+
+    order_msg = _build_order_message(sample_active_encounter)
+
+    # Should contain the Dying indicator from Strings.DEATH_SAVE_COUNTER_DISPLAY
+    assert "Dying" in order_msg
+    assert "1✓" in order_msg
+    assert "2✗" in order_msg
+
+
+async def test_order_message_healthy_character_no_dying_indicator(
+    encounter_bot, db_session, sample_active_encounter, sample_character,
+):
+    """A character with positive HP shows no dying indicator in the order."""
+    from commands.encounter_commands import _build_order_message
+
+    sample_character.max_hp = 10
+    sample_character.current_hp = 8
+    db_session.commit()
+    db_session.refresh(sample_active_encounter)
+
+    order_msg = _build_order_message(sample_active_encounter)
+
+    assert "Dying" not in order_msg
+
+
+# ---------------------------------------------------------------------------
+# _ping_for_turn — death save prompt for dying character
+# ---------------------------------------------------------------------------
+
+
+async def test_turn_prompt_includes_death_save_hint(
+    encounter_bot, db_session, sample_active_encounter, sample_character,
+):
+    """When the current-turn character is dying, the ping includes a death save prompt."""
+    from commands.encounter_commands import _ping_for_turn
+
+    # Set character as dying and make them the current turn (index 0 in sample_active_encounter)
+    sample_character.max_hp = 10
+    sample_character.current_hp = 0
+    db_session.commit()
+    db_session.refresh(sample_active_encounter)
+
+    ping_msg = _ping_for_turn(sample_active_encounter)
+
+    # Strings.DEATH_SAVE_TURN_PROMPT mentions "death save"
+    assert "death save" in ping_msg.lower() or "unconscious" in ping_msg.lower()
+
+
+async def test_turn_prompt_no_death_save_hint_when_healthy(
+    encounter_bot, db_session, sample_active_encounter, sample_character,
+):
+    """When the current-turn character has positive HP, no death save hint appears."""
+    from commands.encounter_commands import _ping_for_turn
+
+    sample_character.max_hp = 10
+    sample_character.current_hp = 5
+    db_session.commit()
+    db_session.refresh(sample_active_encounter)
+
+    ping_msg = _ping_for_turn(sample_active_encounter)
+
+    assert "death save" not in ping_msg.lower()
+    assert "unconscious" not in ping_msg.lower()
+
+
+# ---------------------------------------------------------------------------
+# /encounter next — GM can advance another player's turn
+# ---------------------------------------------------------------------------
+
+
+async def test_encounter_next_gm_can_advance_other_players_turn(
+    encounter_bot, db_session, sample_active_encounter, sample_character, interaction, mocker,
+):
+    """A GM can advance the turn even when it is not their character's turn."""
+    # sample_active_encounter has Aldric (user=111, pos=0) as current turn.
+    # The interaction user is 111 (the GM), so they own this turn already.
+    # Create a second character owned by a different user and make it the current turn.
+    from models import Character, ClassLevel, User
+    from sqlalchemy import insert as sa_insert
+    from models.base import user_server_association
+
+    other_user = User(discord_id="5555")
+    db_session.add(other_user)
+    db_session.flush()
+    other_char = Character(
+        name="Gimli",
+        user=other_user,
+        server=sample_character.server,
+        is_active=True,
+    )
+    db_session.add(other_char)
+    db_session.flush()
+    db_session.add(ClassLevel(character_id=other_char.id, class_name="Fighter", level=1))
+
+    other_turn = EncounterTurn(
+        encounter_id=sample_active_encounter.id,
+        character_id=other_char.id,
+        initiative_roll=5,
+        order_position=2,
+    )
+    db_session.add(other_turn)
+    # Set current_turn_index to Gimli's position (2)
+    sample_active_encounter.current_turn_index = 2
+    db_session.commit()
+    db_session.refresh(sample_active_encounter)
+
+    # interaction user is 111 (a GM of the party)
+    cb = get_callback(encounter_bot, "encounter", "next")
+    await cb(interaction)
+
+    # GM should succeed — "Turn advanced." is sent, not the denied error
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "denied" not in msg.lower()
+    assert "only" not in msg.lower()
+    # Confirm the turn index advanced from 2 (wraps to 0 since pos=2 is last)
+    db_session.refresh(sample_active_encounter)
+    # turn advanced = index moved (either wrapped or incremented)

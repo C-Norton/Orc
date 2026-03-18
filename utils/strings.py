@@ -27,7 +27,7 @@ class Strings:
     # Meta Commands
     HELP_TITLE = "Thank you for using ORC - the Opensource Roleplaying Companion bot for D&D 5e"
     HELP_DESCRIPTION = "Check out our shared setting: [Open Source Gaming and Roleplaying environment (OGRE)](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)"
-    HELP_FOOTER = "Tip: Use autocomplete for character, party, and skill names!"
+    HELP_FOOTER = "Tip: Use autocomplete for character, party, skill names, and more!"
     HELP_NOT_YOUR_MENU = "This help menu belongs to someone else. Use `/help` to open your own."
     HELP_TOC_DESCRIPTION = (
         "{description}\n\n"
@@ -39,7 +39,8 @@ class Strings:
         "❤️ **Health & HP**\n"
         "👥 **Parties & GM Tools**\n"
         "🤼 **Encounter & Initiative**\n"
-         "👨‍🔧 **Credits & Support**\n"
+        "💫 **Inspiration Tracking**\n"
+        "👨‍🔧 **Credits & Support**\n"
         "🏠 **Back to Home**"
     )
     
@@ -60,26 +61,31 @@ class Strings:
     
     HELP_COMBAT_NAME = "⚔️ Combat"
     HELP_COMBAT_VALUE = (
-        "**/attack add <name> <hit_mod> <damage>**: Save an attack (e.g., `/attack add Longsword 5 1d8+3`).\n"
+        "**/weapon search <query>**: Search for weapons in the 2024 SRD (via Open5e). Shows up to 5 results.\n"
+        "**/weapon add <number>**: Import a weapon from your last `/weapon search` results. "
+        "Automatically computes the to-hit modifier from your character's stats.\n"
+        "**/attack add <name> <hit_mod> <damage>**: Manually save an attack (e.g., `/attack add Longsword 5 1d8+3`).\n"
         "**/attack list**: List all your saved attacks.\n"
         "**/attack roll <name> [target]**: Roll a to-hit and damage roll for a saved attack. "
         "In an active encounter, pass `target` as the enemy's position number to resolve the hit "
-        "against their AC and automatically update their HP."
+        "against their AC and automatically update their HP.\n"
     )
     
     HELP_ROLLING_NAME = "🎲 Rolling"
     HELP_ROLLING_VALUE = (
-        "**/roll <notation>**: Roll anything! Use skill names (e.g., `perception`), saves (e.g., `wis save`), or dice (e.g., `1d20+5`)."
+        "**/roll <notation>**: Roll anything! Use skill names (e.g., `perception`), saves (e.g., `wis save`), or dice (e.g., `1d20+5`).\n"
+        "**/roll death save**: Roll a death saving throw (autocomplete-only; only shown when your character is at 0 HP). "
+        "3 successes stabilizes; 3 failures slays. Nat 20 behaviour is configurable per party."
     )
     
     HELP_HEALTH_NAME = "❤️ Health & HP"
     HELP_HEALTH_VALUE = (
-        "**/hp**: View your active character's current HP and temporary HP.\n"
-        "**/set_max_hp <max_hp>**: Set your active character's maximum HP.\n"
-        "**/damage <amount> [partymember]**: Apply damage to yourself or a party member (GM only). Supports dice (e.g., `2d6+3`).\n"
-        "**/heal <amount> [partymember]**: Heal yourself or a party member (GM only). Supports dice (e.g., `1d8+2`).\n"
-        "**/add_temp_hp <amount>**: Add temporary HP to your active character.\n"
-        "**/add_temp_hp_party <amount>**: Add temporary HP to all members of your active party."
+        "**/hp status**: View your active character's current HP and temporary HP.\n"
+        "**/hp set <max_hp>**: Set your active character's maximum HP (also resets current HP to max).\n"
+        "**/hp damage <amount> [partymember]**: Apply damage to yourself or a party member (GM only for others). Supports dice (e.g., `2d6+3`).\n"
+        "**/hp heal <amount> [partymember]**: Heal yourself or any party member. Supports dice (e.g., `1d8+2`).\n"
+        "**/hp temp <amount>**: Add temporary HP to your active character (5e rule: replaces if higher, keeps if lower).\n"
+        "**/hp party_temp <amount>**: Add temporary HP to all members of your active party."
     )
     
     HELP_PARTIES_NAME = "👥 Parties & GM Tools"
@@ -96,7 +102,9 @@ class Strings:
         "**/party delete <name>**: Delete a party (GM only).\n"
         "**/party settings view [party]**: View the current settings for a party.\n"
         "**/party settings initiative_mode <party> <mode>**: Set how enemy initiative is rolled: `by_type` (default), `individual`, or `shared` (GM only).\n"
-        "**/party settings enemy_ac <party> <true/false>**: Set whether enemy AC values are visible to all players (GM only)."
+        "**/party settings enemy_ac <party> <true/false>**: Set whether enemy AC values are visible to all players (GM only).\n"
+        "**/party settings death_save_nat20 <party> <mode>**: Set how a natural 20 on a death save is resolved: "
+        "`regain_hp` (5e 2024 RAW — regain 1 HP) or `double_success` (house rule — count as 2 successes) (GM only)."
     )
     
     HELP_ENCOUNTER_NAME = "⚔️ Encounter & Initiative Tracking"
@@ -132,7 +140,7 @@ class Strings:
         "Then set your stats with `/character stats` — Max HP will be calculated automatically.\n"
         "For accurate rolls, set your skill proficiencies with `/character skill`.\n"
         "When you level up or multiclass, use `/character class_add`.\n"
-        "Finally, set your Max HP with `/set_max_hp`.\n"
+        "Finally, set your Max HP with `/hp set`.\n"
         "**FOR GMs**\n"
         "It is recommended that you read all pages of the help command.\n"
         "That said for the very basics, if you want to create a party, do `/party create`, and add characters with `/party character_add`.\n"
@@ -140,14 +148,13 @@ class Strings:
         "Add monsters with `/encounter enemy`.\n"
         "Roll initiative and start the encounter with `/encounter start`."
     )
-    GUILD_JOIN_WELCOME = (
-        "Hi! I'm **ORC** (Open-Source Roleplaying Companion), a D&D 5e assistant bot.\n\n"
-        "Use `/help` to see everything I can do — character sheets, dice rolls, party management, "
-        "initiative tracking, and more!\n\n"
-        "Check out the [GitHub](https://github.com/C-Norton/orc) and the "
-        "[OGRE WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)."
+    HELP_INSPIRATION_NAME = "💫 **Inspiration Tracking**"
+    HELP_INSPIRATION_VALUE = (
+        "**/inspiration grant [character name]**: Gives Inspiration to a character.\n"
+        "**/inspiration remove [character name]**: Removes Inspiration from a character.\n"
+        "**/inspiration status [character name]**: Checks if a character has inspiration.\n"
+        "Note that only GMs can manage other characters' inspiration."
     )
-
     HELP_CREDITS_NAME = "👨‍🔧 Credits & Support"
     HELP_CREDITS_VALUE = (
         "ORC was created by Channing Norton (Wobbix on Discord) and is open-source.\n"
@@ -156,6 +163,17 @@ class Strings:
         "[WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/) "
         "and [Discord Server](https://discord.gg/2cBKmVTpHR)."
     )
+
+
+    GUILD_JOIN_WELCOME = (
+        "Hi! I'm **ORC** (Open-Source Roleplaying Companion), a D&D 5e assistant bot.\n\n"
+        "Use `/help` to see everything I can do — character sheets, dice rolls, party management, "
+        "initiative tracking, and more!\n\n"
+        "Check out the [GitHub](https://github.com/C-Norton/orc) and the "
+        "[OGRE WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)."
+    )
+
+
 
     # Health Commands
     HP_SET_SUCCESS = "Set **{char_name}**'s HP to {current}/{max}."
@@ -172,7 +190,7 @@ class Strings:
     ERROR_NO_ACTIVE_PARTY = "No active party set."
     ERROR_GM_ONLY_DAMAGE = "Only the GM can apply damage to other party members."
     ERROR_PARTY_MEMBER_NOT_FOUND = "Party member '**{name}**' not found."
-    ERROR_HP_NOT_SET = "HP not set. Use `/set_max_hp` first."
+    ERROR_HP_NOT_SET = "HP not set. Use `/hp set` first."
 
     # Attack Commands
     ATTACK_ADDED = "Added attack **{attack_name}** to **{char_name}**."
@@ -209,10 +227,44 @@ class Strings:
     ENCOUNTER_GM_DM_EMBED_TITLE = "⚔️ {encounter_name}"
     ENCOUNTER_GM_DM_EMBED_FOOTER = "Party: {party_name}"
     CRIT_HIT_HEADER = "🎯 **CRITICAL HIT!**\n"
-    CRIT_PERKINS_INSPIRATION = "\n✨ You gain **Inspiration** from your critical hit! *(Perkins' Rule)*"
+    CRIT_PERKINS_INSPIRATION = "\n✨ **{char_name}** gains **Inspiration** from their critical hit! *(Perkins' Rule)*"
+
+    # Inspiration Commands
+    INSPIRATION_GRANTED = "✨ **{char_name}** now has **Inspiration**!"
+    INSPIRATION_ALREADY_HAS = "**{char_name}** already has Inspiration."
+    INSPIRATION_REMOVED = "**{char_name}** no longer has Inspiration."
+    INSPIRATION_NOT_HELD = "**{char_name}** does not currently have Inspiration."
+    INSPIRATION_STATUS_HAS = "✨ **{char_name}** has Inspiration."
+    INSPIRATION_STATUS_NONE = "**{char_name}** does not have Inspiration."
+    ERROR_GM_ONLY_INSPIRATION = "Only a GM can grant or remove Inspiration for other party members."
     PARTY_SETTINGS_INVALID_CRIT_RULE = (
         "❌ Invalid crit rule. Valid options: `double_dice`, `perkins`, `double_damage`, `max_damage`, `none`."
     )
+
+    # Weapon Commands
+    WEAPON_SEARCH_HEADER = "Weapon search results for \"{query}\":"
+    WEAPON_SEARCH_FOOTER = (
+        "\n\nUse `/weapon add <number>` to add one to **{char_name}**.\n"
+        "*(Results expire in 5 minutes)*"
+    )
+    WEAPON_SEARCH_NO_RESULTS = (
+        "❌ No weapons found matching \"{query}\" in the 2024 SRD. "
+        "Try a different search term."
+    )
+    WEAPON_SEARCH_SESSION_NOT_FOUND = (
+        "❌ No weapon search results found. Run `/weapon search` first."
+    )
+    WEAPON_SEARCH_ERROR = (
+        "❌ Could not reach the Open5e API. Please try again later."
+    )
+    WEAPON_ADD_SUCCESS_HEADER = "✅ Added **{name}** to **{char_name}**."
+    WEAPON_ADD_UPDATED_HEADER = "✅ Updated **{name}** on **{char_name}**."
+    WEAPON_ADD_HIT_LINE = "**To-hit**: {hit_modifier:+d} ({breakdown})"
+    WEAPON_ADD_DAMAGE_LINE = "**Damage**: {damage_dice} {damage_type}"
+    WEAPON_ADD_VERSATILE_SUFFIX = " ({two_handed_damage} two-handed)"
+    WEAPON_ADD_PROPERTIES_LINE = "**Properties**: {properties}"
+    WEAPON_ADD_FOOTER = "\n\nUse `/attack add` to adjust the hit modifier if needed."
+    WEAPON_ADD_INVALID_INDEX = "❌ Please enter a number between 1 and {max_index}."
 
     ERROR_INVALID_DICE = "Invalid dice notation. Use format like '1d20' or '2d6+3'."
     ERROR_DICE_LIMIT = "Too many dice or too many sides! Keep it reasonable."
@@ -233,7 +285,7 @@ class Strings:
         "Character **{name}** created as a level **{level}** **{char_class}** and set as active!\n"
         "Saving throw proficiencies have been set from your class.\n"
         "Next, set your stats with `/character stats`, your skill proficiencies with `/character skill`, "
-        "and your Max HP with `/set_max_hp`.\n"
+        "and your Max HP with `/hp set`.\n"
         "View your character at any time with `/character view`, and switch with `/character switch`."
     )
     CHAR_STATS_FIRST_TIME = "This is your first time setting stats for this character. Please provide all core stats (strength, dexterity, constitution, intelligence, wisdom, charisma)."
@@ -396,6 +448,14 @@ class Strings:
     
     ENCOUNTER_DAMAGE_HP_UPDATE = "⚔️ **{name}** takes {damage} damage. HP: {current_hp}/{max_hp}"
     ENCOUNTER_DAMAGE_ENEMY_DEFEATED = "💀 **{name}** has been defeated and removed from the initiative order!"
+    ENCOUNTER_ALL_ENEMIES_DEFEATED = "🏆 All enemies have been defeated! Encounter **{encounter_name}** has ended."
+    ENCOUNTER_ENEMY_PLACEMENT_PROMPT = "⚔️ **{encounter_name}** is active. Where should {enemy_description} enter initiative?"
+    ENCOUNTER_ENEMY_ADDED_TOP = "✅ {enemy_description} added at the **top** of initiative."
+    ENCOUNTER_ENEMY_ADDED_BOTTOM = "✅ {enemy_description} added at the **bottom** of initiative."
+    ENCOUNTER_ENEMY_ADDED_AFTER_CURRENT = "✅ {enemy_description} added **after the current turn**."
+    ENCOUNTER_ENEMY_ADDED_ROLLED = "✅ {enemy_description} rolled into initiative."
+    ENCOUNTER_ENEMY_PLACEMENT_EXPIRED = "❌ No placement selected — no enemies were added."
+    ENCOUNTER_ENEMY_JOINED_PUBLIC = "⚔️ {enemy_description} joins **{encounter_name}**!"
     ENCOUNTER_DAMAGE_INVALID_POSITION = "❌ Position {position} is not valid. The initiative order has {count} position(s)."
     ENCOUNTER_DAMAGE_NOT_ENEMY = "❌ Position {position} is a player character. Use `/hp damage` for player characters."
     ENCOUNTER_DAMAGE_MUST_BE_POSITIVE = "❌ Damage must be greater than zero."
@@ -418,12 +478,60 @@ class Strings:
     PARTY_SETTINGS_VIEW = (
         "⚙️ **Settings for '{party_name}'**\n"
         "Initiative Mode: **{initiative_mode}**\n"
-        "Enemy AC visible to players: **{enemy_ac_public}**"
+        "Enemy AC visible to players: **{enemy_ac_public}**\n"
+        "Death save nat-20 rule: **{death_save_nat20_mode}**"
     )
     PARTY_SETTINGS_INVALID_MODE = (
         "❌ Invalid initiative mode. Choose from: `by_type`, `individual`, `shared`."
     )
+    PARTY_SETTINGS_INVALID_NAT20_MODE = (
+        "❌ Invalid nat-20 mode. Choose from: `regain_hp`, `double_success`."
+    )
+    PARTY_SETTINGS_NAT20_UPDATED = (
+        "✅ Death save nat-20 rule updated to **{mode}** for party '**{party_name}**'."
+    )
     ERROR_GM_ONLY_PARTY_SETTINGS = "Only a GM of this party can change settings."
+
+    # Party List
+    PARTY_LIST_EMBED_TITLE = "📋 Parties in {server_name}"
+    PARTY_LIST_EMBED_FOOTER = "Page {page}/{total_pages} · {total_parties} total"
+    PARTY_LIST_MEMBER_COUNT = "{count} member{plural}"
+    PARTY_LIST_EMPTY = "No parties have been created on this server yet."
+
+    # Death Save Strings
+    DEATH_SAVE_NOT_DYING = (
+        "❌ **{char_name}** is not currently dying — death saves are only rolled at 0 HP."
+    )
+    DEATH_SAVE_RESULT_SUCCESS = (
+        "🎲 **Death Save — Success** (rolled {roll}): "
+        "{successes}/3 successes, {failures}/3 failures."
+    )
+    DEATH_SAVE_RESULT_FAILURE = (
+        "🎲 **Death Save — Failure** (rolled {roll}): "
+        "{successes}/3 successes, {failures}/3 failures."
+    )
+    DEATH_SAVE_STABILIZED = (
+        "✅ **{char_name} has stabilized!** Three successes — death save counters reset."
+    )
+    DEATH_SAVE_SLAIN = ":skull: **{char_name} has been slain** after three failed death saves."
+    DEATH_SAVE_NAT20_HEAL = (
+        "🌟 **Natural 20!** {char_name} regains 1 HP and is no longer dying."
+    )
+    DEATH_SAVE_NAT20_DOUBLE = "🌟 **Natural 20!** Two successes recorded."
+    DEATH_SAVE_NAT1_DOUBLE = "💀 **Natural 1!** Two failures recorded."
+    DEATH_SAVE_DAMAGE_FAILURE = (
+        "💀 **{char_name}** took damage while dying — 1 failure recorded "
+        "({failures}/3 failures)."
+    )
+    DEATH_SAVE_DAMAGE_SLAIN = (
+        ":skull: **{char_name} has been slain** — three failures from taking damage."
+    )
+    DEATH_SAVE_HEAL_RESET = "Death save counters reset for **{char_name}**."
+    DEATH_SAVE_TURN_PROMPT = (
+        "{char_name} is **unconscious and dying** — use `/roll` → `death save` "
+        "for your death saving throw."
+    )
+    DEATH_SAVE_COUNTER_DISPLAY = "(Dying: {successes}✓ {failures}✗)"
 
 
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]

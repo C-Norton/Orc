@@ -34,7 +34,7 @@ from tests.commands.conftest import get_callback
 async def test_set_hp_success(health_bot, sample_character, interaction, session_factory):
     # get_callback walks bot.tree and returns the raw async function behind the
     # slash command, letting us call it directly without Discord's dispatch.
-    cb = get_callback(health_bot, "set_max_hp")
+    cb = get_callback(health_bot, "hp", "set")
     await cb(interaction, max_hp=40)
 
     # The command opened and closed its own session internally. Open a fresh
@@ -50,7 +50,7 @@ async def test_set_hp_success(health_bot, sample_character, interaction, session
 async def test_set_hp_no_character(health_bot, sample_user, sample_server, interaction):
     # sample_user and sample_server exist but there is no character, so the
     # command must send an ephemeral (private) error message.
-    cb = get_callback(health_bot, "set_max_hp")
+    cb = get_callback(health_bot, "hp", "set")
     await cb(interaction, max_hp=30)
 
     # interaction.response.send_message is an AsyncMock; call_args.kwargs holds
@@ -61,7 +61,7 @@ async def test_set_hp_no_character(health_bot, sample_user, sample_server, inter
 
 async def test_set_hp_zero(health_bot, sample_character, interaction, session_factory):
     # Setting max hp to 0 or negative should be rejected
-    cb = get_callback(health_bot, "set_max_hp")
+    cb = get_callback(health_bot, "hp", "set")
     await cb(interaction, max_hp=30)
     verify = session_factory()
     char = verify.query(Character).filter_by(name="Aldric").first()
@@ -80,7 +80,7 @@ async def test_set_hp_zero(health_bot, sample_character, interaction, session_fa
 
 
 async def test_set_hp_negative(health_bot, sample_character, interaction, session_factory):
-    cb = get_callback(health_bot, "set_max_hp")
+    cb = get_callback(health_bot, "hp", "set")
     await cb(interaction, max_hp=30)
     verify = session_factory()
     char = verify.query(Character).filter_by(name="Aldric").first()
@@ -108,7 +108,7 @@ async def test_damage_reduces_hp(health_bot, sample_character, db_session, inter
     sample_character.temp_hp = 0
     db_session.commit()
 
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="10")
 
     verify = session_factory()
@@ -123,7 +123,7 @@ async def test_damage_burns_temp_hp_first(health_bot, sample_character, db_sessi
     sample_character.temp_hp = 5
     db_session.commit()
 
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="3")  # 3 damage < 5 temp HP, so current HP is untouched
 
     verify = session_factory()
@@ -141,7 +141,7 @@ async def test_damage_can_go_below_zero(health_bot, sample_character, db_session
     sample_character.temp_hp = 0
     db_session.commit()
 
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="100")  # 5 - 100 = -95, which is <= -10 (massive damage)
 
     verify = session_factory()
@@ -156,7 +156,7 @@ async def test_damage_can_go_below_zero(health_bot, sample_character, db_session
 async def test_damage_requires_hp_set(health_bot, sample_character, interaction):
     # sample_character has max_hp=-1, current_hp=-1 by default (HP not yet
     # initialized via /set_max_hp). The command should send an ephemeral error.
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="5")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -170,7 +170,7 @@ async def test_heal_restores_hp(health_bot, sample_character, db_session, intera
     sample_character.temp_hp = 0
     db_session.commit()
 
-    cb = get_callback(health_bot, "heal")
+    cb = get_callback(health_bot, "hp", "heal")
     await cb(interaction, amount="10")
 
     verify = session_factory()
@@ -184,7 +184,7 @@ async def test_heal_capped_at_max(health_bot, sample_character, db_session, inte
     sample_character.current_hp = 28
     db_session.commit()
 
-    cb = get_callback(health_bot, "heal")
+    cb = get_callback(health_bot, "hp", "heal")
     await cb(interaction, amount="10")  # would overshoot to 38 — must cap at 30
 
     verify = session_factory()
@@ -201,7 +201,7 @@ async def test_temp_hp_set(health_bot, sample_character, db_session, interaction
     sample_character.temp_hp = 0
     db_session.commit()
 
-    cb = get_callback(health_bot, "add_temp_hp")
+    cb = get_callback(health_bot, "hp", "temp")
     await cb(interaction, amount=8)
 
     verify = session_factory()
@@ -218,7 +218,7 @@ async def test_temp_hp_does_not_stack(health_bot, sample_character, db_session, 
     sample_character.temp_hp = 10
     db_session.commit()
 
-    cb = get_callback(health_bot, "add_temp_hp")
+    cb = get_callback(health_bot, "hp", "temp")
     await cb(interaction, amount=5)  # lower than existing — should stay at 10
 
     verify = session_factory()
@@ -235,7 +235,7 @@ async def test_hp_view_sends_message(health_bot, sample_character, db_session, i
     sample_character.temp_hp = 5
     db_session.commit()
 
-    cb = get_callback(health_bot, "hp")
+    cb = get_callback(health_bot, "hp", "status")
     await cb(interaction)
 
     # call_args.args[0] is the first positional argument to send_message — the
@@ -249,7 +249,7 @@ async def test_hp_view_sends_message(health_bot, sample_character, db_session, i
 
 async def test_hp_view_no_character(health_bot, sample_user, sample_server, interaction):
     # No sample_character fixture — user exists but has no active character.
-    cb = get_callback(health_bot, "hp")
+    cb = get_callback(health_bot, "hp", "status")
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True

@@ -1,0 +1,2358 @@
+2026-03-16 07:59:28,306 - root - INFO - Logging initialized
+2026-03-16 07:59:28,307 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 07:59:28,307 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 07:59:28,307 - __main__ - INFO - Starting bot...
+2026-03-16 07:59:28,307 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 07:59:28,307 - discord.client - INFO - logging in using static token
+2026-03-16 07:59:29,270 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 07:59:29,782 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: ecd6561e95efc60e9564b518ccfd51cc).
+2026-03-16 07:59:31,789 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 07:59:31,789 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 08:00:23,234 - commands.attack_commands - DEBUG - Command /add_attack called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with name: foo
+2026-03-16 08:00:23,273 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: foo
+2026-03-16 08:00:23,273 - dice_roller - DEBUG - Rolling dice with notation: thisisabadformula
+2026-03-16 08:00:23,273 - dice_roller - DEBUG - Invalid dice notation: thisisabadformula
+2026-03-16 08:00:23,273 - commands.attack_commands - ERROR - Error adding attack for user 181919139751788545: Invalid dice notation. Use format like '1d20' or '2d6+3'.
+2026-03-16 08:13:47,178 - root - INFO - Logging initialized
+2026-03-16 08:13:47,179 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 08:13:47,179 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 08:13:47,180 - __main__ - INFO - Starting bot...
+2026-03-16 08:13:47,180 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 08:13:47,180 - discord.client - INFO - logging in using static token
+2026-03-16 08:13:48,005 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 08:13:48,353 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: ee2e738772cb9cc9a20e859be475da29).
+2026-03-16 08:13:50,360 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 08:13:50,360 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 08:25:30,670 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:30,671 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:30,672 - dice_roller - DEBUG - Result for 1d20: rolls=[13], modifier=0, total=13
+2026-03-16 08:25:30,862 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:31,499 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:31,500 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:31,500 - dice_roller - DEBUG - Result for 1d20: rolls=[15], modifier=0, total=15
+2026-03-16 08:25:31,764 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:33,803 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:33,803 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:33,803 - dice_roller - DEBUG - Result for 1d20: rolls=[16], modifier=0, total=16
+2026-03-16 08:25:34,013 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:36,124 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:36,124 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:36,125 - dice_roller - DEBUG - Result for 1d20: rolls=[18], modifier=0, total=18
+2026-03-16 08:25:36,385 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:38,462 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:38,462 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:38,462 - dice_roller - DEBUG - Result for 1d20: rolls=[11], modifier=0, total=11
+2026-03-16 08:25:38,795 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:40,921 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:40,921 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:40,922 - dice_roller - DEBUG - Result for 1d20: rolls=[5], modifier=0, total=5
+2026-03-16 08:25:41,101 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:43,473 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:43,473 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:43,473 - dice_roller - DEBUG - Result for 1d20: rolls=[19], modifier=0, total=19
+2026-03-16 08:25:43,707 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:45,766 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:45,766 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:45,766 - dice_roller - DEBUG - Result for 1d20: rolls=[15], modifier=0, total=15
+2026-03-16 08:25:45,979 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:49,214 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:49,215 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:49,215 - dice_roller - DEBUG - Result for 1d20: rolls=[15], modifier=0, total=15
+2026-03-16 08:25:49,408 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:51,775 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:51,775 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:51,775 - dice_roller - DEBUG - Result for 1d20: rolls=[15], modifier=0, total=15
+2026-03-16 08:25:51,978 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:54,130 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:54,130 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:54,130 - dice_roller - DEBUG - Result for 1d20: rolls=[1], modifier=0, total=1
+2026-03-16 08:25:54,370 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:56,486 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:56,486 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:56,486 - dice_roller - DEBUG - Result for 1d20: rolls=[20], modifier=0, total=20
+2026-03-16 08:25:56,678 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:25:58,848 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:25:58,848 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:25:58,848 - dice_roller - DEBUG - Result for 1d20: rolls=[14], modifier=0, total=14
+2026-03-16 08:25:59,034 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:26:01,299 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:26:01,299 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:26:01,300 - dice_roller - DEBUG - Result for 1d20: rolls=[8], modifier=0, total=8
+2026-03-16 08:26:01,519 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:26:03,653 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:26:03,654 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:26:03,654 - dice_roller - DEBUG - Result for 1d20: rolls=[6], modifier=0, total=6
+2026-03-16 08:26:03,861 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:26:06,009 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:26:06,009 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:26:06,009 - dice_roller - DEBUG - Result for 1d20: rolls=[7], modifier=0, total=7
+2026-03-16 08:26:06,218 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:26:08,467 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:26:08,468 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:26:08,468 - dice_roller - DEBUG - Result for 1d20: rolls=[9], modifier=0, total=9
+2026-03-16 08:26:08,655 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:26:10,754 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:26:10,754 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:26:10,755 - dice_roller - DEBUG - Result for 1d20: rolls=[13], modifier=0, total=13
+2026-03-16 08:26:11,069 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 08:26:14,118 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with notation: 1d20
+2026-03-16 08:26:14,118 - dice_roller - DEBUG - Rolling dice with notation: 1d20
+2026-03-16 08:26:14,118 - dice_roller - DEBUG - Result for 1d20: rolls=[15], modifier=0, total=15
+2026-03-16 08:26:14,333 - commands.roll_commands - INFO - /roll completed for user 181919139751788545
+2026-03-16 09:31:56,839 - discord.gateway - INFO - Shard ID None has successfully RESUMED session ee2e738772cb9cc9a20e859be475da29.
+2026-03-16 09:53:24,051 - discord.gateway - INFO - Shard ID None has successfully RESUMED session ee2e738772cb9cc9a20e859be475da29.
+2026-03-16 10:09:17,813 - root - INFO - Logging initialized
+2026-03-16 10:09:17,814 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 10:09:17,814 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 10:09:17,815 - __main__ - INFO - Starting bot...
+2026-03-16 10:09:17,815 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 10:09:17,816 - discord.client - INFO - logging in using static token
+2026-03-16 10:09:20,494 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 10:09:20,927 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 1bed26786dd3798572d9b05aa0fa12b5).
+2026-03-16 10:09:22,934 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 10:09:22,935 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 10:09:44,004 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 10:11:24,220 - root - INFO - Logging initialized
+2026-03-16 10:11:24,220 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 10:11:24,220 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 10:11:24,220 - __main__ - INFO - Starting bot...
+2026-03-16 10:11:24,220 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 10:11:24,221 - discord.client - INFO - logging in using static token
+2026-03-16 10:11:24,880 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 10:11:25,397 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 649ddb5a950f0155dde00e3833cceed9).
+2026-03-16 10:11:27,412 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 10:11:27,412 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 10:11:37,114 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 10:18:25,423 - commands.encounter_commands - DEBUG - Command /create_encounter called by 181919139751788545
+2026-03-16 10:18:25,483 - commands.encounter_commands - INFO - /create_encounter completed for user 181919139751788545: 'Goblin ambush'
+2026-03-16 10:18:40,842 - commands.encounter_commands - DEBUG - Command /add_enemy called by 181919139751788545
+2026-03-16 10:18:40,860 - commands.encounter_commands - INFO - /add_enemy completed for user 181919139751788545: 'Goblin 1' added to 'Goblin ambush'
+2026-03-16 10:18:53,407 - commands.encounter_commands - DEBUG - Command /add_enemy called by 181919139751788545
+2026-03-16 10:18:53,417 - commands.encounter_commands - INFO - /add_enemy completed for user 181919139751788545: 'goblin 2' added to 'Goblin ambush'
+2026-03-16 10:19:01,865 - commands.party_commands - DEBUG - Command /active_party called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with name: None
+2026-03-16 10:19:01,874 - commands.party_commands - INFO - /active_party completed for user 181919139751788545: viewed active party 'BadSlashfic'
+2026-03-16 10:19:14,588 - commands.encounter_commands - DEBUG - Command /start_encounter called by 181919139751788545
+2026-03-16 10:19:15,272 - commands.encounter_commands - INFO - /start_encounter completed: 'Goblin ambush' is now ACTIVE
+2026-03-16 10:19:32,492 - commands.encounter_commands - DEBUG - Command /next_turn called by 181919139751788545
+2026-03-16 10:19:37,822 - discord.app_commands.tree - ERROR - Ignoring exception in command 'next_turn'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 353, in next_turn
+    await interaction.followup.send(ping)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 1909, in send
+    data = await adapter.execute_webhook(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 224, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'next_turn' raised an exception: NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+2026-03-16 10:19:40,766 - commands.encounter_commands - DEBUG - Command /next_turn called by 181919139751788545
+2026-03-16 10:19:45,945 - discord.app_commands.tree - ERROR - Ignoring exception in command 'next_turn'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 353, in next_turn
+    await interaction.followup.send(ping)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 1909, in send
+    data = await adapter.execute_webhook(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 224, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'next_turn' raised an exception: NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+2026-03-16 10:24:13,963 - root - INFO - Logging initialized
+2026-03-16 10:24:13,963 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 10:24:13,963 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 10:24:13,963 - __main__ - INFO - Starting bot...
+2026-03-16 10:24:13,963 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 10:24:13,963 - discord.client - INFO - logging in using static token
+2026-03-16 10:24:14,719 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 10:24:15,226 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: b19d1a608a71a8089baf4a576a686748).
+2026-03-16 10:24:17,237 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 10:24:17,237 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 10:24:22,622 - commands.encounter_commands - DEBUG - Command /next_turn called by 181919139751788545
+2026-03-16 10:24:27,651 - discord.app_commands.tree - ERROR - Ignoring exception in command 'next_turn'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 353, in next_turn
+    await interaction.followup.send(ping)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 1909, in send
+    data = await adapter.execute_webhook(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 224, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'next_turn' raised an exception: NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+2026-03-16 10:24:33,717 - commands.encounter_commands - DEBUG - Command /end_encounter called by 181919139751788545
+2026-03-16 10:24:33,725 - commands.encounter_commands - INFO - /end_encounter completed: 'Goblin ambush' marked COMPLETE
+2026-03-16 10:41:07,096 - root - INFO - Logging initialized
+2026-03-16 10:41:07,096 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 10:41:07,096 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 10:41:07,096 - __main__ - INFO - Starting bot...
+2026-03-16 10:41:07,097 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 10:41:07,097 - discord.client - INFO - logging in using static token
+2026-03-16 10:41:07,774 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 10:41:08,181 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 802a76f70a7972fa998305108b85313a).
+2026-03-16 10:41:10,189 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 10:41:10,189 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 10:41:14,940 - commands.encounter_commands - DEBUG - Command /view_encounter called by 181919139751788545
+2026-03-16 10:42:01,329 - commands.encounter_commands - DEBUG - Command /create_encounter called by 181919139751788545
+2026-03-16 10:42:01,345 - commands.encounter_commands - INFO - /create_encounter completed for user 181919139751788545: 'Test2'
+2026-03-16 13:37:54,054 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 802a76f70a7972fa998305108b85313a.
+2026-03-16 13:56:23,003 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 802a76f70a7972fa998305108b85313a.
+2026-03-16 15:38:28,631 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 802a76f70a7972fa998305108b85313a.
+2026-03-16 18:42:38,103 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-16 18:42:43,561 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 6e6150ef6e155580d402cb6be33cb039).
+2026-03-16 18:42:45,594 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 18:42:45,594 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 19:45:17,728 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-16 19:45:23,314 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 4fc8c7fada9e3e74baf0fe3e28d1d66b).
+2026-03-16 19:45:25,322 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 19:45:25,322 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 21:39:44,044 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-16 21:39:49,489 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 907c9fb7891f4b8dd2f111dfb9e8eafe).
+2026-03-16 21:39:51,496 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 21:39:51,497 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 21:41:33,991 - root - INFO - Logging initialized
+2026-03-16 21:41:33,991 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 21:41:33,992 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 21:41:33,992 - __main__ - INFO - Starting bot...
+2026-03-16 21:41:33,992 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 21:41:33,992 - discord.client - INFO - logging in using static token
+2026-03-16 21:41:34,613 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 21:41:35,138 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 97e7ee63639ddc29188f948a9b03ec5c).
+2026-03-16 21:41:37,147 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 21:41:37,147 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 21:42:01,386 - commands.encounter_commands - DEBUG - Command /start_encounter called by 181919139751788545
+2026-03-16 21:42:09,988 - commands.encounter_commands - DEBUG - Command /add_enemy called by 181919139751788545
+2026-03-16 21:42:10,000 - commands.encounter_commands - INFO - /add_enemy completed for user 181919139751788545: 'foo' added to 'Test2'
+2026-03-16 21:42:16,049 - commands.encounter_commands - DEBUG - Command /view_encounter called by 181919139751788545
+2026-03-16 21:42:19,820 - commands.encounter_commands - DEBUG - Command /start_encounter called by 181919139751788545
+2026-03-16 21:42:20,548 - commands.encounter_commands - INFO - /start_encounter completed: 'Test2' is now ACTIVE
+2026-03-16 22:03:07,962 - root - INFO - Logging initialized
+2026-03-16 22:03:07,963 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:03:07,963 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:03:07,964 - __main__ - INFO - Starting bot...
+2026-03-16 22:03:07,964 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:03:07,964 - discord.client - INFO - logging in using static token
+2026-03-16 22:03:08,733 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 22:03:09,082 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 4bad77b7c9b42e7733b9f84cebc641c8).
+2026-03-16 22:03:11,101 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 22:03:11,101 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 22:03:23,275 - commands.character_commands - DEBUG - Command /delete_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with name: Aragorn
+2026-03-16 22:03:23,282 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: Aragorn
+2026-03-16 22:03:23,315 - discord.app_commands.tree - ERROR - Ignoring exception in command 'delete_character'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/character_commands.py", line 430, in delete_character
+    db.commit()
+    ~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 679, in execute
+    util.preloaded.orm_persistence.delete_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, True, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 193, in delete_obj
+    _emit_delete_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        delete,
+        ^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 1471, in _emit_delete_statements
+    c = connection.execute(
+        statement, del_objects, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+[SQL: DELETE FROM characters WHERE characters.id = ?]
+[parameters: (13,)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'delete_character' raised an exception: IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+[SQL: DELETE FROM characters WHERE characters.id = ?]
+[parameters: (13,)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-16 22:04:21,229 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 22:05:15,440 - root - INFO - Logging initialized
+2026-03-16 22:05:15,440 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:05:15,441 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:05:15,441 - __main__ - INFO - Starting bot...
+2026-03-16 22:05:15,442 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:05:15,442 - discord.client - INFO - logging in using static token
+2026-03-16 22:05:16,214 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 22:05:17,853 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 6249aceb577ed20e3a292025afcf74af).
+2026-03-16 22:05:19,859 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 22:05:19,859 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 22:05:40,173 - commands.character_commands - DEBUG - Command /delete_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with name: Aragorn
+2026-03-16 22:05:40,177 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: Aragorn
+2026-03-16 22:05:40,182 - discord.app_commands.tree - ERROR - Ignoring exception in command 'delete_character'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/character_commands.py", line 430, in delete_character
+    db.commit()
+    ~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2030, in commit
+    trans.commit(_to_root=True)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "<string>", line 2, in commit
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 1311, in commit
+    self._prepare_impl()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "<string>", line 2, in _prepare_impl
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 1286, in _prepare_impl
+    self.session.flush()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 679, in execute
+    util.preloaded.orm_persistence.delete_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, True, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 193, in delete_obj
+    _emit_delete_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        delete,
+        ^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 1471, in _emit_delete_statements
+    c = connection.execute(
+        statement, del_objects, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+[SQL: DELETE FROM characters WHERE characters.id = ?]
+[parameters: (13,)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'delete_character' raised an exception: IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+[SQL: DELETE FROM characters WHERE characters.id = ?]
+[parameters: (13,)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-16 22:17:07,905 - root - INFO - Logging initialized
+2026-03-16 22:17:07,906 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:17:07,906 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:17:07,906 - __main__ - INFO - Starting bot...
+2026-03-16 22:17:07,906 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:17:07,906 - discord.client - INFO - logging in using static token
+2026-03-16 22:17:08,565 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 22:17:09,035 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 12fd2070cd3023feb7b6525afe657b78).
+2026-03-16 22:17:11,044 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 22:17:11,045 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 22:17:33,030 - commands.health_commands - DEBUG - Command /hp called by 181919139751788545
+2026-03-16 22:17:41,904 - commands.health_commands - DEBUG - Command /set_max_hp called by 181919139751788545
+2026-03-16 22:17:48,646 - commands.health_commands - DEBUG - Command /set_max_hp called by 181919139751788545
+2026-03-16 22:17:48,654 - commands.health_commands - INFO - /set_max_hp: foo max_hp=20
+2026-03-16 22:17:55,218 - commands.health_commands - DEBUG - Command /damage called by 181919139751788545
+2026-03-16 22:17:55,449 - commands.health_commands - INFO - /damage: foo took 10 damage, HP now 10/20
+2026-03-16 22:31:14,495 - root - INFO - Logging initialized
+2026-03-16 22:31:14,495 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:31:14,495 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:31:14,495 - __main__ - INFO - Starting bot...
+2026-03-16 22:31:14,496 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:31:14,496 - discord.client - INFO - logging in using static token
+2026-03-16 22:31:15,272 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 22:31:15,679 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 935c1c76fe1bbc1fa3ffd18c2f820752).
+2026-03-16 22:31:17,685 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 22:31:17,685 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 22:31:23,771 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 22:31:24,532 - discord.app_commands.tree - ERROR - Ignoring exception in command 'help'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/meta_commands.py", line 61, in help_command
+    await message.add_reaction(":mage:")
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/message.py", line 1543, in add_reaction
+    await self._state.http.add_reaction(self.channel.id, self.id, emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/http.py", line 778, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In emoji_id: Value "" is not snowflake.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'help' raised an exception: HTTPException: 400 Bad Request (error code: 50035): Invalid Form Body
+In emoji_id: Value "" is not snowflake.
+2026-03-16 22:35:45,564 - root - INFO - Logging initialized
+2026-03-16 22:35:45,564 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:35:45,564 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:35:45,565 - __main__ - INFO - Starting bot...
+2026-03-16 22:35:45,565 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:35:45,565 - discord.client - INFO - logging in using static token
+2026-03-16 22:35:46,473 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 22:35:46,855 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: ef20689a6b2d1b58099c896ec010a989).
+2026-03-16 22:35:48,865 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 22:35:48,865 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 22:35:49,563 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 22:40:37,640 - root - INFO - Logging initialized
+2026-03-16 22:40:37,641 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:40:37,641 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:40:37,641 - __main__ - INFO - Starting bot...
+2026-03-16 22:40:37,642 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:40:37,642 - discord.client - INFO - logging in using static token
+2026-03-16 22:40:38,512 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 22:40:39,316 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: a30a4735303f98bf539ee601a5e34ac7).
+2026-03-16 22:40:41,325 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 22:40:41,325 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 22:40:41,671 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 22:40:43,049 - discord.app_commands.tree - ERROR - Ignoring exception in command 'help'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/meta_commands.py", line 62, in help_command
+    await message.add_reaction("⚔⚔️")
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/message.py", line 1543, in add_reaction
+    await self._state.http.add_reaction(self.channel.id, self.id, emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/http.py", line 778, in request
+    raise HTTPException(response, data)
+discord.errors.HTTPException: 400 Bad Request (error code: 10014): Unknown Emoji
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'help' raised an exception: HTTPException: 400 Bad Request (error code: 10014): Unknown Emoji
+2026-03-16 22:41:06,970 - root - INFO - Logging initialized
+2026-03-16 22:41:06,971 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:41:06,971 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:41:06,971 - __main__ - INFO - Starting bot...
+2026-03-16 22:41:06,971 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:41:06,972 - discord.client - INFO - logging in using static token
+2026-03-16 22:41:24,451 - root - INFO - Logging initialized
+2026-03-16 22:41:24,452 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:41:24,452 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:41:24,453 - __main__ - INFO - Starting bot...
+2026-03-16 22:41:24,453 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:41:24,453 - discord.client - INFO - logging in using static token
+2026-03-16 22:51:34,418 - root - INFO - Logging initialized
+2026-03-16 22:51:34,419 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 22:51:34,419 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 22:51:34,419 - __main__ - INFO - Starting bot...
+2026-03-16 22:51:34,419 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 22:51:34,419 - discord.client - INFO - logging in using static token
+2026-03-16 22:51:35,293 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 22:51:35,755 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: afa91cf1c91ebdb28646a503d337d02b).
+2026-03-16 22:51:37,764 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 22:51:37,765 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 22:51:47,931 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 22:59:14,736 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 — notation='1d20+1d6' advantage=None
+2026-03-16 22:59:14,964 - commands.roll_commands - INFO - /roll (dice) completed for user 181919139751788545
+2026-03-16 22:59:27,880 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 — notation='1d20' advantage=advantage
+2026-03-16 22:59:28,180 - commands.roll_commands - INFO - /roll (dice) completed for user 181919139751788545
+2026-03-16 23:00:00,476 - root - INFO - Logging initialized
+2026-03-16 23:00:00,477 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 23:00:00,477 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 23:00:00,477 - __main__ - INFO - Starting bot...
+2026-03-16 23:00:00,477 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 23:00:00,477 - discord.client - INFO - logging in using static token
+2026-03-16 23:00:01,467 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 23:00:01,876 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 849fd7f74ea01ea818a08c408eea5cf0).
+2026-03-16 23:00:03,885 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 23:00:03,885 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 23:00:05,563 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 23:21:39,696 - root - INFO - Logging initialized
+2026-03-16 23:21:39,697 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 23:21:39,697 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 23:21:39,697 - __main__ - INFO - Starting bot...
+2026-03-16 23:21:39,697 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 23:21:39,697 - discord.client - INFO - logging in using static token
+2026-03-16 23:21:40,411 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 23:21:40,710 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 5bcd01baa77d7855dff0f6ca94aeb02f).
+2026-03-16 23:21:42,720 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 23:21:42,720 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 23:21:44,249 - root - INFO - Logging initialized
+2026-03-16 23:21:44,249 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 23:21:44,249 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 23:21:44,250 - __main__ - INFO - Starting bot...
+2026-03-16 23:21:44,250 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 23:21:44,250 - discord.client - INFO - logging in using static token
+2026-03-16 23:22:49,770 - root - INFO - Logging initialized
+2026-03-16 23:22:49,771 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 23:22:49,771 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 23:22:49,771 - __main__ - INFO - Starting bot...
+2026-03-16 23:22:49,771 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 23:22:49,771 - discord.client - INFO - logging in using static token
+2026-03-16 23:22:50,453 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 23:22:52,193 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 7ee9cbca97aaa825ae6cae6481391c55).
+2026-03-16 23:22:54,204 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 23:22:54,204 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 23:23:15,344 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 23:23:16,302 - discord.app_commands.tree - ERROR - Ignoring exception in command 'help'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/meta_commands.py", line 82, in help_command
+    await message.add_reaction(emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/message.py", line 1543, in add_reaction
+    await self._state.http.add_reaction(self.channel.id, self.id, emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/http.py", line 772, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50001): Missing Access
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'help' raised an exception: Forbidden: 403 Forbidden (error code: 50001): Missing Access
+2026-03-16 23:23:35,406 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 23:24:41,656 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 23:24:42,545 - discord.app_commands.tree - ERROR - Ignoring exception in command 'help'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/meta_commands.py", line 82, in help_command
+    await message.add_reaction(emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/message.py", line 1543, in add_reaction
+    await self._state.http.add_reaction(self.channel.id, self.id, emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/http.py", line 772, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50001): Missing Access
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'help' raised an exception: Forbidden: 403 Forbidden (error code: 50001): Missing Access
+2026-03-16 23:29:27,445 - root - INFO - Logging initialized
+2026-03-16 23:29:27,445 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 23:29:27,445 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 23:29:27,445 - __main__ - INFO - Starting bot...
+2026-03-16 23:29:27,445 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 23:29:27,445 - discord.client - INFO - logging in using static token
+2026-03-16 23:29:28,391 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 23:29:28,735 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: f0560a5b76938177612757ddbf0a5c06).
+2026-03-16 23:29:30,761 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 23:29:30,761 - __main__ - DEBUG - Bot is ready and running
+2026-03-16 23:29:35,251 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-16 23:30:12,629 - commands.character_commands - DEBUG - Command /create_character called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with name: test
+2026-03-16 23:30:12,681 - commands.character_commands - INFO - /create_character completed for user 181919139751788545: created 'test' at level 2
+2026-03-16 23:30:18,125 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-16 23:30:18,133 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: test
+2026-03-16 23:30:18,467 - commands.character_commands - INFO - /view_character completed for user 181919139751788545: viewed 'test'
+2026-03-16 23:50:09,304 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 — notation='4d4' advantage=disadvantage
+2026-03-16 23:50:09,688 - commands.roll_commands - INFO - /roll (dice) completed for user 181919139751788545
+2026-03-16 23:50:25,279 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 — notation='Constitution Save' advantage=advantage
+2026-03-16 23:50:25,286 - commands.roll_commands - DEBUG - Character lookup: found: test
+2026-03-16 23:50:25,286 - utils.dnd_logic - DEBUG - perform_roll: char=test notation='Constitution Save' advantage=advantage
+2026-03-16 23:50:25,504 - commands.roll_commands - INFO - /roll (character) completed for user 181919139751788545
+2026-03-16 23:50:59,812 - commands.roll_commands - DEBUG - Command /roll called by wobbix (ID: 181919139751788545) in guild 660895347069157376 — notation='2d20' advantage=disadvantage
+2026-03-16 23:51:00,035 - commands.roll_commands - INFO - /roll (dice) completed for user 181919139751788545
+2026-03-17 00:07:13,727 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 00:07:40,965 - root - INFO - Logging initialized
+2026-03-17 00:07:40,966 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 00:07:40,966 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 00:07:40,967 - __main__ - INFO - Starting bot...
+2026-03-17 00:07:40,967 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 00:07:40,967 - discord.client - INFO - logging in using static token
+2026-03-17 00:07:41,787 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 00:07:42,165 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 442cb19be76352f0b06965a73f4c8ce3).
+2026-03-17 00:07:44,175 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 00:07:44,176 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 00:07:52,209 - commands.meta_commands - INFO - Sent welcome message to Bot Test Server (660895347069157376) in #general
+2026-03-17 00:32:02,024 - commands.meta_commands - INFO - Sent welcome message to Open Source Gaming & Roleplaying Environment (794344702739611668) in #general
+2026-03-17 00:40:56,560 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 00:40:56,569 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: test
+2026-03-17 00:40:56,838 - commands.character_commands - INFO - /view_character completed for user 181919139751788545: viewed 'test'
+2026-03-17 00:51:19,925 - root - INFO - Logging initialized
+2026-03-17 00:51:19,926 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 00:51:19,926 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 00:51:19,926 - __main__ - INFO - Starting bot...
+2026-03-17 00:51:19,927 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 00:51:19,927 - discord.client - INFO - logging in using static token
+2026-03-17 00:51:20,699 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 00:51:21,106 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: c8b6c2b8b634866f6b04136303596250).
+2026-03-17 00:51:23,113 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 00:51:23,113 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 00:51:38,723 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 00:51:38,768 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: test
+2026-03-17 00:51:38,770 - discord.app_commands.tree - ERROR - Ignoring exception in command 'view_character'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: class_levels
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/character_commands.py", line 425, in view_character
+    embed = _build_sheet_page0(char)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/character_commands.py", line 41, in _build_sheet_page0
+    prof_bonus = get_proficiency_bonus(char.level)
+                                       ^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/models/character.py", line 65, in level
+    return sum(cl.level for cl in self.class_levels)
+                                  ^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 569, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1096, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1131, in _fire_loader_callables
+    return self.callable_(state, passive)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 978, in _load_for_state
+    return self._emit_lazyload(
+           ~~~~~~~~~~~~~~~~~~~^
+        session,
+        ^^^^^^^^
+    ...<7 lines>...
+        execution_options,
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 1141, in _emit_lazyload
+    result = session.execute(
+        stmt, params, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: class_levels
+[SQL: SELECT class_levels.id AS class_levels_id, class_levels.character_id AS class_levels_character_id, class_levels.class_name AS class_levels_class_name, class_levels.level AS class_levels_level 
+FROM class_levels 
+WHERE ? = class_levels.character_id]
+[parameters: (19,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'view_character' raised an exception: OperationalError: (sqlite3.OperationalError) no such table: class_levels
+[SQL: SELECT class_levels.id AS class_levels_id, class_levels.character_id AS class_levels_character_id, class_levels.class_name AS class_levels_class_name, class_levels.level AS class_levels_level 
+FROM class_levels 
+WHERE ? = class_levels.character_id]
+[parameters: (19,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-03-17 00:52:34,834 - commands.character_commands - DEBUG - Command /create_character called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with name: testingclass, class: Barbarian, level: 2
+2026-03-17 00:52:34,853 - discord.app_commands.tree - ERROR - Ignoring exception in command 'create_character'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.IntegrityError: NOT NULL constraint failed: characters.level
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/character_commands.py", line 278, in create_character
+    db.flush()
+    ~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4331, in flush
+    self._flush(objects)
+    ~~~~~~~~~~~^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4466, in _flush
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 4427, in _flush
+    flush_context.execute()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 466, in execute
+    rec.execute(self)
+    ~~~~~~~~~~~^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.mapper,
+        ^^^^^^^^^^^^
+        uow.states_for_mapper_hierarchy(self.mapper, False, False),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        uow,
+        ^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        base_mapper,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        insert,
+        ^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+        statement,
+        params,
+        execution_options=execution_options,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: characters.level
+[SQL: INSERT INTO characters (name, user_id, server_id, strength, dexterity, constitution, intelligence, wisdom, charisma, initiative_bonus, is_active, st_prof_strength, st_prof_dexterity, st_prof_constitution, st_prof_intelligence, st_prof_wisdom, st_prof_charisma, max_hp, current_hp, temp_hp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('testingclass', 3, 3, None, None, None, None, None, None, None, 1, 0, 0, 0, 0, 0, 0, -1, -1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'create_character' raised an exception: IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: characters.level
+[SQL: INSERT INTO characters (name, user_id, server_id, strength, dexterity, constitution, intelligence, wisdom, charisma, initiative_bonus, is_active, st_prof_strength, st_prof_dexterity, st_prof_constitution, st_prof_intelligence, st_prof_wisdom, st_prof_charisma, max_hp, current_hp, temp_hp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('testingclass', 3, 3, None, None, None, None, None, None, None, 1, 0, 0, 0, 0, 0, 0, -1, -1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-17 00:54:43,574 - root - INFO - Logging initialized
+2026-03-17 00:54:43,575 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 00:54:43,575 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 00:54:43,575 - __main__ - INFO - Starting bot...
+2026-03-17 00:54:43,575 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 00:54:43,575 - discord.client - INFO - logging in using static token
+2026-03-17 00:54:44,373 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 00:54:44,884 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: cbe4db14f92b9443e273cdcc2487296c).
+2026-03-17 00:54:46,889 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 00:54:46,889 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 00:54:51,642 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 00:54:51,691 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: test
+2026-03-17 00:54:53,937 - commands.character_commands - INFO - /view_character completed for user 181919139751788545: viewed 'test'
+2026-03-17 00:55:33,525 - commands.character_commands - DEBUG - Command /create_character called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with name: TestingClasses, class: Barbarian, level: 2
+2026-03-17 00:55:33,555 - commands.character_commands - INFO - /create_character completed for user 181919139751788545: created 'TestingClasses' as level 2 Barbarian
+2026-03-17 00:56:14,895 - commands.character_commands - DEBUG - Command /set_stats called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 00:56:14,900 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 00:56:14,911 - commands.character_commands - INFO - /set_stats completed for user 181919139751788545: updated stats for 'TestingClasses'
+2026-03-17 00:56:24,127 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 00:56:24,129 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 00:56:26,841 - commands.character_commands - INFO - /view_character completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 01:00:48,509 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-17 01:00:54,193 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: b316c8ff748b9dd7000224589f220def).
+2026-03-17 01:00:56,214 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 01:00:56,214 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 01:07:08,391 - root - INFO - Logging initialized
+2026-03-17 01:07:08,391 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 01:07:08,391 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 01:07:08,392 - __main__ - INFO - Starting bot...
+2026-03-17 01:07:08,392 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 01:07:08,393 - discord.client - INFO - logging in using static token
+2026-03-17 01:07:09,207 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 01:07:09,613 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 9ce4dd2c2774499dbad4d599aed42e2d).
+2026-03-17 01:07:11,622 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 01:07:11,622 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 01:07:16,680 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 01:07:16,809 - discord.app_commands.tree - ERROR - Ignoring exception in command 'view_character'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: characters.ac
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/character_commands.py", line 422, in view_character
+    char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2857, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+                                                  ~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+        params,
+        ^^^^^^^
+        execution_options={"_sa_orm_load_options": self.load_options},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: characters.ac
+[SQL: SELECT characters.id AS characters_id, characters.name AS characters_name, characters.user_id AS characters_user_id, characters.server_id AS characters_server_id, characters.strength AS characters_strength, characters.dexterity AS characters_dexterity, characters.constitution AS characters_constitution, characters.intelligence AS characters_intelligence, characters.wisdom AS characters_wisdom, characters.charisma AS characters_charisma, characters.initiative_bonus AS characters_initiative_bonus, characters.is_active AS characters_is_active, characters.st_prof_strength AS characters_st_prof_strength, characters.st_prof_dexterity AS characters_st_prof_dexterity, characters.st_prof_constitution AS characters_st_prof_constitution, characters.st_prof_intelligence AS characters_st_prof_intelligence, characters.st_prof_wisdom AS characters_st_prof_wisdom, characters.st_prof_charisma AS characters_st_prof_charisma, characters.max_hp AS characters_max_hp, characters.current_hp AS characters_current_hp, characters.temp_hp AS characters_temp_hp, characters.ac AS characters_ac 
+FROM characters 
+WHERE ? = characters.user_id AND ? = characters.server_id AND characters.is_active = 1
+ LIMIT ? OFFSET ?]
+[parameters: (3, 3, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'view_character' raised an exception: OperationalError: (sqlite3.OperationalError) no such column: characters.ac
+[SQL: SELECT characters.id AS characters_id, characters.name AS characters_name, characters.user_id AS characters_user_id, characters.server_id AS characters_server_id, characters.strength AS characters_strength, characters.dexterity AS characters_dexterity, characters.constitution AS characters_constitution, characters.intelligence AS characters_intelligence, characters.wisdom AS characters_wisdom, characters.charisma AS characters_charisma, characters.initiative_bonus AS characters_initiative_bonus, characters.is_active AS characters_is_active, characters.st_prof_strength AS characters_st_prof_strength, characters.st_prof_dexterity AS characters_st_prof_dexterity, characters.st_prof_constitution AS characters_st_prof_constitution, characters.st_prof_intelligence AS characters_st_prof_intelligence, characters.st_prof_wisdom AS characters_st_prof_wisdom, characters.st_prof_charisma AS characters_st_prof_charisma, characters.max_hp AS characters_max_hp, characters.current_hp AS characters_current_hp, characters.temp_hp AS characters_temp_hp, characters.ac AS characters_ac 
+FROM characters 
+WHERE ? = characters.user_id AND ? = characters.server_id AND characters.is_active = 1
+ LIMIT ? OFFSET ?]
+[parameters: (3, 3, 1, 0)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-03-17 01:07:44,788 - root - INFO - Logging initialized
+2026-03-17 01:07:44,789 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 01:07:44,789 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 01:07:44,789 - __main__ - INFO - Starting bot...
+2026-03-17 01:07:44,790 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 01:07:44,790 - discord.client - INFO - logging in using static token
+2026-03-17 01:07:45,343 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 01:07:45,763 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 8fb6893d83e6c7cb0911a7c8c308e038).
+2026-03-17 01:07:47,770 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 01:07:47,770 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 01:07:52,132 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 01:07:52,233 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 01:07:54,204 - commands.character_commands - INFO - /view_character completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 01:08:15,253 - commands.health_commands - DEBUG - Command /add_temp_hp called by 181919139751788545
+2026-03-17 01:08:15,276 - commands.health_commands - INFO - /add_temp_hp: TestingClasses temp_hp=1
+2026-03-17 01:08:21,905 - commands.character_commands - DEBUG - Command /view_character called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 01:08:21,912 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 01:08:24,154 - commands.character_commands - INFO - /view_character completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 01:32:48,448 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 8fb6893d83e6c7cb0911a7c8c308e038.
+2026-03-17 01:44:59,028 - root - INFO - Logging initialized
+2026-03-17 01:44:59,029 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 01:44:59,029 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 01:44:59,029 - __main__ - INFO - Starting bot...
+2026-03-17 01:44:59,030 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 01:44:59,030 - discord.client - INFO - logging in using static token
+2026-03-17 01:44:59,754 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 01:45:00,264 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 62d37e202356d8d32124c6448a28dc50).
+2026-03-17 01:45:02,271 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 01:45:02,272 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 01:45:29,245 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 01:47:36,943 - commands.character_commands - DEBUG - Command /character saves called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 01:47:37,091 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 01:47:37,109 - commands.character_commands - INFO - /character saves completed for user 181919139751788545: updated saves for 'TestingClasses'
+2026-03-17 02:05:50,365 - commands.encounter_commands - DEBUG - Command /encounter create called by 181919139751788545
+2026-03-17 02:05:57,527 - root - INFO - Logging initialized
+2026-03-17 02:05:57,528 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 02:05:57,528 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 02:05:57,528 - __main__ - INFO - Starting bot...
+2026-03-17 02:05:57,529 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 02:05:57,529 - discord.client - INFO - logging in using static token
+2026-03-17 02:05:58,560 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 02:05:58,967 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 3cb07b4c42775faee35220d6026e8c1e).
+2026-03-17 02:06:00,977 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 02:06:00,978 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 02:06:11,972 - commands.encounter_commands - DEBUG - Command /encounter view called by 181919139751788545
+2026-03-17 02:06:12,318 - commands.encounter_commands - INFO - /encounter view served for 'Test2'
+2026-03-17 02:06:27,740 - commands.character_commands - DEBUG - Command /character delete called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with name: Aragorn
+2026-03-17 02:06:27,752 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: Aragorn
+2026-03-17 02:06:57,128 - commands.party_commands - DEBUG - Command /party character_remove called by wobbix (ID: 181919139751788545) for guild 660895347069157376 — party: BadSlashfic, char: Aragorn
+2026-03-17 02:07:01,869 - commands.party_commands - INFO - Confirmed removal of 'Aragorn' from 'BadSlashfic' including EncounterTurn cascade
+2026-03-17 02:09:55,478 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-17 02:10:00,905 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 6439d3a50271c954bba98c7d18b7b2a2).
+2026-03-17 02:10:02,915 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 02:10:02,915 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 08:44:09,348 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-17 08:44:14,770 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 13b16753459b24a0117473fa6cc54d2e).
+2026-03-17 08:44:16,782 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 08:44:16,782 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 08:49:17,636 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 08:49:18,557 - discord.app_commands.tree - ERROR - Ignoring exception in command 'help'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/meta_commands.py", line 110, in help_command
+    await message.add_reaction(emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/message.py", line 1543, in add_reaction
+    await self._state.http.add_reaction(self.channel.id, self.id, emoji)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/http.py", line 772, in request
+    raise Forbidden(response, data)
+discord.errors.Forbidden: 403 Forbidden (error code: 50001): Missing Access
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'help' raised an exception: Forbidden: 403 Forbidden (error code: 50001): Missing Access
+2026-03-17 09:05:37,817 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 09:09:39,036 - root - INFO - Logging initialized
+2026-03-17 09:09:39,037 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 09:09:39,037 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 09:09:39,038 - __main__ - INFO - Starting bot...
+2026-03-17 09:09:39,039 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 09:09:39,040 - discord.client - INFO - logging in using static token
+2026-03-17 09:09:40,013 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 09:09:40,446 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: c8a53e1e02640dda14aae98bfe388cc4).
+2026-03-17 09:09:42,455 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 09:09:42,455 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 09:09:46,388 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 09:09:46,766 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-17 09:10:12,833 - commands.character_commands - DEBUG - Command /character view called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 09:10:12,969 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 09:10:15,249 - commands.character_commands - INFO - /character view completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 09:11:05,369 - root - INFO - Logging initialized
+2026-03-17 09:11:05,370 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 09:11:05,370 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 09:11:05,370 - __main__ - INFO - Starting bot...
+2026-03-17 09:11:05,371 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 09:11:05,371 - discord.client - INFO - logging in using static token
+2026-03-17 09:11:06,131 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 09:11:06,499 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 9f1f6568b0876c69248693e66aecbd54).
+2026-03-17 09:11:08,509 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 09:11:08,509 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 09:15:16,666 - commands.character_commands - DEBUG - Command /character view called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 09:15:16,785 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 09:15:19,075 - commands.character_commands - INFO - /character view completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 09:15:23,469 - root - INFO - Logging initialized
+2026-03-17 09:15:23,469 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 09:15:23,470 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 09:15:23,470 - __main__ - INFO - Starting bot...
+2026-03-17 09:15:23,470 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 09:15:23,471 - discord.client - INFO - logging in using static token
+2026-03-17 09:15:24,252 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 09:15:24,580 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 15e04d01b4995f65ae52f436f4f7eec0).
+2026-03-17 09:15:26,590 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 09:15:26,590 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 09:15:29,711 - commands.character_commands - DEBUG - Command /character view called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 09:15:29,855 - commands.character_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 09:15:31,446 - commands.character_commands - INFO - /character view completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 09:29:48,798 - root - INFO - Logging initialized
+2026-03-17 09:29:48,798 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 09:29:48,798 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 09:29:48,799 - __main__ - INFO - Starting bot...
+2026-03-17 09:29:48,799 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 09:29:48,801 - discord.client - INFO - logging in using static token
+2026-03-17 09:29:50,020 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 09:29:50,513 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 8da8db4915b9d4121103318eed07b8fc).
+2026-03-17 09:29:52,521 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 09:29:52,521 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 09:30:23,449 - commands.character_commands - DEBUG - Command /character view called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 09:30:23,589 - commands.character_commands - DEBUG - Character lookup resolved to 'TestingClasses'
+2026-03-17 09:30:24,176 - commands.character_commands - INFO - /character view completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 09:30:31,885 - commands.character_commands - DEBUG - Command /character list called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 09:30:31,896 - commands.character_commands - DEBUG - Character list for user 181919139751788545: found 7 character(s)
+2026-03-17 09:30:32,162 - commands.character_commands - INFO - /character list completed for user 181919139751788545: listed 7 character(s)
+2026-03-17 09:30:50,626 - commands.character_commands - DEBUG - Command /character view called by wobbix (ID: 181919139751788545) for guild 660895347069157376 — requested name: 'Widowmaker's Ass'
+2026-03-17 09:30:50,639 - commands.character_commands - DEBUG - Character lookup resolved to 'Widowmaker's Ass'
+2026-03-17 09:30:51,033 - commands.character_commands - INFO - /character view completed for user 181919139751788545: viewed 'Widowmaker's Ass'
+2026-03-17 09:36:50,968 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 09:36:51,566 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-17 09:42:24,389 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 09:42:24,796 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-17 09:43:54,186 - commands.character_commands - DEBUG - Command /character create called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with name: foo, class: Cleric, level: 1
+2026-03-17 18:53:23,686 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-17 18:53:29,245 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 7db4a089203c948ac05637aae4cc7419).
+2026-03-17 18:53:31,256 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 18:53:31,257 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 19:28:54,726 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 7db4a089203c948ac05637aae4cc7419.
+2026-03-17 19:55:46,692 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-17 19:55:52,184 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 9b03fd69f7daf0eb01fecf9aee31604b).
+2026-03-17 19:55:54,192 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 19:55:54,193 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 20:29:40,898 - root - INFO - Logging initialized
+2026-03-17 20:29:40,899 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 20:29:40,899 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 20:29:40,899 - __main__ - INFO - Starting bot...
+2026-03-17 20:29:40,899 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 20:29:40,899 - discord.client - INFO - logging in using static token
+2026-03-17 20:29:42,113 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 20:29:42,464 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 557f565cbef48b14302a5b1d6d5f2b89).
+2026-03-17 20:29:44,472 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 20:29:44,472 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 20:30:53,051 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-17 20:30:53,532 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-17 20:31:50,276 - commands.encounter_commands - DEBUG - Command /encounter create called by 181919139751788545
+2026-03-17 20:31:55,094 - commands.encounter_commands - DEBUG - Command /encounter end called by 181919139751788545
+2026-03-17 20:31:55,107 - commands.encounter_commands - INFO - /encounter end completed: 'Test2' marked COMPLETE
+2026-03-17 20:33:01,022 - commands.encounter_commands - DEBUG - Command /encounter create called by 181919139751788545
+2026-03-17 20:33:01,028 - commands.encounter_commands - INFO - /encounter create completed for user 181919139751788545: 'test'
+2026-03-17 20:33:38,017 - commands.encounter_commands - DEBUG - Command /encounter enemy called by 181919139751788545
+2026-03-17 20:33:38,022 - discord.app_commands.tree - ERROR - Ignoring exception in command 'enemy'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: enemies.type_name
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 291, in encounter_enemy
+    current_enemy_count = len(encounter.enemies)
+                              ^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 569, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1096, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1131, in _fire_loader_callables
+    return self.callable_(state, passive)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 978, in _load_for_state
+    return self._emit_lazyload(
+           ~~~~~~~~~~~~~~~~~~~^
+        session,
+        ^^^^^^^^
+    ...<7 lines>...
+        execution_options,
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 1141, in _emit_lazyload
+    result = session.execute(
+        stmt, params, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: enemies.type_name
+[SQL: SELECT enemies.id AS enemies_id, enemies.encounter_id AS enemies_encounter_id, enemies.name AS enemies_name, enemies.type_name AS enemies_type_name, enemies.initiative_modifier AS enemies_initiative_modifier, enemies.max_hp AS enemies_max_hp, enemies.current_hp AS enemies_current_hp, enemies.ac AS enemies_ac 
+FROM enemies 
+WHERE ? = enemies.encounter_id]
+[parameters: (3,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'enemy' raised an exception: OperationalError: (sqlite3.OperationalError) no such column: enemies.type_name
+[SQL: SELECT enemies.id AS enemies_id, enemies.encounter_id AS enemies_encounter_id, enemies.name AS enemies_name, enemies.type_name AS enemies_type_name, enemies.initiative_modifier AS enemies_initiative_modifier, enemies.max_hp AS enemies_max_hp, enemies.current_hp AS enemies_current_hp, enemies.ac AS enemies_ac 
+FROM enemies 
+WHERE ? = enemies.encounter_id]
+[parameters: (3,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-03-17 20:35:06,315 - commands.encounter_commands - DEBUG - Command /encounter enemy called by 181919139751788545
+2026-03-17 20:35:06,317 - discord.app_commands.tree - ERROR - Ignoring exception in command 'enemy'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: enemies.type_name
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 291, in encounter_enemy
+    current_enemy_count = len(encounter.enemies)
+                              ^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 569, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1096, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1131, in _fire_loader_callables
+    return self.callable_(state, passive)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 978, in _load_for_state
+    return self._emit_lazyload(
+           ~~~~~~~~~~~~~~~~~~~^
+        session,
+        ^^^^^^^^
+    ...<7 lines>...
+        execution_options,
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 1141, in _emit_lazyload
+    result = session.execute(
+        stmt, params, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: enemies.type_name
+[SQL: SELECT enemies.id AS enemies_id, enemies.encounter_id AS enemies_encounter_id, enemies.name AS enemies_name, enemies.type_name AS enemies_type_name, enemies.initiative_modifier AS enemies_initiative_modifier, enemies.max_hp AS enemies_max_hp, enemies.current_hp AS enemies_current_hp, enemies.ac AS enemies_ac 
+FROM enemies 
+WHERE ? = enemies.encounter_id]
+[parameters: (3,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'enemy' raised an exception: OperationalError: (sqlite3.OperationalError) no such column: enemies.type_name
+[SQL: SELECT enemies.id AS enemies_id, enemies.encounter_id AS enemies_encounter_id, enemies.name AS enemies_name, enemies.type_name AS enemies_type_name, enemies.initiative_modifier AS enemies_initiative_modifier, enemies.max_hp AS enemies_max_hp, enemies.current_hp AS enemies_current_hp, enemies.ac AS enemies_ac 
+FROM enemies 
+WHERE ? = enemies.encounter_id]
+[parameters: (3,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-03-17 20:38:33,341 - root - INFO - Logging initialized
+2026-03-17 20:38:33,341 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 20:38:33,341 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 20:38:33,342 - __main__ - INFO - Starting bot...
+2026-03-17 20:38:33,342 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 20:38:33,342 - discord.client - INFO - logging in using static token
+2026-03-17 20:38:34,181 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 20:38:34,655 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 031878ecf3c5ff207f9c528536b6210c).
+2026-03-17 20:38:36,662 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 20:38:36,663 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 20:38:47,916 - commands.encounter_commands - DEBUG - Command /encounter enemy called by 181919139751788545
+2026-03-17 20:38:47,963 - discord.app_commands.tree - ERROR - Ignoring exception in command 'enemy'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such column: enemies.type_name
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 291, in encounter_enemy
+    current_enemy_count = len(encounter.enemies)
+                              ^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 569, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1096, in get
+    value = self._fire_loader_callables(state, key, passive)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/attributes.py", line 1131, in _fire_loader_callables
+    return self.callable_(state, passive)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 978, in _load_for_state
+    return self._emit_lazyload(
+           ~~~~~~~~~~~~~~~~~~~^
+        session,
+        ^^^^^^^^
+    ...<7 lines>...
+        execution_options,
+        ^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/strategies.py", line 1141, in _emit_lazyload
+    result = session.execute(
+        stmt, params, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2351, in execute
+    return self._execute_internal(
+           ~~~~~~~~~~~~~~~~~~~~~~^
+        statement,
+        ^^^^^^^^^^
+    ...<4 lines>...
+        _add_event=_add_event,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self,
+        ^^^^^
+    ...<4 lines>...
+        conn,
+        ^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+        statement, params or {}, execution_options=execution_options
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+    return meth(
+        self,
+        distilled_parameters,
+        execution_options or NO_OPTIONS,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self, distilled_params, execution_options
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+    ret = self._execute_context(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^
+        dialect, context, statement, parameters
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        e, str_statement, effective_parameters, cursor, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statement, effective_parameters, context
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such column: enemies.type_name
+[SQL: SELECT enemies.id AS enemies_id, enemies.encounter_id AS enemies_encounter_id, enemies.name AS enemies_name, enemies.type_name AS enemies_type_name, enemies.initiative_modifier AS enemies_initiative_modifier, enemies.max_hp AS enemies_max_hp, enemies.current_hp AS enemies_current_hp, enemies.ac AS enemies_ac 
+FROM enemies 
+WHERE ? = enemies.encounter_id]
+[parameters: (3,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'enemy' raised an exception: OperationalError: (sqlite3.OperationalError) no such column: enemies.type_name
+[SQL: SELECT enemies.id AS enemies_id, enemies.encounter_id AS enemies_encounter_id, enemies.name AS enemies_name, enemies.type_name AS enemies_type_name, enemies.initiative_modifier AS enemies_initiative_modifier, enemies.max_hp AS enemies_max_hp, enemies.current_hp AS enemies_current_hp, enemies.ac AS enemies_ac 
+FROM enemies 
+WHERE ? = enemies.encounter_id]
+[parameters: (3,)]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-03-17 20:39:33,365 - root - INFO - Logging initialized
+2026-03-17 20:39:33,365 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 20:39:33,365 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 20:39:33,366 - __main__ - INFO - Starting bot...
+2026-03-17 20:39:33,366 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 20:39:33,366 - discord.client - INFO - logging in using static token
+2026-03-17 20:39:34,309 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 20:39:34,695 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: f329cbb8a15521a13ee8ad6ca5a6027b).
+2026-03-17 20:39:36,744 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 20:39:36,745 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 20:40:02,448 - commands.encounter_commands - DEBUG - Command /encounter enemy called by 181919139751788545
+2026-03-17 20:40:02,540 - commands.encounter_commands - INFO - /encounter enemy completed for user 181919139751788545: 2× 'test2' added to 'test'
+2026-03-17 20:41:05,881 - commands.encounter_commands - DEBUG - Command /encounter enemy called by 181919139751788545
+2026-03-17 20:41:05,886 - dice_roller - DEBUG - Rolling dice with notation: 2d6+8
+2026-03-17 20:41:05,886 - dice_roller - DEBUG - Result for 2d6+8: rolls=[1, 3], modifier=8, total=12
+2026-03-17 20:41:05,886 - dice_roller - DEBUG - Rolling dice with notation: 2d6+8
+2026-03-17 20:41:05,886 - dice_roller - DEBUG - Result for 2d6+8: rolls=[2, 4], modifier=8, total=14
+2026-03-17 20:41:05,892 - commands.encounter_commands - INFO - /encounter enemy completed for user 181919139751788545: 2× 'test3' added to 'test'
+2026-03-17 20:41:21,833 - commands.character_commands - DEBUG - Command /character view called by wobbix (ID: 181919139751788545) for guild 660895347069157376
+2026-03-17 20:41:21,840 - commands.character_commands - DEBUG - Character lookup resolved to 'TestingClasses'
+2026-03-17 20:41:22,362 - commands.character_commands - INFO - /character view completed for user 181919139751788545: viewed 'TestingClasses'
+2026-03-17 20:41:42,091 - commands.attack_commands - DEBUG - Command /attack add called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with name: Longsword
+2026-03-17 20:41:42,095 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 20:41:42,095 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 20:41:42,095 - dice_roller - DEBUG - Result for 2d6+4: rolls=[5, 5], modifier=4, total=14
+2026-03-17 20:41:42,110 - commands.attack_commands - INFO - /attack add completed for user 181919139751788545: Added attack **Longsword** to **TestingClasses**.
+2026-03-17 20:41:58,568 - commands.encounter_commands - DEBUG - Command /encounter start called by 181919139751788545
+2026-03-17 20:41:59,472 - commands.encounter_commands - INFO - /encounter start completed: 'test' is now ACTIVE
+2026-03-17 20:42:06,975 - commands.encounter_commands - DEBUG - Command /encounter next called by 181919139751788545
+2026-03-17 20:42:12,096 - discord.app_commands.tree - ERROR - Ignoring exception in command 'next'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 586, in encounter_next
+    await interaction.followup.send(ping)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 1909, in send
+    data = await adapter.execute_webhook(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<11 lines>...
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/webhook/async_.py", line 224, in request
+    raise NotFound(response, data)
+discord.errors.NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'next' raised an exception: NotFound: 404 Not Found (error code: 10015): Unknown Webhook
+2026-03-17 20:47:10,215 - root - INFO - Logging initialized
+2026-03-17 20:47:10,215 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 20:47:10,215 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 20:47:10,215 - __main__ - INFO - Starting bot...
+2026-03-17 20:47:10,216 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 20:47:10,216 - discord.client - INFO - logging in using static token
+2026-03-17 20:47:10,925 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 20:47:11,290 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: e14fb79a64e673e7cca9c77951303766).
+2026-03-17 20:47:13,300 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 20:47:13,301 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 20:47:23,518 - commands.encounter_commands - DEBUG - Command /encounter next called by 181919139751788545
+2026-03-17 20:47:24,748 - commands.encounter_commands - INFO - /encounter next: 'test' advanced to index 2 (round 1)
+2026-03-17 21:13:15,796 - root - INFO - Logging initialized
+2026-03-17 21:13:15,797 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 21:13:15,797 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 21:13:15,797 - __main__ - INFO - Starting bot...
+2026-03-17 21:13:15,797 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 21:13:15,797 - discord.client - INFO - logging in using static token
+2026-03-17 21:13:16,698 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 21:13:17,266 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 01280e33afde5cf17c9dd304a21e6881).
+2026-03-17 21:13:19,274 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 21:13:19,274 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 21:14:04,587 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: 1
+2026-03-17 21:14:04,590 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 21:14:04,593 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 21:14:04,593 - dice_roller - DEBUG - Result for 2d6+4: rolls=[3, 6], modifier=4, total=13
+2026-03-17 21:14:26,788 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 21:14:26,794 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 21:14:26,796 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 21:14:26,797 - dice_roller - DEBUG - Result for 2d6+4: rolls=[6, 4], modifier=4, total=14
+2026-03-17 21:14:27,088 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 21:14:57,005 - commands.encounter_commands - DEBUG - Command /encounter view called by 181919139751788545
+2026-03-17 21:14:57,706 - commands.encounter_commands - INFO - /encounter view served for 'test'
+2026-03-17 21:16:19,838 - root - INFO - Logging initialized
+2026-03-17 21:16:19,839 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 21:16:19,839 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 21:16:19,839 - __main__ - INFO - Starting bot...
+2026-03-17 21:16:19,839 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 21:16:19,839 - discord.client - INFO - logging in using static token
+2026-03-17 21:16:20,791 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 21:16:21,248 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 194db1ea34e0b39dbd89249d669ee235).
+2026-03-17 21:16:23,256 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 21:16:23,256 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 21:16:43,503 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: 4
+2026-03-17 21:16:43,506 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 21:16:43,508 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 21:16:43,508 - dice_roller - DEBUG - Result for 2d6+4: rolls=[5, 5], modifier=4, total=14
+2026-03-17 21:16:44,015 - commands.attack_commands - INFO - /attack roll: TestingClasses missed 'test2 1' (rolled 8 vs AC 14) in 'test'
+2026-03-17 21:16:56,482 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: 4
+2026-03-17 21:16:56,489 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 21:16:56,491 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 21:16:56,491 - dice_roller - DEBUG - Result for 2d6+4: rolls=[3, 1], modifier=4, total=8
+2026-03-17 21:16:56,707 - commands.attack_commands - INFO - /attack roll: 'test2 1' took 8 damage (12/20 HP) in 'test'
+2026-03-17 21:28:24,665 - root - INFO - Logging initialized
+2026-03-17 21:28:24,665 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 21:28:24,666 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 21:28:24,666 - __main__ - INFO - Starting bot...
+2026-03-17 21:28:24,666 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 21:28:24,667 - discord.client - INFO - logging in using static token
+2026-03-17 21:28:25,354 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 21:28:25,752 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 0bc81fb9b01c75ce7e34434f3954b084).
+2026-03-17 21:28:27,759 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 21:28:27,760 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 21:29:16,614 - root - INFO - Logging initialized
+2026-03-17 21:29:16,614 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 21:29:16,614 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 21:29:16,615 - __main__ - INFO - Starting bot...
+2026-03-17 21:29:16,615 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 21:29:16,615 - discord.client - INFO - logging in using static token
+2026-03-17 21:29:17,487 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 21:29:17,889 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: dee03bd1242836ba5dc767d10eb2235b).
+2026-03-17 21:29:19,897 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 21:29:19,897 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 21:30:31,010 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test3 1
+2026-03-17 21:30:31,013 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 21:30:31,014 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 21:30:31,014 - dice_roller - DEBUG - Result for 2d6+4: rolls=[4, 2], modifier=4, total=10
+2026-03-17 21:30:31,251 - commands.attack_commands - INFO - /attack roll: TestingClasses missed 'test3 1' (rolled 9 vs AC 12) in 'test'
+2026-03-17 21:30:33,264 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test3 1
+2026-03-17 21:30:33,268 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 21:30:33,270 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 21:30:33,270 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 1], modifier=4, total=6
+2026-03-17 21:30:33,480 - commands.attack_commands - INFO - /attack roll: 'test3 1' took 6 damage (6/12 HP) in 'test'
+2026-03-17 21:30:37,045 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test3 1
+2026-03-17 21:30:37,049 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 21:30:37,049 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 21:30:37,049 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 6], modifier=4, total=11
+2026-03-17 21:30:37,463 - commands.attack_commands - INFO - /attack roll: 'test3 1' defeated by TestingClasses in 'test'
+2026-03-17 22:16:23,236 - root - INFO - Logging initialized
+2026-03-17 22:16:23,236 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 22:16:23,236 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 22:16:23,236 - __main__ - INFO - Starting bot...
+2026-03-17 22:16:23,236 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 22:16:23,237 - discord.client - INFO - logging in using static token
+2026-03-17 22:16:24,072 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 22:16:24,431 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 4177e44bb73fa9a746b1b51727e9f0e9).
+2026-03-17 22:16:26,450 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 22:16:26,451 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 22:16:40,846 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test2 1
+2026-03-17 22:16:40,849 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:16:40,852 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:16:40,852 - dice_roller - DEBUG - Result for 2d6+4: rolls=[5, 6], modifier=4, total=15
+2026-03-17 22:16:41,360 - commands.attack_commands - INFO - /attack roll: 'test2 1' defeated by TestingClasses in 'test'
+2026-03-17 22:16:48,430 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test2 2
+2026-03-17 22:16:48,433 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:16:48,435 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:16:48,435 - dice_roller - DEBUG - Result for 2d6+4: rolls=[6, 3], modifier=4, total=13
+2026-03-17 22:16:48,803 - commands.attack_commands - INFO - /attack roll: 'test2 2' took 13 damage (7/20 HP) in 'test'
+2026-03-17 22:16:54,362 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test2 2
+2026-03-17 22:16:54,368 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:16:54,371 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:16:54,372 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 1], modifier=4, total=6
+2026-03-17 22:16:54,671 - commands.attack_commands - INFO - /attack roll: 'test2 2' took 6 damage (1/20 HP) in 'test'
+2026-03-17 22:17:00,517 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test2 2
+2026-03-17 22:17:00,519 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:17:00,519 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:17:00,520 - dice_roller - DEBUG - Result for 2d6+4: rolls=[4, 5], modifier=4, total=13
+2026-03-17 22:17:01,223 - commands.attack_commands - INFO - /attack roll: 'test2 2' defeated by TestingClasses in 'test'
+2026-03-17 22:17:11,278 - commands.encounter_commands - DEBUG - Command /encounter view called by 181919139751788545
+2026-03-17 22:17:11,290 - discord.app_commands.tree - ERROR - Ignoring exception in command 'view'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/sqltypes.py", line 1709, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'double_dice'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 814, in encounter_view
+    settings = _get_or_create_party_settings(db, party)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/encounter_commands.py", line 31, in _get_or_create_party_settings
+    settings = db.query(PartySettings).filter_by(party_id=party.id).first()
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 1803, in first
+    return self._only_one_row(
+           ~~~~~~~~~~~~~~~~~~^
+        raise_for_second_row=False, raise_for_none=False, scalar=False
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 769, in _only_one_row
+    row: Optional[_InterimRowType[Any]] = onerow(hard_close=True)
+                                          ~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 1690, in _fetchone_impl
+    return self._real_result._fetchone_impl(hard_close=hard_close)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 2276, in _fetchone_impl
+    row = next(self.iterator, _NO_ROW)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 553, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ~~~~~~~~^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/sqltypes.py", line 1829, in process
+    value = self._object_value_for_elem(value)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/sqltypes.py", line 1711, in _object_value_for_elem
+    raise LookupError(
+    ...<7 lines>...
+    ) from err
+LookupError: 'double_dice' is not among the defined enum values. Enum name: critrule. Possible values: DOUBLE_DICE, PERKINS, DOUBLE_DAMA.., ..., NONE
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'view' raised an exception: LookupError: 'double_dice' is not among the defined enum values. Enum name: critrule. Possible values: DOUBLE_DICE, PERKINS, DOUBLE_DAMA.., ..., NONE
+2026-03-17 22:18:44,583 - commands.party_commands - DEBUG - Command /party settings crit_rule called by 181919139751788545 party='BadSlashfic' rule='double_dice'
+2026-03-17 22:18:44,588 - discord.app_commands.tree - ERROR - Ignoring exception in command 'crit_rule'
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/sqltypes.py", line 1709, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: 'double_dice'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 859, in _do_call
+    return await self._callback(interaction, **params)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/party_commands.py", line 1359, in party_settings_crit_rule
+    party_settings = _get_or_create_party_settings(db, party)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/commands/party_commands.py", line 29, in _get_or_create_party_settings
+    settings = db.query(PartySettings).filter_by(party_id=party.id).first()
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/query.py", line 2759, in first
+    return self.limit(1)._iter().first()  # type: ignore
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 1803, in first
+    return self._only_one_row(
+           ~~~~~~~~~~~~~~~~~~^
+        raise_for_second_row=False, raise_for_none=False, scalar=False
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 769, in _only_one_row
+    row: Optional[_InterimRowType[Any]] = onerow(hard_close=True)
+                                          ~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 1690, in _fetchone_impl
+    return self._real_result._fetchone_impl(hard_close=hard_close)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 2276, in _fetchone_impl
+    row = next(self.iterator, _NO_ROW)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/orm/loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/engine/result.py", line 553, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ~~~~~~~~^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/sqltypes.py", line 1829, in process
+    value = self._object_value_for_elem(value)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/sqlalchemy/sql/sqltypes.py", line 1711, in _object_value_for_elem
+    raise LookupError(
+    ...<7 lines>...
+    ) from err
+LookupError: 'double_dice' is not among the defined enum values. Enum name: critrule. Possible values: DOUBLE_DICE, PERKINS, DOUBLE_DAMA.., ..., NONE
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/tree.py", line 1302, in _call
+    await command._invoke_with_namespace(interaction, namespace)
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 884, in _invoke_with_namespace
+    return await self._do_call(interaction, transformed_values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/cnorton9/PycharmProjects/Kaz-bot/.venv/lib/python3.13/site-packages/discord/app_commands/commands.py", line 877, in _do_call
+    raise CommandInvokeError(self, e) from e
+discord.app_commands.errors.CommandInvokeError: Command 'crit_rule' raised an exception: LookupError: 'double_dice' is not among the defined enum values. Enum name: critrule. Possible values: DOUBLE_DICE, PERKINS, DOUBLE_DAMA.., ..., NONE
+2026-03-17 22:22:54,973 - root - INFO - Logging initialized
+2026-03-17 22:22:54,973 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 22:22:54,974 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 22:22:54,974 - __main__ - INFO - Starting bot...
+2026-03-17 22:22:54,974 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 22:22:54,974 - discord.client - INFO - logging in using static token
+2026-03-17 22:22:55,699 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 22:22:56,030 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 869a34550c8130d1ac90cfe04e1a2cf9).
+2026-03-17 22:22:58,041 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 22:22:58,041 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 22:23:05,490 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:05,496 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:05,502 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:05,503 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 4], modifier=4, total=9
+2026-03-17 22:23:05,770 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:08,019 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:08,024 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:08,025 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:08,025 - dice_roller - DEBUG - Result for 2d6+4: rolls=[6, 3], modifier=4, total=13
+2026-03-17 22:23:08,225 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:09,575 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:09,576 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:09,577 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:09,577 - dice_roller - DEBUG - Result for 2d6+4: rolls=[2, 1], modifier=4, total=7
+2026-03-17 22:23:09,903 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:11,716 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:11,723 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:11,727 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:11,727 - dice_roller - DEBUG - Result for 2d6+4: rolls=[5, 1], modifier=4, total=10
+2026-03-17 22:23:11,925 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:13,358 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:13,366 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:13,371 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:13,371 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 1], modifier=4, total=6
+2026-03-17 22:23:13,862 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:16,385 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:16,391 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:16,393 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:16,393 - dice_roller - DEBUG - Result for 2d6+4: rolls=[2, 3], modifier=4, total=9
+2026-03-17 22:23:16,644 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:18,415 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:18,419 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:18,423 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:18,423 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 6], modifier=4, total=11
+2026-03-17 22:23:18,608 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:21,843 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:21,848 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:21,851 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:21,851 - dice_roller - DEBUG - Result for 2d6+4: rolls=[2, 2], modifier=4, total=8
+2026-03-17 22:23:22,127 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:23,549 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:23,555 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:23,557 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:23:23,557 - dice_roller - DEBUG - Result for 2d6+4: rolls=[5, 4], modifier=4, total=13
+2026-03-17 22:23:23,790 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:23:25,608 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:23:25,610 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:23:25,613 - dice_roller - DEBUG - Rolling dice with notation: 4d6+4
+2026-03-17 22:23:25,613 - dice_roller - DEBUG - Result for 4d6+4: rolls=[4, 3, 2, 4], modifier=4, total=17
+2026-03-17 22:23:25,613 - utils.crit_logic - DEBUG - apply_crit_damage DOUBLE_DICE: 2d6+4 → 4d6+4, total=17
+2026-03-17 22:23:25,837 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword (CRIT)
+2026-03-17 22:33:42,816 - root - INFO - Logging initialized
+2026-03-17 22:33:42,816 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 22:33:42,816 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 22:33:42,816 - __main__ - INFO - Starting bot...
+2026-03-17 22:33:42,817 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 22:33:42,817 - discord.client - INFO - logging in using static token
+2026-03-17 22:33:43,524 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 22:33:43,861 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 5373df6ffc0a6664dd9f47566af0ce87).
+2026-03-17 22:33:45,870 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 22:33:45,870 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 22:33:56,329 - commands.encounter_commands - DEBUG - Command /encounter view called by 181919139751788545
+2026-03-17 22:33:56,967 - commands.encounter_commands - INFO - /encounter view served for 'test'
+2026-03-17 22:34:18,001 - commands.encounter_commands - DEBUG - Command /encounter enemy called by 181919139751788545
+2026-03-17 22:55:09,725 - root - INFO - Logging initialized
+2026-03-17 22:55:09,726 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-17 22:55:09,726 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-17 22:55:09,727 - __main__ - INFO - Starting bot...
+2026-03-17 22:55:09,727 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-17 22:55:09,727 - discord.client - INFO - logging in using static token
+2026-03-17 22:55:10,527 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-17 22:55:10,913 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: bd75896821b8caef725bb2252a7f1ff1).
+2026-03-17 22:55:12,924 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-17 22:55:12,925 - __main__ - DEBUG - Bot is ready and running
+2026-03-17 22:56:06,612 - commands.encounter_commands - DEBUG - Command /encounter enemy called by 181919139751788545
+2026-03-17 22:56:07,137 - commands.encounter_commands - DEBUG - /encounter enemy: placement menu shown for 'reinforcements' in active encounter 'test'
+2026-03-17 22:56:13,472 - commands.encounter_commands - INFO - EnemyPlacementView: **reinforcements** added to 'test' via roll
+2026-03-17 22:56:25,845 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: None
+2026-03-17 22:56:25,852 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:56:25,858 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:56:25,859 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 5], modifier=4, total=10
+2026-03-17 22:56:26,120 - commands.attack_commands - INFO - /attack roll completed for user 181919139751788545: TestingClasses used Longsword
+2026-03-17 22:56:40,403 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: reinforcements
+2026-03-17 22:56:40,410 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:56:40,413 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:56:40,414 - dice_roller - DEBUG - Result for 2d6+4: rolls=[2, 5], modifier=4, total=11
+2026-03-17 22:56:40,992 - commands.attack_commands - INFO - /attack roll: 'reinforcements' defeated by TestingClasses in 'test'
+2026-03-17 22:56:50,827 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test3 2
+2026-03-17 22:56:50,832 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:56:50,835 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:56:50,835 - dice_roller - DEBUG - Result for 2d6+4: rolls=[1, 4], modifier=4, total=9
+2026-03-17 22:56:51,092 - commands.attack_commands - INFO - /attack roll: 'test3 2' took 9 damage (5/14 HP) in 'test'
+2026-03-17 22:57:06,816 - commands.attack_commands - DEBUG - Command /attack roll called by wobbix (ID: 181919139751788545) for guild 660895347069157376 with attack_name: Longsword, target: test3 2
+2026-03-17 22:57:06,823 - commands.attack_commands - DEBUG - Character lookup for user 181919139751788545: found: TestingClasses
+2026-03-17 22:57:06,827 - dice_roller - DEBUG - Rolling dice with notation: 2d6+4
+2026-03-17 22:57:06,827 - dice_roller - DEBUG - Result for 2d6+4: rolls=[5, 2], modifier=4, total=11
+2026-03-17 22:57:07,240 - commands.attack_commands - INFO - /attack roll: 'test3 2' defeated by TestingClasses in 'test'
+2026-03-17 22:57:18,393 - commands.encounter_commands - DEBUG - Command /encounter view called by 181919139751788545
+2026-03-17 22:57:18,863 - commands.encounter_commands - INFO - /encounter view served for 'test'
+2026-03-17 22:57:45,632 - commands.encounter_commands - DEBUG - Command /encounter end called by 181919139751788545
+2026-03-17 22:57:45,649 - commands.encounter_commands - INFO - /encounter end completed: 'test' marked COMPLETE
+2026-03-18 10:23:10,019 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-18 10:23:15,462 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 95611310c2dbf500c3aa945fd9a1085e).
+2026-03-18 10:23:17,472 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-18 10:23:17,473 - __main__ - DEBUG - Bot is ready and running
+2026-03-18 10:44:20,113 - discord.gateway - INFO - Shard ID None has successfully RESUMED session 95611310c2dbf500c3aa945fd9a1085e.
+2026-03-18 11:52:45,921 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-18 11:52:51,228 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 257cdec2f2216873561e02f95307f92e).
+2026-03-18 11:52:53,236 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-18 11:52:53,236 - __main__ - DEBUG - Bot is ready and running
+2026-03-18 18:05:54,145 - root - INFO - Logging initialized
+2026-03-18 18:05:54,147 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-18 18:05:54,147 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-18 18:05:54,149 - __main__ - INFO - Starting bot...
+2026-03-18 18:05:54,149 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-18 18:05:54,150 - discord.client - INFO - logging in using static token
+2026-03-18 18:05:55,076 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-18 18:05:55,681 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 4a4cdc5a0b4073744d68d32625a533bf).
+2026-03-18 18:05:57,687 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-18 18:05:57,688 - __main__ - DEBUG - Bot is ready and running
+2026-03-18 18:15:27,183 - commands.inspiration_commands - DEBUG - Command /inspiration grant called by 181919139751788545 partymember=None
+2026-03-18 18:15:27,275 - commands.inspiration_commands - INFO - /inspiration grant: TestingClasses granted Inspiration by user 181919139751788545
+2026-03-18 18:15:44,489 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-18 18:15:44,974 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-18 18:26:02,410 - root - INFO - Logging initialized
+2026-03-18 18:26:02,411 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-18 18:26:02,411 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-18 18:26:02,411 - __main__ - INFO - Starting bot...
+2026-03-18 18:26:02,412 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-18 18:26:02,412 - discord.client - INFO - logging in using static token
+2026-03-18 18:26:03,219 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-18 18:26:03,725 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: fc87bf98f371c3aa3deb199bbe4e7901).
+2026-03-18 18:26:05,734 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-18 18:26:05,734 - __main__ - DEBUG - Bot is ready and running
+2026-03-18 18:26:17,743 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-18 18:26:18,265 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-18 18:33:27,836 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-18 18:33:28,474 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-18 18:39:58,342 - root - INFO - Logging initialized
+2026-03-18 18:39:58,343 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-18 18:39:58,343 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-18 18:39:58,344 - __main__ - INFO - Starting bot...
+2026-03-18 18:39:58,344 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-18 18:39:58,345 - discord.client - INFO - logging in using static token
+2026-03-18 18:39:59,257 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-18 18:39:59,613 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 7774277bf90c467a1415dc1c37b70932).
+2026-03-18 18:40:01,622 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-18 18:40:01,622 - __main__ - DEBUG - Bot is ready and running
+2026-03-18 18:40:11,131 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-18 18:40:11,561 - commands.meta_commands - INFO - /help served to user 181919139751788545
+2026-03-18 18:42:26,158 - root - INFO - Logging initialized
+2026-03-18 18:42:26,158 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-18 18:42:26,158 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-18 18:42:26,159 - __main__ - INFO - Starting bot...
+2026-03-18 18:42:26,159 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-18 18:42:26,159 - discord.client - INFO - logging in using static token
+2026-03-18 18:42:27,075 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-18 18:42:27,415 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: ce4cd13511e4048bf4578099def6d407).
+2026-03-18 18:42:29,424 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-18 18:42:29,424 - __main__ - DEBUG - Bot is ready and running
+2026-03-18 18:42:51,849 - commands.meta_commands - DEBUG - Command /help called by wobbix (ID: 181919139751788545)
+2026-03-18 18:42:52,289 - commands.meta_commands - INFO - /help served to user 181919139751788545

@@ -1,0 +1,29 @@
+2026-03-15 22:04:09,586 - root - INFO - Logging initialized at DEBUG level
+2026-03-15 22:04:09,586 - test - DEBUG - Debug message
+2026-03-15 22:04:09,586 - test - INFO - Info message
+2026-03-15 22:04:09,586 - test - WARNING - Warning message
+2026-03-15 22:04:09,587 - test - ERROR - Error message
+2026-03-15 22:04:15,642 - root - INFO - Logging initialized at INFO level
+2026-03-15 22:04:15,643 - test_info - INFO - This SHOULD appear
+2026-03-15 22:05:20,395 - root - INFO - Logging initialized at INFO level
+2026-03-15 22:05:20,395 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-15 22:05:20,395 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-15 22:05:20,396 - __main__ - INFO - Starting bot...
+2026-03-15 22:05:20,396 - discord.client - INFO - logging in using static token
+2026-03-15 22:05:21,128 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-15 22:05:21,464 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: fd8ddd9f277720581e19e04fb02451f1).
+2026-03-15 22:05:23,471 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-15 22:05:33,824 - commands.character_commands - INFO - Command /create_character called by wobbix (ID: 181919139751788545) in guild 660895347069157376 with name: foo
+2026-03-16 07:14:24,435 - discord.gateway - INFO - Shard ID None session has been invalidated.
+2026-03-16 07:14:29,900 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: ce8a882b83c70b637f475a5c70489361).
+2026-03-16 07:14:31,902 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 07:15:50,123 - root - INFO - Logging initialized at DEBUG level
+2026-03-16 07:15:50,124 - discord.client - WARNING - PyNaCl is not installed, voice will NOT be supported
+2026-03-16 07:15:50,124 - discord.client - WARNING - davey is not installed, voice will NOT be supported
+2026-03-16 07:15:50,124 - __main__ - INFO - Starting bot...
+2026-03-16 07:15:50,124 - asyncio - DEBUG - Using selector: EpollSelector
+2026-03-16 07:15:50,124 - discord.client - INFO - logging in using static token
+2026-03-16 07:15:50,776 - __main__ - INFO - Synced slash commands for ORC#7202
+2026-03-16 07:15:51,205 - discord.gateway - INFO - Shard ID None has connected to Gateway (Session ID: 5d326d65f797caa54381ae0b291bfc44).
+2026-03-16 07:15:53,210 - __main__ - INFO - Logged in as ORC#7202 (ID: 1482118794599071856)
+2026-03-16 07:15:53,211 - __main__ - DEBUG - Bot is ready and running

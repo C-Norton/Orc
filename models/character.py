@@ -58,6 +58,13 @@ class Character(Base):
     temp_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     ac: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
+    # Inspiration (5e: awarded by GM or via Perkins crit rule; spent for advantage)
+    inspiration: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
+    # Death saving throw counters (reset on stabilize, death, or healing from ≤ 0 HP)
+    death_save_successes: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    death_save_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
     __table_args__ = (UniqueConstraint('user_id', 'server_id', 'name', name='_user_server_name_uc'),)
 
     @property

@@ -1,5 +1,6 @@
 import pytest
-from models import Attack, Character, Enemy, EncounterTurn
+from models import Attack, Character, Enemy, Encounter, EncounterTurn
+from enums.encounter_status import EncounterStatus
 from tests.commands.conftest import get_callback
 from tests.conftest import make_interaction
 
@@ -372,15 +373,17 @@ async def test_attack_roll_targeted_enemy_death_announced_publicly(
     cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Longsword", target="Goblin")
 
-    followup_call = interaction.followup.send.call_args
-    assert followup_call is not None
-    death_msg = (
-        followup_call.args[0]
-        if followup_call.args
-        else followup_call.kwargs.get("content", "")
+    followup_calls = interaction.followup.send.call_args_list
+    assert followup_calls, "Expected at least one followup call"
+    public_messages = [
+        (call.args[0] if call.args else call.kwargs.get("content", ""), call.kwargs)
+        for call in followup_calls
+    ]
+    death_msg, death_kwargs = next(
+        (msg, kwargs) for msg, kwargs in public_messages if "Goblin" in msg
     )
     assert "Goblin" in death_msg
-    assert followup_call.kwargs.get("ephemeral") is not True
+    assert death_kwargs.get("ephemeral") is not True
 
 
 async def test_attack_roll_targeted_notifies_gms_on_hit(
@@ -644,7 +647,216 @@ async def test_attack_roll_nat20_targeted_uses_crit_damage(
     await cb(interaction, attack_name="Longsword", target="Goblin")
 
     verify = session_factory()
-    from models import Enemy
     enemy = verify.get(Enemy, sample_enemy.id)
     assert enemy.current_hp == 0  # 7 - 15 = 0 (floored)
     verify.close()
+
+
+async def test_attack_roll_last_enemy_defeated_auto_ends_encounter(
+    attack_bot, sample_active_encounter, sample_enemy, sample_character,
+    db_session, session_factory, interaction, mocker,
+):
+    """Killing the last enemy via /attack roll auto-ends the encounter."""
+    sample_enemy.ac = 12
+    _add_longsword(db_session, sample_character)
+    mocker.patch("commands.attack_commands.random.randint", return_value=15)
+    mocker.patch(
+        "commands.attack_commands.roll_dice",
+        return_value=([4, 3], 3, 10),  # 10 damage > 7 HP → kills Goblin
+    )
+    interaction.client.fetch_user = mocker.AsyncMock(return_value=mocker.AsyncMock())
+
+    cb = get_callback(attack_bot, "attack", "roll")
+    await cb(interaction, attack_name="Longsword", target="Goblin")
+
+    verify = session_factory()
+    refreshed_encounter = verify.get(Encounter, sample_active_encounter.id)
+    assert refreshed_encounter.status == EncounterStatus.COMPLETE
+    verify.close()
+
+
+async def test_attack_roll_last_enemy_defeated_sends_auto_end_message(
+    attack_bot, sample_active_encounter, sample_enemy, sample_character,
+    db_session, interaction, mocker,
+):
+    """A public victory announcement is sent when /attack roll kills the last enemy."""
+    sample_enemy.ac = 12
+    _add_longsword(db_session, sample_character)
+    mocker.patch("commands.attack_commands.random.randint", return_value=15)
+    mocker.patch(
+        "commands.attack_commands.roll_dice",
+        return_value=([4, 3], 3, 10),
+    )
+    interaction.client.fetch_user = mocker.AsyncMock(return_value=mocker.AsyncMock())
+
+    cb = get_callback(attack_bot, "attack", "roll")
+    await cb(interaction, attack_name="Longsword", target="Goblin")
+
+    followup_calls = interaction.followup.send.call_args_list
+    public_messages = [
+        call.args[0] if call.args else call.kwargs.get("content", "")
+        for call in followup_calls
+        if not call.kwargs.get("ephemeral")
+    ]
+    assert any("All enemies" in msg or "ended" in msg.lower() for msg in public_messages)
+
+
+async def test_attack_roll_non_last_enemy_defeated_does_not_end_encounter(
+    attack_bot, sample_active_encounter, sample_enemy, sample_character,
+    db_session, session_factory, interaction, mocker,
+):
+    """Killing one of several enemies via /attack roll leaves the encounter ACTIVE."""
+    sample_enemy.ac = 12
+    # Add a second enemy with a turn so the encounter knows it still has combatants
+    second_enemy = Enemy(
+        encounter_id=sample_active_encounter.id,
+        name="Orc",
+        type_name="Orc",
+        initiative_modifier=0,
+        max_hp=15,
+        current_hp=15,
+    )
+    db_session.add(second_enemy)
+    db_session.flush()
+    db_session.add(EncounterTurn(
+        encounter_id=sample_active_encounter.id,
+        enemy_id=second_enemy.id,
+        initiative_roll=5,
+        order_position=2,
+    ))
+    db_session.commit()
+
+    _add_longsword(db_session, sample_character)
+    mocker.patch("commands.attack_commands.random.randint", return_value=15)
+    mocker.patch(
+        "commands.attack_commands.roll_dice",
+        return_value=([4, 3], 3, 10),  # kills Goblin (7 HP), Orc survives
+    )
+    interaction.client.fetch_user = mocker.AsyncMock(return_value=mocker.AsyncMock())
+
+    cb = get_callback(attack_bot, "attack", "roll")
+    await cb(interaction, attack_name="Longsword", target="Goblin")
+
+    verify = session_factory()
+    refreshed_encounter = verify.get(Encounter, sample_active_encounter.id)
+    assert refreshed_encounter.status == EncounterStatus.ACTIVE
+    verify.close()
+
+
+# ---------------------------------------------------------------------------
+# Edge cases: negative hit modifier, flat-number formulas, crit rules
+# ---------------------------------------------------------------------------
+
+
+async def test_attack_roll_negative_hit_modifier(
+    attack_bot, sample_character, db_session, interaction, mocker,
+):
+    """An attack with hit_modifier=-2 produces a correct hit_total and no crash."""
+    db_session.add(Attack(
+        character_id=sample_character.id,
+        name="OldSword",
+        hit_modifier=-2,
+        damage_formula="1d6",
+    ))
+    db_session.commit()
+
+    mocker.patch("commands.attack_commands.random.randint", return_value=15)
+    mocker.patch("commands.attack_commands.roll_dice", return_value=([4], 0, 4))
+
+    cb = get_callback(attack_bot, "attack", "roll")
+    await cb(interaction, attack_name="OldSword")
+
+    msg = interaction.response.send_message.call_args.args[0]
+    # hit_total = 15 + (-2) = 13; message should show the modifier
+    assert "-2" in msg or "13" in msg
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+
+
+# ---------------------------------------------------------------------------
+# Crit edge cases — apply_crit_damage unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_crit_double_dice_doubles_dice_count():
+    """DOUBLE_DICE crit doubles the number of dice in the formula."""
+    from utils.crit_logic import apply_crit_damage
+    from enums.crit_rule import CritRule
+
+    # 1d8 doubled → 2d8; we just verify that more dice are rolled by checking
+    # that the result total is within the 2d8 range (2–16) instead of 1d8 (1–8).
+    result = apply_crit_damage("1d8", CritRule.DOUBLE_DICE)
+    assert len(result.rolls) == 2  # 2d8 produces 2 individual rolls
+    assert result.grants_inspiration is False
+
+
+def test_crit_max_damage_uses_max_faces():
+    """MAX_DAMAGE crit sets every die to its maximum face value."""
+    from utils.crit_logic import apply_crit_damage
+    from enums.crit_rule import CritRule
+
+    result = apply_crit_damage("2d6", CritRule.MAX_DAMAGE)
+    assert all(r == 6 for r in result.rolls)
+    assert result.total == 12  # 6+6, no modifier
+
+
+def test_crit_double_damage_doubles_total():
+    """DOUBLE_DAMAGE crit doubles the full damage total."""
+    from utils.crit_logic import apply_crit_damage
+    from enums.crit_rule import CritRule
+    import unittest.mock as mock
+
+    with mock.patch("utils.crit_logic.roll_dice", return_value=([4], 2, 6)):
+        result = apply_crit_damage("1d6+2", CritRule.DOUBLE_DAMAGE)
+    assert result.total == 12  # 6 × 2
+    assert result.grants_inspiration is False
+
+
+def test_crit_none_treats_nat20_as_normal():
+    """CritRule.NONE produces a normal roll with no crit modification."""
+    from utils.crit_logic import apply_crit_damage
+    from enums.crit_rule import CritRule
+    import unittest.mock as mock
+
+    with mock.patch("utils.crit_logic.roll_dice", return_value=([5], 3, 8)):
+        result = apply_crit_damage("1d6+3", CritRule.NONE)
+    assert result.total == 8
+    assert result.grants_inspiration is False
+    assert result.rolls == [5]
+
+
+async def test_perkins_crit_when_already_inspired(
+    attack_bot, sample_character, db_session,
+    sample_active_party, interaction, mocker,
+):
+    """Perkins crit fires on a character who already has inspiration — no error, stays True."""
+    from models import PartySettings
+    from enums.crit_rule import CritRule
+
+    db_session.add(Attack(
+        character_id=sample_character.id,
+        name="Rapier",
+        hit_modifier=5,
+        damage_formula="1d6+3",
+    ))
+    sample_character.inspiration = True
+    party_settings = PartySettings(
+        party_id=sample_active_party.id,
+        crit_rule=CritRule.PERKINS,
+    )
+    db_session.add(party_settings)
+    sample_active_party.characters.append(sample_character)
+    db_session.commit()
+
+    mocker.patch("commands.attack_commands.random.randint", return_value=20)
+    mocker.patch(
+        "commands.attack_commands.apply_crit_damage",
+        return_value=mocker.Mock(rolls=[5], modifier=3, total=8, grants_inspiration=True),
+    )
+
+    cb = get_callback(attack_bot, "attack", "roll")
+    await cb(interaction, attack_name="Rapier")
+
+    db_session.refresh(sample_character)
+    assert sample_character.inspiration is True
+    # No exception raised — command succeeds
+    assert interaction.response.send_message.call_args is not None

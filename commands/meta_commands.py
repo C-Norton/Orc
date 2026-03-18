@@ -14,6 +14,7 @@ HELP_PAGES: list[tuple[str, str, str, str]] = [
     ("❤️", "Health", Strings.HELP_HEALTH_NAME, Strings.HELP_HEALTH_VALUE),
     ("👥", "Parties", Strings.HELP_PARTIES_NAME, Strings.HELP_PARTIES_VALUE),
     ("🤼", "Encounters", Strings.HELP_ENCOUNTER_NAME, Strings.HELP_ENCOUNTER_VALUE),
+    ("💫", "Inspiration", Strings.HELP_INSPIRATION_NAME, Strings.HELP_INSPIRATION_VALUE),
     ("👨‍🔧", "Credits", Strings.HELP_CREDITS_NAME, Strings.HELP_CREDITS_VALUE),
 ]
 
@@ -29,10 +30,10 @@ def _toc_embed() -> discord.Embed:
     return embed
 
 
-def _page_embed(emoji: str, title: str, content: str) -> discord.Embed:
+def _page_embed(title: str, content: str) -> discord.Embed:
     """Build a help-page embed."""
     embed = discord.Embed(
-        title=f"{emoji} {title}",
+        title=title,
         description=content,
         color=discord.Color.gold(),
     )
@@ -47,11 +48,10 @@ class _HelpPageButton(discord.ui.Button):
         super().__init__(emoji=emoji, label=label, style=discord.ButtonStyle.secondary, row=row)
         self._embed_title = embed_title
         self._embed_content = embed_content
-        self._page_emoji = emoji
 
     async def callback(self, interaction: discord.Interaction) -> None:
         """Edit the help message to show this page."""
-        embed = _page_embed(self._page_emoji, self._embed_title, self._embed_content)
+        embed = _page_embed(self._embed_title, self._embed_content)
         await interaction.response.edit_message(embed=embed, view=self.view)
 
 
