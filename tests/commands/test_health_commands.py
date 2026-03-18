@@ -34,7 +34,7 @@ from tests.commands.conftest import get_callback
 async def test_set_hp_success(health_bot, sample_character, interaction, session_factory):
     # get_callback walks bot.tree and returns the raw async function behind the
     # slash command, letting us call it directly without Discord's dispatch.
-    cb = get_callback(health_bot, "hp", "set")
+    cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=40)
 
     # The command opened and closed its own session internally. Open a fresh
@@ -50,7 +50,7 @@ async def test_set_hp_success(health_bot, sample_character, interaction, session
 async def test_set_hp_no_character(health_bot, sample_user, sample_server, interaction):
     # sample_user and sample_server exist but there is no character, so the
     # command must send an ephemeral (private) error message.
-    cb = get_callback(health_bot, "hp", "set")
+    cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=30)
 
     # interaction.response.send_message is an AsyncMock; call_args.kwargs holds
@@ -61,7 +61,7 @@ async def test_set_hp_no_character(health_bot, sample_user, sample_server, inter
 
 async def test_set_hp_zero(health_bot, sample_character, interaction, session_factory):
     # Setting max hp to 0 or negative should be rejected
-    cb = get_callback(health_bot, "hp", "set")
+    cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=30)
     verify = session_factory()
     char = verify.query(Character).filter_by(name="Aldric").first()
@@ -80,7 +80,7 @@ async def test_set_hp_zero(health_bot, sample_character, interaction, session_fa
 
 
 async def test_set_hp_negative(health_bot, sample_character, interaction, session_factory):
-    cb = get_callback(health_bot, "hp", "set")
+    cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=30)
     verify = session_factory()
     char = verify.query(Character).filter_by(name="Aldric").first()
