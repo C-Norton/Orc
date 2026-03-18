@@ -5,6 +5,7 @@ from typing import List, Optional
 from sqlalchemy import update, select, insert
 from database import SessionLocal
 from models import User, Server, Character, Party, PartySettings, Encounter, EncounterTurn, user_server_association
+from enums.crit_rule import CritRule
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from utils.dnd_logic import perform_roll
@@ -1298,6 +1299,83 @@ def register_party_commands(bot: commands.Bot) -> None:
 
     @party_settings_enemy_ac.autocomplete("party_name")
     async def party_settings_enemy_ac_autocomplete(
+        interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
+        return await _party_name_autocomplete(interaction, current)
+
+    @settings_group.command(
+        name="crit_rule",
+        description="Set how critical hits are resolved for this party (GM only)",
+    )
+    @app_commands.describe(
+        party_name="The party to update",
+        rule="Crit rule: double_dice (default), perkins, double_damage, max_damage, or none",
+    )
+    async def party_settings_crit_rule(
+        interaction: discord.Interaction,
+        party_name: str,
+        rule: str,
+    ) -> None:
+        """Update the critical hit rule for a party.
+
+        Only the party GM can use this command.  Valid rules are
+        ``double_dice`` (default), ``perkins``, ``double_damage``,
+        ``max_damage``, and ``none``.
+
+        Args:
+            interaction: The Discord interaction.
+            party_name: Name of the party to update.
+            rule: One of the CritRule string values.
+        """
+        logger.debug(
+            f"Command /party settings crit_rule called by {interaction.user.id} "
+            f"party='{party_name}' rule='{rule}'"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True
+                )
+                return
+
+            if not user or user not in party.gms:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
+                )
+                return
+
+            valid_rules = {member.value for member in CritRule}
+            if rule not in valid_rules:
+                await interaction.response.send_message(
+                    Strings.PARTY_SETTINGS_INVALID_CRIT_RULE, ephemeral=True
+                )
+                return
+
+            party_settings = _get_or_create_party_settings(db, party)
+            party_settings.crit_rule = CritRule(rule)
+            db.commit()
+
+            logger.info(
+                f"/party settings crit_rule updated for user {interaction.user.id}: "
+                f"'{party_name}' → {rule}"
+            )
+            await interaction.response.send_message(
+                Strings.PARTY_SETTINGS_UPDATED.format(
+                    setting="crit_rule",
+                    value=rule,
+                    party_name=party.name,
+                )
+            )
+        finally:
+            db.close()
+
+    @party_settings_crit_rule.autocomplete("party_name")
+    async def party_settings_crit_rule_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)

@@ -1,7 +1,8 @@
 import pytest
 import discord
 from sqlalchemy import select
-from models import Party, Character, User, Server, user_server_association
+from enums.crit_rule import CritRule
+from models import Party, Character, User, Server, PartySettings, user_server_association
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
 
@@ -598,3 +599,73 @@ async def test_party_add_over_member_limit(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
     assert "maximum" in msg.lower()
+
+
+# ---------------------------------------------------------------------------
+# /party settings crit_rule
+# ---------------------------------------------------------------------------
+
+async def test_party_settings_crit_rule_set_by_gm(
+    party_bot, sample_party, interaction, session_factory,
+):
+    """GM can set the crit rule for their party."""
+    cb = get_callback(party_bot, "party", "settings", "crit_rule")
+    await cb(interaction, party_name="The Fellowship", rule="perkins")
+
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "perkins" in msg.lower()
+
+    verify = session_factory()
+    settings = verify.query(PartySettings).filter_by(
+        party_id=sample_party.id
+    ).first()
+    assert settings is not None
+    assert settings.crit_rule == CritRule.PERKINS
+    verify.close()
+
+
+async def test_party_settings_crit_rule_default_is_double_dice(
+    party_bot, sample_party, interaction, session_factory,
+):
+    """A party with no settings defaults to DOUBLE_DICE."""
+    cb = get_callback(party_bot, "party", "settings", "crit_rule")
+    await cb(interaction, party_name="The Fellowship", rule="double_dice")
+
+    verify = session_factory()
+    settings = verify.query(PartySettings).filter_by(
+        party_id=sample_party.id
+    ).first()
+    assert settings.crit_rule == CritRule.DOUBLE_DICE
+    verify.close()
+
+
+async def test_party_settings_crit_rule_invalid_value(
+    party_bot, sample_party, interaction,
+):
+    """An unrecognised crit rule name returns an ephemeral error."""
+    cb = get_callback(party_bot, "party", "settings", "crit_rule")
+    await cb(interaction, party_name="The Fellowship", rule="quadruple")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_party_settings_crit_rule_requires_gm(
+    party_bot, sample_party, db_session, interaction, session_factory, mocker,
+):
+    """A non-GM cannot change the crit rule."""
+    non_gm = User(discord_id="999")
+    db_session.add(non_gm)
+    db_session.commit()
+    interaction.user.id = 999
+
+    cb = get_callback(party_bot, "party", "settings", "crit_rule")
+    await cb(interaction, party_name="The Fellowship", rule="double_damage")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    # Settings should be unchanged
+    verify = session_factory()
+    settings = verify.query(PartySettings).filter_by(
+        party_id=sample_party.id
+    ).first()
+    assert settings is None or settings.crit_rule == CritRule.DOUBLE_DICE
+    verify.close()

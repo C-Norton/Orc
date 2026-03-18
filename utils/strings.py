@@ -208,6 +208,11 @@ class Strings:
     )
     ENCOUNTER_GM_DM_EMBED_TITLE = "⚔️ {encounter_name}"
     ENCOUNTER_GM_DM_EMBED_FOOTER = "Party: {party_name}"
+    CRIT_HIT_HEADER = "🎯 **CRITICAL HIT!**\n"
+    CRIT_PERKINS_INSPIRATION = "\n✨ You gain **Inspiration** from your critical hit! *(Perkins' Rule)*"
+    PARTY_SETTINGS_INVALID_CRIT_RULE = (
+        "❌ Invalid crit rule. Valid options: `double_dice`, `perkins`, `double_damage`, `max_damage`, `none`."
+    )
 
     ERROR_INVALID_DICE = "Invalid dice notation. Use format like '1d20' or '2d6+3'."
     ERROR_DICE_LIMIT = "Too many dice or too many sides! Keep it reasonable."
