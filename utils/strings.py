@@ -81,7 +81,7 @@ class Strings:
     HELP_HEALTH_NAME = "❤️ Health & HP"
     HELP_HEALTH_VALUE = (
         "**/hp status**: View your active character's current HP and temporary HP.\n"
-        "**/hp set <max_hp>**: Set your active character's maximum HP (also resets current HP to max).\n"
+        "**/hp set_max <max_hp>**: Set your active character's maximum HP (also resets current HP to max).\n"
         "**/hp damage <amount> [partymember]**: Apply damage to yourself or a party member (GM only for others). Supports dice (e.g., `2d6+3`).\n"
         "**/hp heal <amount> [partymember]**: Heal yourself or any party member. Supports dice (e.g., `1d8+2`).\n"
         "**/hp temp <amount>**: Add temporary HP to your active character (5e rule: replaces if higher, keeps if lower).\n"
@@ -140,7 +140,7 @@ class Strings:
         "Then set your stats with `/character stats` — Max HP will be calculated automatically.\n"
         "For accurate rolls, set your skill proficiencies with `/character skill`.\n"
         "When you level up or multiclass, use `/character class_add`.\n"
-        "Finally, set your Max HP with `/hp set`.\n"
+        "Finally, set your Max HP with `/hp set_max`.\n"
         "**FOR GMs**\n"
         "It is recommended that you read all pages of the help command.\n"
         "That said for the very basics, if you want to create a party, do `/party create`, and add characters with `/party character_add`.\n"
@@ -190,7 +190,7 @@ class Strings:
     ERROR_NO_ACTIVE_PARTY = "No active party set."
     ERROR_GM_ONLY_DAMAGE = "Only the GM can apply damage to other party members."
     ERROR_PARTY_MEMBER_NOT_FOUND = "Party member '**{name}**' not found."
-    ERROR_HP_NOT_SET = "HP not set. Use `/hp set` first."
+    ERROR_HP_NOT_SET = "HP not set. Use `/hp set_max` first."
 
     # Attack Commands
     ATTACK_ADDED = "Added attack **{attack_name}** to **{char_name}**."
@@ -285,7 +285,7 @@ class Strings:
         "Character **{name}** created as a level **{level}** **{char_class}** and set as active!\n"
         "Saving throw proficiencies have been set from your class.\n"
         "Next, set your stats with `/character stats`, your skill proficiencies with `/character skill`, "
-        "and your Max HP with `/hp set`.\n"
+        "and your Max HP with `/hp set_max`.\n"
         "View your character at any time with `/character view`, and switch with `/character switch`."
     )
     CHAR_STATS_FIRST_TIME = "This is your first time setting stats for this character. Please provide all core stats (strength, dexterity, constitution, intelligence, wisdom, charisma)."

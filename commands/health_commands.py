@@ -34,11 +34,11 @@ def register_health_commands(bot: commands.Bot) -> None:
         description="Manage your character's hit points",
     )
 
-    @hp_group.command(name="set", description="Set your character's maximum HP")
+    @hp_group.command(name="set_max", description="Set your character's maximum HP")
     @app_commands.describe(max_hp="Maximum hit points (must be at least 1)")
-    async def hp_set(interaction: discord.Interaction, max_hp: int) -> None:
+    async def hp_set_max(interaction: discord.Interaction, max_hp: int) -> None:
         """Set max HP and reset current HP to the new maximum."""
-        logger.debug(f"Command /hp set called by {interaction.user.id}")
+        logger.debug(f"Command /hp set_max called by {interaction.user.id}")
         if max_hp < 1:
             await interaction.response.send_message(Strings.ERROR_INVALID_MAX_HP, ephemeral=True)
             return
@@ -53,7 +53,7 @@ def register_health_commands(bot: commands.Bot) -> None:
             char.max_hp = max_hp
             char.current_hp = max_hp
             db.commit()
-            logger.info(f"/hp set: {char.name} max_hp={max_hp}")
+            logger.info(f"/hp set_max: {char.name} max_hp={max_hp}")
             await interaction.response.send_message(
                 Strings.HP_SET_SUCCESS.format(char_name=char.name, current=max_hp, max=max_hp)
             )
