@@ -7,7 +7,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
-
+*.log
 dnd_bot.db
 *.db
 # Virtual environments
