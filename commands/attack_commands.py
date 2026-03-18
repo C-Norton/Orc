@@ -1,16 +1,33 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List
+from typing import List, Optional
 import random
+from sqlalchemy import select
 from database import SessionLocal
-from models import User, Server, Character, Attack
+from models import User, Server, Character, Attack, Party, Encounter, EncounterTurn, Enemy, user_server_association
+from enums.encounter_status import EncounterStatus
 from dice_roller import roll_dice
+from utils.encounter_utils import remove_enemy_turn_from_encounter, notify_gms_hp_update
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
+
+
+def _active_party_for_user(db, user: User, server: Server) -> Optional[Party]:
+    """Return the user's active party on this server, or None."""
+    if not user or not server:
+        return None
+    stmt = select(user_server_association.c.active_party_id).where(
+        user_server_association.c.user_id == user.id,
+        user_server_association.c.server_id == server.id,
+    )
+    result = db.execute(stmt).fetchone()
+    if not result or result[0] is None:
+        return None
+    return db.get(Party, result[0])
 
 
 def register_attack_commands(bot: commands.Bot) -> None:
@@ -82,11 +99,23 @@ def register_attack_commands(bot: commands.Bot) -> None:
             db.close()
 
     @attack_group.command(name="roll", description="Perform an attack roll")
-    @app_commands.describe(attack_name="The name of the attack to use")
-    async def attack_roll(interaction: discord.Interaction, attack_name: str) -> None:
+    @app_commands.describe(
+        attack_name="The name of the attack to use",
+        target="Enemy name from the active encounter (optional — use autocomplete)",
+    )
+    async def attack_roll(
+        interaction: discord.Interaction,
+        attack_name: str,
+        target: Optional[str] = None,
+    ) -> None:
+        """Roll to-hit and damage for a saved attack.
+
+        When ``target`` is provided and an encounter is active, resolves the
+        attack against the enemy's AC and automatically updates their HP.
+        """
         logger.debug(
             f"Command /attack roll called by {interaction.user} (ID: {interaction.user.id}) "
-            f"for guild {interaction.guild_id} with attack_name: {attack_name}"
+            f"for guild {interaction.guild_id} with attack_name: {attack_name}, target: {target}"
         )
         db = SessionLocal()
         try:
@@ -121,31 +150,153 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 rolls_str = ", ".join(map(str, rolls))
                 mod_str = f" {modifier:+d}" if modifier != 0 else ""
                 damage_detail = f"({rolls_str}){mod_str}"
-            except ValueError as e:
+            except ValueError as error:
                 logger.warning(
-                    f"ValueError in /attack roll (damage formula: {attack_obj.damage_formula}): {e}"
+                    f"ValueError in /attack roll (damage formula: {attack_obj.damage_formula}): {error}"
                 )
                 await interaction.response.send_message(
-                    f"❌ Error in damage formula: {str(e)}", ephemeral=True
+                    f"❌ Error in damage formula: {str(error)}", ephemeral=True
                 )
                 return
 
-            response = Strings.ATTACK_ROLL_MSG.format(
-                char_name=char.name,
-                attack_obj_name=attack_obj.name,
-                d20_roll=d20_roll,
-                hit_modifier=attack_obj.hit_modifier,
-                hit_total=hit_total,
-                damage_formula=attack_obj.damage_formula,
-                damage_detail=damage_detail,
-                damage_total=damage_total,
+            # ----------------------------------------------------------------
+            # Untargeted path — original behaviour unchanged
+            # ----------------------------------------------------------------
+            if target is None:
+                response = Strings.ATTACK_ROLL_MSG.format(
+                    char_name=char.name,
+                    attack_obj_name=attack_obj.name,
+                    d20_roll=d20_roll,
+                    hit_modifier=attack_obj.hit_modifier,
+                    hit_total=hit_total,
+                    damage_formula=attack_obj.damage_formula,
+                    damage_detail=damage_detail,
+                    damage_total=damage_total,
+                )
+                await interaction.response.send_message(response)
+                logger.info(
+                    f"/attack roll completed for user {interaction.user.id}: "
+                    f"{char.name} used {attack_obj.name}"
+                )
+                return
+
+            # ----------------------------------------------------------------
+            # Targeted path — resolve against encounter enemy
+            # ----------------------------------------------------------------
+            party = _active_party_for_user(db, user, server)
+            if not party:
+                await interaction.response.send_message(
+                    Strings.ATTACK_TARGET_NO_ENCOUNTER, ephemeral=True
+                )
+                return
+
+            encounter = (
+                db.query(Encounter)
+                .filter(
+                    Encounter.party_id == party.id,
+                    Encounter.status == EncounterStatus.ACTIVE,
+                )
+                .first()
+            )
+            if not encounter:
+                await interaction.response.send_message(
+                    Strings.ATTACK_TARGET_NO_ENCOUNTER, ephemeral=True
+                )
+                return
+
+            target_turn = next(
+                (
+                    t for t in encounter.turns
+                    if t.enemy_id and t.enemy.name == target
+                ),
+                None,
             )
 
-            await interaction.response.send_message(response)
-            logger.info(
-                f"/attack roll completed for user {interaction.user.id}: "
-                f"{char.name} used {attack_obj.name}"
-            )
+            if target_turn is None:
+                await interaction.response.send_message(
+                    Strings.ATTACK_TARGET_NOT_FOUND.format(enemy_name=target),
+                    ephemeral=True,
+                )
+                return
+
+            enemy = target_turn.enemy
+
+            if enemy.ac is None:
+                await interaction.response.send_message(
+                    Strings.ATTACK_TARGET_NO_AC.format(enemy_name=enemy.name),
+                    ephemeral=True,
+                )
+                return
+
+            if hit_total >= enemy.ac:
+                # Hit — apply damage and notify GMs
+                new_hp = max(0, enemy.current_hp - damage_total)
+                enemy.current_hp = new_hp
+
+                hit_message = Strings.ATTACK_ROLL_HIT_TARGET.format(
+                    char_name=char.name,
+                    enemy_name=enemy.name,
+                    attack_name=attack_obj.name,
+                    d20_roll=d20_roll,
+                    hit_modifier=attack_obj.hit_modifier,
+                    hit_total=hit_total,
+                    ac=enemy.ac,
+                    damage_formula=attack_obj.damage_formula,
+                    damage_detail=damage_detail,
+                    damage_total=damage_total,
+                )
+
+                if new_hp == 0:
+                    remove_enemy_turn_from_encounter(db, encounter, target_turn)
+                    db.commit()
+
+                    await interaction.response.send_message(hit_message)
+                    await interaction.followup.send(
+                        Strings.ENCOUNTER_DAMAGE_ENEMY_DEFEATED.format(name=enemy.name)
+                    )
+                    gm_message = Strings.ATTACK_GM_ENEMY_DEFEATED.format(
+                        enemy_name=enemy.name,
+                        char_name=char.name,
+                        attack_name=attack_obj.name,
+                    )
+                    logger.info(
+                        f"/attack roll: '{enemy.name}' defeated by "
+                        f"{char.name} in '{encounter.name}'"
+                    )
+                else:
+                    db.commit()
+                    await interaction.response.send_message(hit_message)
+                    gm_message = Strings.ATTACK_GM_DAMAGE_NOTIFY.format(
+                        enemy_name=enemy.name,
+                        damage=damage_total,
+                        char_name=char.name,
+                        attack_name=attack_obj.name,
+                        current_hp=new_hp,
+                        max_hp=enemy.max_hp,
+                    )
+                    logger.info(
+                        f"/attack roll: '{enemy.name}' took {damage_total} damage "
+                        f"({new_hp}/{enemy.max_hp} HP) in '{encounter.name}'"
+                    )
+
+                await notify_gms_hp_update(party, gm_message, interaction.client, encounter)
+
+            else:
+                # Miss — no HP change
+                miss_message = Strings.ATTACK_ROLL_MISS_TARGET.format(
+                    char_name=char.name,
+                    enemy_name=enemy.name,
+                    attack_name=attack_obj.name,
+                    d20_roll=d20_roll,
+                    hit_modifier=attack_obj.hit_modifier,
+                    hit_total=hit_total,
+                    ac=enemy.ac,
+                )
+                await interaction.response.send_message(miss_message)
+                logger.info(
+                    f"/attack roll: {char.name} missed '{enemy.name}' "
+                    f"(rolled {hit_total} vs AC {enemy.ac}) in '{encounter.name}'"
+                )
         finally:
             db.close()
 
@@ -167,6 +318,43 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 app_commands.Choice(name=a.name, value=a.name)
                 for a in char.attacks
                 if current.lower() in a.name.lower()
+            ][:25]
+        finally:
+            db.close()
+
+    @attack_roll.autocomplete("target")
+    async def attack_roll_target_autocomplete(
+        interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
+        """Suggest enemy names from the active encounter's initiative order."""
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = _active_party_for_user(db, user, server)
+            if not party:
+                return []
+
+            encounter = (
+                db.query(Encounter)
+                .filter(
+                    Encounter.party_id == party.id,
+                    Encounter.status == EncounterStatus.ACTIVE,
+                )
+                .first()
+            )
+            if not encounter:
+                return []
+
+            enemy_names = [
+                t.enemy.name
+                for t in sorted(encounter.turns, key=lambda t: t.order_position)
+                if t.enemy_id
+            ]
+            return [
+                app_commands.Choice(name=name, value=name)
+                for name in enemy_names
+                if current.lower() in name.lower()
             ][:25]
         finally:
             db.close()

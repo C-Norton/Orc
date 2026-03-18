@@ -151,8 +151,10 @@ def sample_enemy(db_session, sample_pending_encounter):
     enemy = Enemy(
         encounter_id=sample_pending_encounter.id,
         name="Goblin",
+        type_name="Goblin",
         initiative_modifier=1,
         max_hp=7,
+        current_hp=7,
     )
     db_session.add(enemy)
     db_session.commit()

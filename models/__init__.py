@@ -5,6 +5,7 @@ from models.character import Character
 from models.character_skill import CharacterSkill
 from models.attack import Attack
 from models.party import Party
+from models.party_settings import PartySettings
 from models.encounter import Encounter
 from models.enemy import Enemy
 from models.encounter_turn import EncounterTurn
@@ -18,6 +19,7 @@ __all__ = [
     "CharacterSkill",
     "Attack",
     "Party",
+    "PartySettings",
     "Encounter",
     "Enemy",
     "EncounterTurn",

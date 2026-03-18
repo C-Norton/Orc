@@ -4,14 +4,33 @@ from discord.ext import commands
 from typing import List, Optional
 from sqlalchemy import update, select, insert
 from database import SessionLocal
-from models import User, Server, Character, Party, Encounter, EncounterTurn, user_server_association
+from models import User, Server, Character, Party, PartySettings, Encounter, EncounterTurn, user_server_association
 from enums.encounter_status import EncounterStatus
+from enums.enemy_initiative_mode import EnemyInitiativeMode
 from utils.dnd_logic import perform_roll
 from utils.limits import MAX_GM_PARTIES_PER_USER, MAX_CHARACTERS_PER_PARTY, MAX_PARTIES_PER_SERVER
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
+
+
+def _get_or_create_party_settings(db, party: Party) -> PartySettings:
+    """Return the PartySettings for a party, creating with defaults if absent.
+
+    Args:
+        db: An active SQLAlchemy session.
+        party: The Party instance whose settings are needed.
+
+    Returns:
+        The existing or newly-created PartySettings for the party.
+    """
+    settings = db.query(PartySettings).filter_by(party_id=party.id).first()
+    if settings is None:
+        settings = PartySettings(party_id=party.id)
+        db.add(settings)
+        db.flush()
+    return settings
 
 
 class _ConfirmCharacterRemoveView(discord.ui.View):
@@ -1076,4 +1095,212 @@ def register_party_commands(bot: commands.Bot) -> None:
     ) -> List[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
+    # ------------------------------------------------------------------
+    # /party settings subgroup
+    # ------------------------------------------------------------------
+
+    settings_group = app_commands.Group(
+        name="settings",
+        description="View or change per-party settings (GM only for changes)",
+    )
+
+    @settings_group.command(
+        name="view", description="View the current settings for a party"
+    )
+    @app_commands.describe(party_name="The party whose settings you want to view (defaults to active party)")
+    async def party_settings_view(
+        interaction: discord.Interaction,
+        party_name: Optional[str] = None,
+    ) -> None:
+        """Display the current settings for the specified (or active) party.
+
+        Any party member or GM can view settings.
+        """
+        logger.debug(
+            f"Command /party settings view called by {interaction.user.id} "
+            f"for party '{party_name}'"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+
+            if party_name:
+                party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+            else:
+                party = _get_active_party(db, user, server)
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.PARTY_NOT_FOUND.format(party_name=party_name or "(active)"),
+                    ephemeral=True,
+                )
+                return
+
+            party_settings = _get_or_create_party_settings(db, party)
+            db.commit()
+
+            msg = Strings.PARTY_SETTINGS_VIEW.format(
+                party_name=party.name,
+                initiative_mode=party_settings.initiative_mode.value,
+                enemy_ac_public=str(party_settings.enemy_ac_public),
+            )
+            logger.info(
+                f"/party settings view served for user {interaction.user.id}: '{party.name}'"
+            )
+            await interaction.response.send_message(msg, ephemeral=True)
+        finally:
+            db.close()
+
+    @party_settings_view.autocomplete("party_name")
+    async def party_settings_view_autocomplete(
+        interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
+        return await _party_name_autocomplete(interaction, current)
+
+    @settings_group.command(
+        name="initiative_mode",
+        description="Set how enemy initiative is rolled (GM only)",
+    )
+    @app_commands.describe(
+        party_name="The party to update",
+        mode="Initiative mode: by_type, individual, or shared",
+    )
+    async def party_settings_initiative_mode(
+        interaction: discord.Interaction,
+        party_name: str,
+        mode: str,
+    ) -> None:
+        """Update the enemy initiative rolling mode for a party.
+
+        Only the party GM can use this command.  Valid modes are ``by_type``,
+        ``individual``, and ``shared``.
+
+        Args:
+            interaction: The Discord interaction.
+            party_name: Name of the party to update.
+            mode: One of 'by_type', 'individual', or 'shared'.
+        """
+        logger.debug(
+            f"Command /party settings initiative_mode called by {interaction.user.id} "
+            f"party='{party_name}' mode='{mode}'"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True
+                )
+                return
+
+            if not user or user not in party.gms:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
+                )
+                return
+
+            valid_modes = {member.value for member in EnemyInitiativeMode}
+            if mode not in valid_modes:
+                await interaction.response.send_message(
+                    Strings.PARTY_SETTINGS_INVALID_MODE, ephemeral=True
+                )
+                return
+
+            party_settings = _get_or_create_party_settings(db, party)
+            party_settings.initiative_mode = EnemyInitiativeMode(mode)
+            db.commit()
+
+            logger.info(
+                f"/party settings initiative_mode updated for user {interaction.user.id}: "
+                f"'{party_name}' → {mode}"
+            )
+            await interaction.response.send_message(
+                Strings.PARTY_SETTINGS_UPDATED.format(
+                    setting="initiative_mode",
+                    value=mode,
+                    party_name=party.name,
+                )
+            )
+        finally:
+            db.close()
+
+    @party_settings_initiative_mode.autocomplete("party_name")
+    async def party_settings_initiative_mode_autocomplete(
+        interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
+        return await _party_name_autocomplete(interaction, current)
+
+    @settings_group.command(
+        name="enemy_ac",
+        description="Set whether enemy AC is visible to all players (GM only)",
+    )
+    @app_commands.describe(
+        party_name="The party to update",
+        public="True to show enemy AC to players, False to hide it",
+    )
+    async def party_settings_enemy_ac(
+        interaction: discord.Interaction,
+        party_name: str,
+        public: bool,
+    ) -> None:
+        """Update the enemy AC visibility setting for a party.
+
+        Only the party GM can use this command.
+
+        Args:
+            interaction: The Discord interaction.
+            party_name: Name of the party to update.
+            public: Whether enemy AC values should be visible to all players.
+        """
+        logger.debug(
+            f"Command /party settings enemy_ac called by {interaction.user.id} "
+            f"party='{party_name}' public={public}"
+        )
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
+            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
+
+            if not party:
+                await interaction.response.send_message(
+                    Strings.PARTY_NOT_FOUND.format(party_name=party_name), ephemeral=True
+                )
+                return
+
+            if not user or user not in party.gms:
+                await interaction.response.send_message(
+                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
+                )
+                return
+
+            party_settings = _get_or_create_party_settings(db, party)
+            party_settings.enemy_ac_public = public
+            db.commit()
+
+            logger.info(
+                f"/party settings enemy_ac updated for user {interaction.user.id}: "
+                f"'{party_name}' → {public}"
+            )
+            await interaction.response.send_message(
+                Strings.PARTY_SETTINGS_UPDATED.format(
+                    setting="enemy_ac_public",
+                    value=str(public),
+                    party_name=party.name,
+                )
+            )
+        finally:
+            db.close()
+
+    @party_settings_enemy_ac.autocomplete("party_name")
+    async def party_settings_enemy_ac_autocomplete(
+        interaction: discord.Interaction, current: str
+    ) -> List[app_commands.Choice[str]]:
+        return await _party_name_autocomplete(interaction, current)
+
+    party_group.add_command(settings_group)
     bot.tree.add_command(party_group)
