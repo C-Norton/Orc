@@ -3,13 +3,16 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 from database import SessionLocal
-from models import User, Server, Character
 from dice_roller import (
-    parse_expression_tokens,
-    has_named_tokens,
     evaluate_expression,
+    has_named_tokens,
+    parse_expression_tokens,
+    roll_dice,
 )
+from enums.death_save_nat20_mode import DeathSaveNat20Mode
+from models import Character, PartySettings, Server, User
 from utils.constants import SKILL_TO_STAT, STAT_NAMES
+from utils.death_save_logic import character_is_dying, process_death_save
 from utils.dnd_logic import perform_roll
 from utils.logging_config import get_logger
 from utils.strings import Strings
@@ -17,9 +20,15 @@ from utils.strings import Strings
 logger = get_logger(__name__)
 
 
+_DEATH_SAVE_NOTATION = "death save"
+
+
 def _needs_character(notation: str) -> bool:
     """Return True if the notation requires an active character to resolve."""
     clean = notation.lower().strip()
+
+    if clean == _DEATH_SAVE_NOTATION:
+        return True
 
     # Simple named checks (skill / save / stat / initiative)
     if clean in ("initiative", "init"):
@@ -36,6 +45,95 @@ def _needs_character(notation: str) -> bool:
     # Complex expression: any named token requires a character
     tokens = parse_expression_tokens(notation)
     return has_named_tokens(tokens)
+
+
+def _get_nat20_mode(db, character: Character) -> DeathSaveNat20Mode:
+    """Return the party's nat-20 death save mode, defaulting to REGAIN_HP."""
+    for party in character.parties:
+        settings = db.query(PartySettings).filter_by(party_id=party.id).first()
+        if settings is not None:
+            return settings.death_save_nat20_mode
+    return DeathSaveNat20Mode.REGAIN_HP
+
+
+async def _handle_death_save(
+    interaction: discord.Interaction,
+    character: Character,
+    db,
+) -> None:
+    """Process a death saving throw for a dying character."""
+    if not character_is_dying(character):
+        await interaction.response.send_message(
+            Strings.DEATH_SAVE_NOT_DYING.format(char_name=character.name),
+            ephemeral=True,
+        )
+        return
+
+    nat20_mode = _get_nat20_mode(db, character)
+    _rolls, _modifier, roll = roll_dice("1d20")
+
+    result = process_death_save(
+        roll=roll,
+        nat20_mode=nat20_mode,
+        current_successes=character.death_save_successes,
+        current_failures=character.death_save_failures,
+    )
+
+    # Persist updated state
+    if result.is_nat20_heal:
+        character.current_hp = 1
+        character.death_save_successes = 0
+        character.death_save_failures = 0
+    else:
+        character.death_save_successes = result.successes_after
+        character.death_save_failures = result.failures_after
+
+    db.commit()
+
+    # Build response message
+    lines: List[str] = []
+
+    if result.roll == 1 and not result.is_nat20_heal:
+        lines.append(Strings.DEATH_SAVE_NAT1_DOUBLE)
+    elif result.roll == 20 and nat20_mode == DeathSaveNat20Mode.REGAIN_HP:
+        lines.append(Strings.DEATH_SAVE_NAT20_HEAL.format(char_name=character.name))
+    elif result.roll == 20 and nat20_mode == DeathSaveNat20Mode.DOUBLE_SUCCESS:
+        lines.append(Strings.DEATH_SAVE_NAT20_DOUBLE)
+    elif result.is_success:
+        lines.append(
+            Strings.DEATH_SAVE_RESULT_SUCCESS.format(
+                roll=roll,
+                successes=result.successes_after,
+                failures=result.failures_after,
+            )
+        )
+    else:
+        lines.append(
+            Strings.DEATH_SAVE_RESULT_FAILURE.format(
+                roll=roll,
+                successes=result.successes_after,
+                failures=result.failures_after,
+            )
+        )
+
+    if result.is_stabilized:
+        lines.append(Strings.DEATH_SAVE_STABILIZED.format(char_name=character.name))
+    elif result.is_slain:
+        lines.append(Strings.DEATH_SAVE_SLAIN.format(char_name=character.name))
+
+    await interaction.response.send_message("\n".join(lines))
+
+    if result.is_slain:
+        # Public announcement so the whole table sees it
+        await interaction.followup.send(
+            Strings.DEATH_SAVE_SLAIN.format(char_name=character.name)
+        )
+
+    logger.info(
+        f"/roll death save for {character.name}: roll={roll} "
+        f"success={result.is_success} failure={result.is_failure} "
+        f"stabilized={result.is_stabilized} slain={result.is_slain}"
+    )
 
 
 def register_roll_commands(bot: commands.Bot) -> None:
@@ -72,6 +170,10 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 )
                 if not char:
                     await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
+                    return
+
+                if notation.lower().strip() == _DEATH_SAVE_NOTATION:
+                    await _handle_death_save(interaction, char, db)
                     return
 
                 response = await perform_roll(char, notation, db, advantage=advantage)
@@ -114,6 +216,24 @@ def register_roll_commands(bot: commands.Bot) -> None:
             suggestions.append(f"{stat} Save")
         for stat in ["Str", "Dex", "Con", "Int", "Wis", "Cha"]:
             suggestions.append(f"{stat} Save")
+
+        # Include "death save" only when the active character is at 0 HP
+        death_save_db = SessionLocal()
+        try:
+            user = death_save_db.query(User).filter_by(
+                discord_id=str(interaction.user.id)
+            ).first()
+            server = death_save_db.query(Server).filter_by(
+                discord_id=str(interaction.guild_id)
+            ).first()
+            if user and server:
+                char = death_save_db.query(Character).filter_by(
+                    user=user, server=server, is_active=True
+                ).first()
+                if char and character_is_dying(char):
+                    suggestions.insert(0, "death save")
+        finally:
+            death_save_db.close()
 
         filtered = [
             app_commands.Choice(name=s, value=s)

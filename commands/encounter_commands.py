@@ -8,8 +8,15 @@ from database import SessionLocal
 from models import User, Server, Party, PartySettings, Character, Encounter, Enemy, EncounterTurn, user_server_association
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
+from enums.enemy_placement_mode import EnemyPlacementMode
+from utils.death_save_logic import character_is_dying
 from utils.dnd_logic import roll_initiative_for_character, get_stat_modifier
-from utils.encounter_utils import remove_enemy_turn_from_encounter
+from utils.encounter_utils import (
+    check_and_auto_end_encounter,
+    insert_enemy_turns_at_position,
+    insert_enemy_turns_by_roll,
+    remove_enemy_turn_from_encounter,
+)
 from utils.limits import MAX_ENEMIES_PER_ENCOUNTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
@@ -124,11 +131,17 @@ def _build_order_message(encounter: Encounter) -> str:
         is_current = i == encounter.current_turn_index
         if turn.character_id:
             char = turn.character
+            dying_suffix = ""
+            if character_is_dying(char):
+                dying_suffix = " " + Strings.DEATH_SAVE_COUNTER_DISPLAY.format(
+                    successes=char.death_save_successes,
+                    failures=char.death_save_failures,
+                )
             label = f"{char.name} (Player)"
             if char.current_hp is not None and char.max_hp is not None:
-                hp_part = f" — HP: {char.current_hp}/{char.max_hp}"
+                hp_part = f" — HP: {char.current_hp}/{char.max_hp}{dying_suffix}"
             else:
-                hp_part = ""
+                hp_part = dying_suffix
         else:
             enemy = turn.enemy
             label = f"{enemy.name} (Enemy)"
@@ -146,16 +159,252 @@ def _build_order_message(encounter: Encounter) -> str:
 
 
 def _ping_for_turn(encounter: Encounter) -> str:
-    """Return the Discord ping string for whoever acts on the current turn."""
+    """Return the Discord ping string for whoever acts on the current turn.
+
+    When a player character is dying, appends a death save prompt.
+    """
     turns = sorted(encounter.turns, key=lambda t: t.order_position)
     turn = turns[encounter.current_turn_index]
     if turn.character_id:
-        ping = f"<@{turn.character.user.discord_id}>"
-        name = turn.character.name
+        character = turn.character
+        ping = f"<@{character.user.discord_id}>"
+        name = character.name
+        ping_message = Strings.ENCOUNTER_TURN_PING.format(ping=ping, name=name)
+        if character_is_dying(character):
+            ping_message += "\n" + Strings.DEATH_SAVE_TURN_PROMPT.format(
+                char_name=character.name
+            )
+        return ping_message
     else:
         ping = " ".join(f"<@{gm.discord_id}>" for gm in encounter.party.gms)
         name = turn.enemy.name
-    return Strings.ENCOUNTER_TURN_PING.format(ping=ping, name=name)
+        return Strings.ENCOUNTER_TURN_PING.format(ping=ping, name=name)
+
+
+class EnemyPlacementView(discord.ui.View):
+    """Ephemeral button menu for placing newly added enemies in an active encounter.
+
+    Shown to the GM when ``/encounter enemy`` is called while an encounter is
+    already ACTIVE.  No Enemy rows are written to the database until a button
+    is clicked.  If the view times out without a selection, nothing is created.
+    """
+
+    def __init__(
+        self,
+        encounter_id: int,
+        party_id: int,
+        enemy_name: str,
+        initiative_modifier: int,
+        max_hp_str: str,
+        count: int,
+        ac: Optional[int],
+    ) -> None:
+        super().__init__(timeout=180)
+        self.encounter_id = encounter_id
+        self.party_id = party_id
+        self.enemy_name = enemy_name
+        self.initiative_modifier = initiative_modifier
+        self.max_hp_str = max_hp_str
+        self.count = count
+        self.ac = ac
+        self.message: Optional[discord.Message] = None
+
+    def _build_enemy_description(self) -> str:
+        """Return a short display string describing the enemy or group."""
+        if self.count == 1:
+            return f"**{self.enemy_name}**"
+        return f"**{self.count}× {self.enemy_name}**"
+
+    def _create_enemies(self, db, encounter: "Encounter") -> List[Enemy]:
+        """Persist Enemy rows for this placement and return them.
+
+        Called inside the button callback, after the encounter has been
+        re-verified as ACTIVE.  Flushes so IDs are available immediately.
+        """
+        enemies: List[Enemy] = []
+        if self.count == 1:
+            resolved_hp = _parse_hp_input(self.max_hp_str)
+            enemy = Enemy(
+                encounter_id=encounter.id,
+                name=self.enemy_name,
+                type_name=self.enemy_name,
+                initiative_modifier=self.initiative_modifier,
+                max_hp=resolved_hp,
+                current_hp=resolved_hp,
+                ac=self.ac,
+            )
+            db.add(enemy)
+            enemies.append(enemy)
+        else:
+            for enemy_index in range(1, self.count + 1):
+                resolved_hp = _parse_hp_input(self.max_hp_str)
+                enemy = Enemy(
+                    encounter_id=encounter.id,
+                    name=f"{self.enemy_name} {enemy_index}",
+                    type_name=self.enemy_name,
+                    initiative_modifier=self.initiative_modifier,
+                    max_hp=resolved_hp,
+                    current_hp=resolved_hp,
+                    ac=self.ac,
+                )
+                db.add(enemy)
+                enemies.append(enemy)
+        db.flush()
+        return enemies
+
+    def _roll_for_enemies(
+        self, enemies: List[Enemy], initiative_mode: EnemyInitiativeMode
+    ) -> List[tuple]:
+        """Return ``(enemy, roll)`` pairs based on the party's initiative mode.
+
+        SHARED and BY_TYPE both produce one shared roll for the entire batch
+        (all new enemies share the same ``type_name`` since they come from a
+        single ``/encounter enemy`` invocation).  INDIVIDUAL gives each enemy
+        its own roll.
+        """
+        if initiative_mode in (EnemyInitiativeMode.SHARED, EnemyInitiativeMode.BY_TYPE):
+            shared_roll = random.randint(1, 20) + self.initiative_modifier
+            return [(enemy, shared_roll) for enemy in enemies]
+        # INDIVIDUAL
+        return [
+            (enemy, random.randint(1, 20) + self.initiative_modifier)
+            for enemy in enemies
+        ]
+
+    async def _place_enemies(
+        self,
+        interaction: discord.Interaction,
+        placement: EnemyPlacementMode,
+    ) -> None:
+        """Create enemies and insert them into the encounter at the chosen position.
+
+        Called by each button callback.  Opens its own DB session, re-verifies
+        the encounter is still ACTIVE, creates the enemies, inserts the turns,
+        commits, updates the public initiative message, and confirms to the GM.
+        """
+        self.stop()
+        for child in self.children:
+            child.disabled = True
+
+        db = SessionLocal()
+        try:
+            encounter = db.get(Encounter, self.encounter_id)
+            if not encounter or encounter.status != EncounterStatus.ACTIVE:
+                await interaction.response.edit_message(
+                    content=Strings.ENCOUNTER_NOT_ACTIVE,
+                    view=None,
+                )
+                return
+
+            party = db.get(Party, self.party_id)
+            encounter_settings = _get_or_create_party_settings(db, party)
+            initiative_mode = encounter_settings.initiative_mode
+
+            enemies = self._create_enemies(db, encounter)
+            all_turns_count = len(
+                [t for t in encounter.turns]
+            )
+
+            if placement == EnemyPlacementMode.TOP:
+                roll = random.randint(1, 20) + self.initiative_modifier
+                enemies_with_rolls = [(enemy, roll) for enemy in enemies]
+                insert_enemy_turns_at_position(db, encounter, enemies_with_rolls, 0)
+                confirmation = Strings.ENCOUNTER_ENEMY_ADDED_TOP
+
+            elif placement == EnemyPlacementMode.BOTTOM:
+                roll = random.randint(1, 20) + self.initiative_modifier
+                enemies_with_rolls = [(enemy, roll) for enemy in enemies]
+                insert_enemy_turns_at_position(
+                    db, encounter, enemies_with_rolls, all_turns_count
+                )
+                confirmation = Strings.ENCOUNTER_ENEMY_ADDED_BOTTOM
+
+            elif placement == EnemyPlacementMode.AFTER_CURRENT:
+                roll = random.randint(1, 20) + self.initiative_modifier
+                enemies_with_rolls = [(enemy, roll) for enemy in enemies]
+                insert_enemy_turns_at_position(
+                    db, encounter, enemies_with_rolls, encounter.current_turn_index + 1
+                )
+                confirmation = Strings.ENCOUNTER_ENEMY_ADDED_AFTER_CURRENT
+
+            else:  # EnemyPlacementMode.ROLL
+                enemies_with_rolls = self._roll_for_enemies(enemies, initiative_mode)
+                insert_enemy_turns_by_roll(db, encounter, enemies_with_rolls)
+                confirmation = Strings.ENCOUNTER_ENEMY_ADDED_ROLLED
+
+            db.commit()
+            db.refresh(encounter)
+
+            enemy_description = self._build_enemy_description()
+            order_msg = _build_order_message(encounter)
+
+            try:
+                original_msg = await interaction.channel.fetch_message(
+                    int(encounter.message_id)
+                )
+                await original_msg.edit(content=order_msg)
+            except (discord.NotFound, discord.HTTPException) as exc:
+                logger.warning(
+                    f"EnemyPlacementView: could not update initiative message: {exc}"
+                )
+
+            await interaction.response.edit_message(
+                content=confirmation.format(enemy_description=enemy_description),
+                view=None,
+            )
+            await interaction.followup.send(
+                Strings.ENCOUNTER_ENEMY_JOINED_PUBLIC.format(
+                    enemy_description=enemy_description,
+                    encounter_name=encounter.name,
+                )
+            )
+            logger.info(
+                f"EnemyPlacementView: {enemy_description} added to "
+                f"'{encounter.name}' via {placement.value}"
+            )
+        finally:
+            db.close()
+
+    async def on_timeout(self) -> None:
+        """Disable all buttons when the placement menu expires without a selection."""
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(
+                    content=Strings.ENCOUNTER_ENEMY_PLACEMENT_EXPIRED,
+                    view=self,
+                )
+            except (discord.NotFound, discord.HTTPException):
+                pass
+
+    @discord.ui.button(label="Top of Initiative", style=discord.ButtonStyle.primary)
+    async def top_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Place the enemy(ies) at position 1 in the initiative order."""
+        await self._place_enemies(interaction, EnemyPlacementMode.TOP)
+
+    @discord.ui.button(label="Bottom of Initiative", style=discord.ButtonStyle.secondary)
+    async def bottom_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Place the enemy(ies) at the last position in the initiative order."""
+        await self._place_enemies(interaction, EnemyPlacementMode.BOTTOM)
+
+    @discord.ui.button(label="After Current Turn", style=discord.ButtonStyle.secondary)
+    async def after_current_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Place the enemy(ies) immediately after the currently active turn."""
+        await self._place_enemies(interaction, EnemyPlacementMode.AFTER_CURRENT)
+
+    @discord.ui.button(label="Roll Initiative", style=discord.ButtonStyle.success)
+    async def roll_initiative_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Roll initiative for the enemy(ies) and insert them in sorted order."""
+        await self._place_enemies(interaction, EnemyPlacementMode.ROLL)
 
 
 def register_encounter_commands(bot: commands.Bot) -> None:
@@ -270,12 +519,6 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            if encounter.status != EncounterStatus.PENDING:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NOT_STARTED, ephemeral=True
-                )
-                return
-
             # Validate the HP input format before any rolls or DB writes so the
             # user gets a clear error if the formula is malformed.  This check
             # does not consume any randomness.
@@ -301,6 +544,34 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                         remaining=remaining_slots,
                     ),
                     ephemeral=True,
+                )
+                return
+
+            if encounter.status == EncounterStatus.ACTIVE:
+                enemy_description = (
+                    f"**{name}**" if count == 1 else f"**{count}× {name}**"
+                )
+                view = EnemyPlacementView(
+                    encounter_id=encounter.id,
+                    party_id=party.id,
+                    enemy_name=name,
+                    initiative_modifier=initiative_modifier,
+                    max_hp_str=max_hp,
+                    count=count,
+                    ac=ac,
+                )
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_ENEMY_PLACEMENT_PROMPT.format(
+                        encounter_name=encounter.name,
+                        enemy_description=enemy_description,
+                    ),
+                    view=view,
+                    ephemeral=True,
+                )
+                view.message = await interaction.original_response()
+                logger.debug(
+                    f"/encounter enemy: placement menu shown for '{name}' "
+                    f"in active encounter '{encounter.name}'"
                 )
                 return
 
@@ -734,6 +1005,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             if new_hp == 0:
                 remove_enemy_turn_from_encounter(db, encounter, target_turn)
+                all_enemies_defeated = check_and_auto_end_encounter(db, encounter)
                 db.commit()
 
                 await interaction.response.send_message(
@@ -748,9 +1020,19 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 await interaction.followup.send(
                     Strings.ENCOUNTER_DAMAGE_ENEMY_DEFEATED.format(name=enemy.name)
                 )
-                logger.info(
-                    f"/encounter damage: '{enemy.name}' defeated in '{encounter.name}'"
-                )
+                if all_enemies_defeated:
+                    await interaction.followup.send(
+                        Strings.ENCOUNTER_ALL_ENEMIES_DEFEATED.format(
+                            encounter_name=encounter.name
+                        )
+                    )
+                    logger.info(
+                        f"/encounter damage: all enemies defeated, encounter '{encounter.name}' auto-ended"
+                    )
+                else:
+                    logger.info(
+                        f"/encounter damage: '{enemy.name}' defeated in '{encounter.name}'"
+                    )
             else:
                 db.commit()
                 await interaction.response.send_message(

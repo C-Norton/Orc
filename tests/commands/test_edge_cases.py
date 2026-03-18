@@ -596,7 +596,7 @@ async def test_damage_during_active_encounter_does_not_end_encounter(
     sample_character.current_hp = 3
     db_session.commit()
 
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="3")
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -616,7 +616,7 @@ async def test_overheal_is_capped_at_max_hp(
     sample_character.current_hp = 7
     db_session.commit()
 
-    cb = get_callback(health_bot, "heal")
+    cb = get_callback(health_bot, "hp", "heal")
     await cb(interaction, amount="999")
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -638,7 +638,7 @@ async def test_damage_to_zero_hp_shows_downed_not_death(
     sample_character.current_hp = 8
     db_session.commit()
 
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="8")
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -656,7 +656,7 @@ async def test_massive_damage_triggers_instant_death_message(
     sample_character.current_hp = 8
     db_session.commit()
 
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     # 17 damage: 8 (max_hp) + 1 pushes current_hp to -9, which is ≤ -8
     await cb(interaction, amount="17")
 
@@ -670,7 +670,7 @@ async def test_damage_without_hp_set_is_rejected(
     """Applying damage before max HP is set (current_hp == -1) should be
     rejected with an ephemeral error."""
     # sample_character has default max_hp=-1 / current_hp=-1
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="5")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -685,7 +685,7 @@ async def test_gm_can_damage_party_member_by_name(
     sample_character.current_hp = 20
     db_session.commit()
 
-    cb = get_callback(health_bot, "damage")
+    cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="5", partymember="Aldric")
 
     msg = interaction.response.send_message.call_args.args[0]

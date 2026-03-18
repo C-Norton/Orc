@@ -669,3 +669,201 @@ async def test_party_settings_crit_rule_requires_gm(
     ).first()
     assert settings is None or settings.crit_rule == CritRule.DOUBLE_DICE
     verify.close()
+
+
+# ---------------------------------------------------------------------------
+# /party list
+# ---------------------------------------------------------------------------
+
+
+async def test_party_list_shows_embed(party_bot, sample_party, sample_server, interaction):
+    """/party list returns an embed when at least one party exists."""
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    assert embed is not None
+
+
+async def test_party_list_embed_title_contains_server_name(
+    party_bot, sample_party, sample_server, interaction
+):
+    """/party list embed title includes the server name."""
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    assert sample_server.name in embed.title
+
+
+async def test_party_list_shows_member_count(
+    party_bot, sample_party, sample_character, db_session, interaction
+):
+    """/party list shows the correct member count for a party."""
+    sample_party.characters.append(sample_character)
+    db_session.commit()
+
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    field_values = " ".join(f.value for f in embed.fields)
+    assert "1" in field_values  # 1 member
+
+
+async def test_party_list_empty_server_sends_ephemeral(
+    party_bot, sample_user, sample_server, interaction
+):
+    """/party list with no parties sends an ephemeral message (not an embed)."""
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    assert embed is None
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_party_list_no_character_needed(party_bot, sample_party, sample_server, interaction):
+    """/party list works for a user who has no active character."""
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    embed = interaction.response.send_message.call_args.kwargs.get("embed")
+    assert embed is not None
+
+
+async def test_party_list_single_page_buttons_disabled(
+    party_bot, sample_party, sample_server, interaction
+):
+    """With only 1 party (< page size), both pagination buttons are disabled."""
+    from commands.party_commands import PartyListView
+
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    view = interaction.response.send_message.call_args.kwargs.get("view")
+    assert isinstance(view, PartyListView)
+    prev_btn = next(item for item in view.children if getattr(item, "label", "") == "◀ Previous")
+    next_btn = next(item for item in view.children if getattr(item, "label", "") == "Next ▶")
+    assert prev_btn.disabled is True
+    assert next_btn.disabled is True
+
+
+async def test_party_list_multi_page_next_button_enabled(
+    mocker, party_bot, sample_user, sample_server, db_session, interaction
+):
+    """With more parties than PARTIES_PER_PAGE, the Next button is enabled."""
+    from commands.party_commands import PartyListView
+
+    for i in range(PartyListView.PARTIES_PER_PAGE + 1):
+        db_session.add(Party(name=f"Party{i}", gms=[sample_user], server=sample_server))
+    db_session.commit()
+
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    view = interaction.response.send_message.call_args.kwargs.get("view")
+    next_btn = next(item for item in view.children if getattr(item, "label", "") == "Next ▶")
+    assert next_btn.disabled is False
+
+
+async def test_party_list_next_button_advances_page(
+    mocker, party_bot, sample_user, sample_server, db_session, interaction
+):
+    """Clicking Next on a multi-page list edits the message to show the next page."""
+    from commands.party_commands import PartyListView
+
+    for i in range(PartyListView.PARTIES_PER_PAGE + 2):
+        db_session.add(Party(name=f"Party{i:02d}", gms=[sample_user], server=sample_server))
+    db_session.commit()
+
+    cb = get_callback(party_bot, "party", "list")
+    await cb(interaction)
+
+    view = interaction.response.send_message.call_args.kwargs.get("view")
+    assert view.current_page == 0
+
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.response = mocker.AsyncMock()
+    next_btn = next(item for item in view.children if getattr(item, "label", "") == "Next ▶")
+    await next_btn.callback(btn_interaction)
+
+    assert view.current_page == 1
+    btn_interaction.response.edit_message.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# /party settings death_save_nat20
+# ---------------------------------------------------------------------------
+
+
+async def test_settings_death_save_nat20_set_regain_hp(
+    party_bot, sample_party, interaction, session_factory,
+):
+    """GM can set death_save_nat20 to regain_hp."""
+    cb = get_callback(party_bot, "party", "settings", "death_save_nat20")
+    await cb(interaction, party_name="The Fellowship", mode="regain_hp")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "regain_hp" in msg.lower()
+
+    verify = session_factory()
+    settings = verify.query(PartySettings).filter_by(party_id=sample_party.id).first()
+    assert settings is not None
+    assert settings.death_save_nat20_mode.value == "regain_hp"
+    verify.close()
+
+
+async def test_settings_death_save_nat20_set_double_success(
+    party_bot, sample_party, interaction, session_factory,
+):
+    """GM can set death_save_nat20 to double_success."""
+    from enums.death_save_nat20_mode import DeathSaveNat20Mode
+
+    cb = get_callback(party_bot, "party", "settings", "death_save_nat20")
+    await cb(interaction, party_name="The Fellowship", mode="double_success")
+
+    verify = session_factory()
+    settings = verify.query(PartySettings).filter_by(party_id=sample_party.id).first()
+    assert settings is not None
+    assert settings.death_save_nat20_mode == DeathSaveNat20Mode.DOUBLE_SUCCESS
+    verify.close()
+
+
+async def test_settings_death_save_nat20_invalid_mode(
+    party_bot, sample_party, interaction,
+):
+    """An invalid mode string returns an ephemeral error."""
+    cb = get_callback(party_bot, "party", "settings", "death_save_nat20")
+    await cb(interaction, party_name="The Fellowship", mode="triple_success")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+async def test_settings_death_save_nat20_transition(
+    party_bot, sample_party, interaction, session_factory,
+):
+    """Setting double_success then regain_hp → final value is regain_hp."""
+    from enums.death_save_nat20_mode import DeathSaveNat20Mode
+
+    cb = get_callback(party_bot, "party", "settings", "death_save_nat20")
+    await cb(interaction, party_name="The Fellowship", mode="double_success")
+    await cb(interaction, party_name="The Fellowship", mode="regain_hp")
+
+    verify = session_factory()
+    settings = verify.query(PartySettings).filter_by(party_id=sample_party.id).first()
+    assert settings.death_save_nat20_mode == DeathSaveNat20Mode.REGAIN_HP
+    verify.close()
+
+
+async def test_settings_view_shows_death_save_nat20_mode(
+    party_bot, sample_party, interaction,
+):
+    """/party settings view includes the death_save_nat20 field."""
+    cb = get_callback(party_bot, "party", "settings", "view")
+    await cb(interaction, party_name="The Fellowship")
+
+    msg = interaction.response.send_message.call_args.args[0]
+    # PARTY_SETTINGS_VIEW contains "Death save nat-20 rule:" label
+    assert "death" in msg.lower() or "nat" in msg.lower() or "nat20" in msg.lower() or "nat-20" in msg.lower()

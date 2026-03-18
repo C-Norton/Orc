@@ -1,0 +1,230 @@
+"""Utility functions for weapon data parsing and hit modifier calculation.
+
+Supports the ``/weapon search`` and ``/weapon add`` workflow.  Data is pulled
+from the Open5e v2 API and attack hit modifiers are computed from character
+stats following 5e 2024 rules.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Optional
+
+import aiohttp
+
+from utils.dnd_logic import get_proficiency_bonus, get_stat_modifier
+from utils.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from models import Character
+
+logger = get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+OPEN5E_WEAPONS_URL = "https://api.open5e.com/v2/weapons/"
+OPEN5E_SRD_2024_KEY = "srd-2024"
+MAX_SEARCH_RESULTS = 5
+REQUEST_TIMEOUT_SECONDS = 10
+
+
+# ---------------------------------------------------------------------------
+# Data classes
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class WeaponHitModifier:
+    """Result of computing the to-hit modifier for a weapon and character pair."""
+
+    total: int
+    ability_name: str
+    ability_modifier: int
+    proficiency_bonus: int
+
+    @property
+    def breakdown(self) -> str:
+        """Human-readable explanation of the modifier components.
+
+        Example: ``"STR mod +3 + proficiency +2"``
+        """
+        return (
+            f"{self.ability_name} mod {self.ability_modifier:+d} + "
+            f"proficiency {self.proficiency_bonus:+d}"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Property parsing helpers
+# ---------------------------------------------------------------------------
+
+
+def get_property_names(properties: list[dict]) -> list[str]:
+    """Return a list of property name strings from an Open5e weapon properties array.
+
+    Each element in *properties* is expected to have the shape::
+
+        {"property": {"name": "Finesse", "desc": "..."}, "detail": ""}
+    """
+    names = []
+    for property_entry in properties:
+        property_object = property_entry.get("property") or {}
+        name = property_object.get("name", "")
+        if name:
+            names.append(name)
+    return names
+
+
+def extract_two_handed_damage(properties: list[dict]) -> Optional[str]:
+    """Return the two-handed damage dice for a Versatile weapon, or ``None``.
+
+    For a Longsword the Versatile entry looks like::
+
+        {"property": {"name": "Versatile", "desc": "..."}, "detail": "1d10"}
+
+    Returns ``"1d10"`` in that case, or ``None`` if no Versatile property is
+    present or if the detail field is empty.
+    """
+    for property_entry in properties:
+        property_object = property_entry.get("property") or {}
+        if property_object.get("name") == "Versatile":
+            detail = property_entry.get("detail", "")
+            return detail if detail else None
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Hit modifier calculation
+# ---------------------------------------------------------------------------
+
+
+def calculate_weapon_hit_modifier(
+    character: "Character",
+    properties: list[dict],
+    range_normal: float,
+) -> WeaponHitModifier:
+    """Calculate the to-hit modifier for a weapon equipped by a given character.
+
+    Follows 5e 2024 rules:
+
+    - **Finesse** → ``max(STR mod, DEX mod)``
+    - **Ranged** (``range_normal > 0``) or **Thrown** → DEX mod
+    - Otherwise → STR mod
+
+    The proficiency bonus is always added.
+
+    .. note::
+        Weapon type proficiency is not yet tracked in the data model.  This
+        function assumes the character is proficient with all weapons and always
+        adds the proficiency bonus.  When per-class weapon proficiency tracking
+        is added, gate the proficiency bonus behind a proficiency check here.
+
+    Falls back gracefully when stats are ``None`` — ``get_stat_modifier``
+    treats ``None`` as score 10, yielding modifier 0.
+    """
+    property_names = get_property_names(properties)
+    is_finesse = "Finesse" in property_names
+    is_thrown = "Thrown" in property_names
+    is_ranged = range_normal > 0
+
+    strength_modifier = get_stat_modifier(character.strength)
+    dexterity_modifier = get_stat_modifier(character.dexterity)
+    proficiency = get_proficiency_bonus(character.level)
+
+    if is_finesse:
+        if strength_modifier >= dexterity_modifier:
+            ability_name = "STR"
+            ability_modifier = strength_modifier
+        else:
+            ability_name = "DEX"
+            ability_modifier = dexterity_modifier
+    elif is_ranged or is_thrown:
+        ability_name = "DEX"
+        ability_modifier = dexterity_modifier
+    else:
+        ability_name = "STR"
+        ability_modifier = strength_modifier
+
+    logger.debug(
+        f"calculate_weapon_hit_modifier: {ability_name} mod {ability_modifier:+d} "
+        f"+ prof {proficiency:+d} = {ability_modifier + proficiency:+d}"
+    )
+
+    return WeaponHitModifier(
+        total=ability_modifier + proficiency,
+        ability_name=ability_name,
+        ability_modifier=ability_modifier,
+        proficiency_bonus=proficiency,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Display formatting
+# ---------------------------------------------------------------------------
+
+
+def format_weapon_result_line(index: int, weapon: dict) -> str:
+    """Format a single weapon search result line for the ``/weapon search`` response.
+
+    Example output::
+
+        1. Longsword — Martial Melee | 1d8 Slashing | Versatile (1d10)
+        2. Short Sword — Martial Melee | 1d6 Piercing | Finesse, Light
+    """
+    name = weapon.get("name", "Unknown")
+    damage_dice = weapon.get("damage_dice", "?")
+    damage_type_object = weapon.get("damage_type") or {}
+    damage_type = damage_type_object.get("name", "?")
+    is_simple = weapon.get("is_simple", True)
+    weapon_category = "Simple" if is_simple else "Martial"
+    properties = weapon.get("properties", [])
+    two_handed = extract_two_handed_damage(properties)
+    property_names = get_property_names(properties)
+
+    # Build property display tokens
+    display_properties: list[str] = []
+    if two_handed:
+        display_properties.append(f"Versatile ({two_handed})")
+    for property_name in property_names:
+        if property_name != "Versatile":
+            display_properties.append(property_name)
+
+    properties_suffix = f" | {', '.join(display_properties)}" if display_properties else ""
+
+    return (
+        f"{index}. **{name}** — {weapon_category} | "
+        f"{damage_dice} {damage_type}{properties_suffix}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# API call
+# ---------------------------------------------------------------------------
+
+
+async def fetch_weapons(query: str) -> list[dict]:
+    """Fetch up to 5 weapons from the Open5e v2 API matching *query*.
+
+    Searches the 2024 SRD only (``document__key=srd-2024``).  Returns an
+    empty list when no results are found.
+
+    Raises :class:`aiohttp.ClientError` on network failures so callers can
+    surface a user-friendly error message.
+    """
+    params = {
+        "search": query,
+        "document__key": OPEN5E_SRD_2024_KEY,
+        "limit": MAX_SEARCH_RESULTS,
+    }
+    timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT_SECONDS)
+    logger.debug(f"fetch_weapons: querying Open5e for {query!r}")
+    async with aiohttp.ClientSession(timeout=timeout) as http_session:
+        async with http_session.get(OPEN5E_WEAPONS_URL, params=params) as response:
+            response.raise_for_status()
+            data = await response.json()
+            results = data.get("results", [])
+            logger.debug(
+                f"fetch_weapons: received {len(results)} result(s) for {query!r}"
+            )
+            return results

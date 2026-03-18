@@ -101,6 +101,15 @@ def meta_bot():
     yield bot
 
 
+@pytest.fixture
+def weapon_bot(session_factory, mocker):
+    bot = make_bot()
+    mocker.patch("commands.weapon_commands.SessionLocal", new=session_factory)
+    from commands.weapon_commands import register_weapon_commands
+    register_weapon_commands(bot)
+    yield bot
+
+
 # ---------------------------------------------------------------------------
 # Party-specific seed fixtures
 # ---------------------------------------------------------------------------

@@ -10,7 +10,11 @@ from enums.encounter_status import EncounterStatus
 from dice_roller import roll_dice
 from enums.crit_rule import CritRule
 from utils.crit_logic import apply_crit_damage
-from utils.encounter_utils import remove_enemy_turn_from_encounter, notify_gms_hp_update
+from utils.encounter_utils import (
+    check_and_auto_end_encounter,
+    notify_gms_hp_update,
+    remove_enemy_turn_from_encounter,
+)
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
@@ -180,7 +184,12 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 return
 
             crit_prefix = Strings.CRIT_HIT_HEADER if is_crit and crit_rule != CritRule.NONE else ""
-            inspiration_suffix = Strings.CRIT_PERKINS_INSPIRATION if grants_inspiration else ""
+            if grants_inspiration:
+                char.inspiration = True
+                db.commit()
+                inspiration_suffix = Strings.CRIT_PERKINS_INSPIRATION.format(char_name=char.name)
+            else:
+                inspiration_suffix = ""
 
             # ----------------------------------------------------------------
             # Untargeted path
@@ -279,20 +288,31 @@ def register_attack_commands(bot: commands.Bot) -> None:
 
                 if new_hp == 0:
                     remove_enemy_turn_from_encounter(db, encounter, target_turn)
+                    all_enemies_defeated = check_and_auto_end_encounter(db, encounter)
                     db.commit()
 
                     await interaction.response.send_message(hit_message)
                     await interaction.followup.send(
                         Strings.ENCOUNTER_DAMAGE_ENEMY_DEFEATED.format(name=enemy.name)
                     )
+                    if all_enemies_defeated:
+                        await interaction.followup.send(
+                            Strings.ENCOUNTER_ALL_ENEMIES_DEFEATED.format(
+                                encounter_name=encounter.name
+                            )
+                        )
+                        logger.info(
+                            f"/attack roll: all enemies defeated, encounter '{encounter.name}' auto-ended"
+                        )
+                    else:
+                        logger.info(
+                            f"/attack roll: '{enemy.name}' defeated by "
+                            f"{char.name} in '{encounter.name}'"
+                        )
                     gm_message = Strings.ATTACK_GM_ENEMY_DEFEATED.format(
                         enemy_name=enemy.name,
                         char_name=char.name,
                         attack_name=attack_obj.name,
-                    )
-                    logger.info(
-                        f"/attack roll: '{enemy.name}' defeated by "
-                        f"{char.name} in '{encounter.name}'"
                     )
                 else:
                     db.commit()

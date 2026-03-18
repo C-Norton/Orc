@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import TYPE_CHECKING
 
 from enums.crit_rule import CritRule
+from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from models.base import Base
 
@@ -38,6 +39,12 @@ class PartySettings(Base):
         SAEnum(CritRule, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=CritRule.DOUBLE_DICE,
+    )
+    death_save_nat20_mode: Mapped[DeathSaveNat20Mode] = mapped_column(
+        SAEnum(DeathSaveNat20Mode, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=DeathSaveNat20Mode.REGAIN_HP,
+        server_default=DeathSaveNat20Mode.REGAIN_HP.value,
     )
 
     party: Mapped["Party"] = relationship("Party", back_populates="settings")
