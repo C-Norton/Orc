@@ -80,6 +80,9 @@ resource "google_service_account_iam_member" "deploy_sa_act_as_vm_sa" {
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.deploy_sa.email}"
 }
+
+# Allow the deploy SA to look up instance details (needed by gcloud compute ssh).
+resource "google_project_iam_member" "deploy_sa_compute_viewer" {
   project = var.project_id
   role    = "roles/compute.viewer"
   member  = "serviceAccount:${google_service_account.deploy_sa.email}"
