@@ -9,6 +9,10 @@ __pycache__/
 .Python
 *.log
 dnd_bot.db
+
+*.tfstate
+*.tfstate.backup
+
 *.db
 # Virtual environments
 .venv/

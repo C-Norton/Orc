@@ -102,6 +102,15 @@ def meta_bot():
 
 
 @pytest.fixture
+def inspiration_bot(session_factory, mocker):
+    bot = make_bot()
+    mocker.patch("commands.inspiration_commands.SessionLocal", new=session_factory)
+    from commands.inspiration_commands import register_inspiration_commands
+    register_inspiration_commands(bot)
+    yield bot
+
+
+@pytest.fixture
 def weapon_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.weapon_commands.SessionLocal", new=session_factory)
