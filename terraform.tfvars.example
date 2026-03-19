@@ -1,0 +1,29 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit it.
+
+project_id    = "your-gcp-project-id"
+region        = "us-east1"
+zone          = "us-east1-b"
+
+# IAP SSH access will be granted to these GCP IAM users.
+# Format: the local username that maps to your Google account via OS Login.
+ssh_users     = ["cnorton9", "channing"]
+
+# Your Discord bot token from discord.com/developers/applications
+# This is written to Secret Manager and never stored in Terraform state as plaintext.
+discord_token = "your-discord-bot-token-here"
+
+# CHANGE: added — from Discord Developer Portal > General Information
+discord_public_key = "your-discord-public-key-here"
+discord_app_id     = "your-discord-application-id-here"
+
+# CHANGE: removed data_disk_size_gb — no SQLite disk, DB is now Cloud SQL Postgres
+
+# CHANGE: added — GitHub PAT with repo + workflow scopes
+# Generate at: github.com/settings/tokens
+
+
+# CHANGE: updated example image name from kaz-bot to orc-bot
+# Leave empty until you have a built image — the startup script will handle
+# pulling it. Set to e.g. "gcr.io/your-project/orc-bot:latest" once built.
+bot_image = ""

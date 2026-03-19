@@ -3,33 +3,19 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 from database import SessionLocal
-from sqlalchemy import select
-from models import User, Server, Character, CharacterSkill, ClassLevel, Encounter, EncounterTurn, Party, user_server_association
+from models import User, Server, Character, CharacterSkill, ClassLevel, Encounter, EncounterTurn, Party
 from enums.character_class import CharacterClass
 from enums.encounter_status import EncounterStatus
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from utils.class_data import apply_class_save_profs, calculate_max_hp
 from utils.constants import SKILL_TO_STAT
+from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
 from utils.dnd_logic import get_proficiency_bonus, get_stat_modifier
 from utils.limits import MAX_CHARACTERS_PER_USER
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
-
-
-def _active_party_for_user(db, user: User, server: Server) -> Optional[Party]:
-    """Return the user's active party on this server, or None."""
-    if not user or not server:
-        return None
-    stmt = select(user_server_association.c.active_party_id).where(
-        user_server_association.c.user_id == user.id,
-        user_server_association.c.server_id == server.id,
-    )
-    result = db.execute(stmt).fetchone()
-    if not result or result[0] is None:
-        return None
-    return db.get(Party, result[0])
 
 
 class _ConfirmCharacterDeleteView(discord.ui.View):
@@ -492,9 +478,8 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -587,9 +572,8 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -640,9 +624,8 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -708,9 +691,8 @@ def register_character_commands(bot: commands.Bot) -> None:
             return
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -761,11 +743,10 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if name is None:
-                char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+                char = get_active_character(db, user, server)
                 if not char:
                     await interaction.response.send_message(
                         Strings.ACTIVE_CHARACTER_NOT_FOUND
@@ -782,7 +763,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                 )
                 # Fall back to active party characters
                 if not char:
-                    party = _active_party_for_user(db, user, server)
+                    party = get_active_party(db, user, server)
                     if party:
                         char = next(
                             (c for c in party.characters if c.name == name), None
@@ -813,8 +794,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         """Suggest own characters first, then active party members' characters."""
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -827,7 +807,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                     choices.append(app_commands.Choice(name=character.name, value=character.name))
                     seen_names.add(character.name)
 
-            party = _active_party_for_user(db, user, server)
+            party = get_active_party(db, user, server)
             if party:
                 for character in party.characters:
                     if character.name not in seen_names and current.lower() in character.name.lower():
@@ -857,8 +837,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if not user or not server:
                 await interaction.response.send_message(Strings.CHAR_LIST_NONE, ephemeral=True)
@@ -914,8 +893,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             char = db.query(Character).filter_by(user=user, server=server, name=name).first()
             logger.debug(
@@ -945,8 +923,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         """Suggest character names owned by this user on this server."""
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -974,8 +951,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if not user or not server:
                 await interaction.response.send_message(Strings.CHAR_LIST_NONE, ephemeral=True)
@@ -1021,8 +997,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     ) -> List[app_commands.Choice[str]]:
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -1063,9 +1038,8 @@ def register_character_commands(bot: commands.Bot) -> None:
             return
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -1157,9 +1131,8 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"

@@ -18,7 +18,8 @@ from discord import app_commands
 from discord.ext import commands
 
 from database import SessionLocal
-from models import Attack, Character, Server, User
+from models import Attack, Character
+from utils.db_helpers import get_active_character, resolve_user_server
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
@@ -92,13 +93,8 @@ def register_weapon_commands(bot: commands.Bot) -> None:
         await interaction.response.defer(ephemeral=True)
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(
-                discord_id=str(interaction.guild_id)
-            ).first()
-            character = db.query(Character).filter_by(
-                user=user, server=server, is_active=True
-            ).first()
+            user, server = resolve_user_server(db, interaction)
+            character = get_active_character(db, user, server)
             if not character:
                 await interaction.followup.send(
                     Strings.CHARACTER_NOT_FOUND, ephemeral=True
@@ -164,13 +160,8 @@ def register_weapon_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(
-                discord_id=str(interaction.guild_id)
-            ).first()
-            character = db.query(Character).filter_by(
-                user=user, server=server, is_active=True
-            ).first()
+            user, server = resolve_user_server(db, interaction)
+            character = get_active_character(db, user, server)
             if not character:
                 await interaction.response.send_message(
                     Strings.CHARACTER_NOT_FOUND, ephemeral=True

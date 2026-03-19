@@ -99,7 +99,11 @@ class Strings:
         "**/party gm_add <party> <user>**: Add a Discord user as a GM of a party (GM only).\n"
         "**/party gm_remove <party> <user>**: Remove a Discord user as a GM of a party (GM only).\n"
         "**/party view <name>**: View a party's members and GMs.\n"
-        "**/party delete <name>**: Delete a party (GM only).\n"
+        "**/party delete <name>**: Delete a party (GM only)."
+    )
+
+    HELP_PARTY_SETTINGS_NAME = "⚙️ Party Settings"
+    HELP_PARTY_SETTINGS_VALUE = (
         "**/party settings view [party]**: View the current settings for a party.\n"
         "**/party settings initiative_mode <party> <mode>**: Set how enemy initiative is rolled: `by_type` (default), `individual`, or `shared` (GM only).\n"
         "**/party settings enemy_ac <party> <true/false>**: Set whether enemy AC values are visible to all players (GM only).\n"
@@ -140,7 +144,7 @@ class Strings:
         "Then set your stats with `/character stats` — Max HP will be calculated automatically.\n"
         "For accurate rolls, set your skill proficiencies with `/character skill`.\n"
         "When you level up or multiclass, use `/character class_add`.\n"
-        "Finally, set your Max HP with `/hp set_max`.\n"
+        "Finally, set your Max HP with `/hp set_max` if it differs from the default calculation (e.g. rolled or tough feat).\n"
         "**FOR GMs**\n"
         "It is recommended that you read all pages of the help command.\n"
         "That said for the very basics, if you want to create a party, do `/party create`, and add characters with `/party character_add`.\n"

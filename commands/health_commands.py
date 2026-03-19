@@ -1,29 +1,16 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from sqlalchemy import select
 
 from database import SessionLocal
 from models import Character, User, Server, Party
-from models.base import user_server_association
+from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
 from utils.death_save_logic import character_is_dying
 from utils.hp_logic import apply_damage, apply_healing, apply_temp_hp, parse_amount
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
-
-
-def _get_active_party(db, user, server):
-    """Return the active Party for a user+server, or None if not set."""
-    stmt = select(user_server_association.c.active_party_id).where(
-        user_server_association.c.user_id == user.id,
-        user_server_association.c.server_id == server.id,
-    )
-    result = db.execute(stmt).fetchone()
-    if result and result[0]:
-        return db.get(Party, result[0])
-    return None
 
 
 def register_health_commands(bot: commands.Bot) -> None:
@@ -44,9 +31,8 @@ def register_health_commands(bot: commands.Bot) -> None:
             return
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             if not char:
                 await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
                 return
@@ -70,11 +56,10 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp damage called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if partymember:
-                party = _get_active_party(db, user, server)
+                party = get_active_party(db, user, server)
                 if not party:
                     await interaction.response.send_message(Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True)
                     return
@@ -90,7 +75,7 @@ def register_health_commands(bot: commands.Bot) -> None:
                     )
                     return
             else:
-                char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+                char = get_active_character(db, user, server)
                 if not char:
                     await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
                     return
@@ -156,11 +141,10 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp heal called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if partymember:
-                party = _get_active_party(db, user, server)
+                party = get_active_party(db, user, server)
                 if not party:
                     await interaction.response.send_message(Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True)
                     return
@@ -171,7 +155,7 @@ def register_health_commands(bot: commands.Bot) -> None:
                     )
                     return
             else:
-                char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+                char = get_active_character(db, user, server)
                 if not char:
                     await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
                     return
@@ -216,9 +200,8 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp temp called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             if not char:
                 await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
                 return
@@ -238,9 +221,8 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp party_temp called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _get_active_party(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
             if not party:
                 await interaction.response.send_message(Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True)
                 return
@@ -260,9 +242,8 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp status called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             if not char:
                 await interaction.response.send_message(Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True)
                 return

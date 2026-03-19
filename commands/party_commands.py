@@ -11,6 +11,7 @@ from enums.crit_rule import CritRule
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
+from utils.db_helpers import get_active_party, resolve_user_server
 from utils.dnd_logic import perform_roll
 from utils.limits import MAX_GM_PARTIES_PER_USER, MAX_CHARACTERS_PER_PARTY, MAX_PARTIES_PER_SERVER
 from utils.logging_config import get_logger
@@ -366,19 +367,6 @@ def register_party_commands(bot: commands.Bot) -> None:
         finally:
             db.close()
 
-    def _get_active_party(db, user: User, server: Server) -> Optional[Party]:
-        """Return the user's active party on this server, or None."""
-        if not user or not server:
-            return None
-        stmt = select(user_server_association.c.active_party_id).where(
-            user_server_association.c.user_id == user.id,
-            user_server_association.c.server_id == server.id,
-        )
-        result = db.execute(stmt).fetchone()
-        if not result or result[0] is None:
-            return None
-        return db.get(Party, result[0])
-
     def _set_active_party(db, user: User, server: Server, party: Party) -> None:
         """Upsert the user-server association to point at party."""
         stmt = select(user_server_association).where(
@@ -424,8 +412,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if not user or not server:
                 await interaction.response.send_message(
@@ -508,8 +495,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if party_name:
                 party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
@@ -630,8 +616,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -686,10 +671,9 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
-            party = _get_active_party(db, user, server)
+            party = get_active_party(db, user, server)
             if not party:
                 await interaction.response.send_message(
                     Strings.ERROR_PARTY_SET_ACTIVE_FIRST, ephemeral=True
@@ -739,10 +723,9 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
-            party = _get_active_party(db, user, server)
+            party = get_active_party(db, user, server)
             if not party:
                 await interaction.response.send_message(
                     Strings.ERROR_PARTY_SET_ACTIVE_FIRST, ephemeral=True
@@ -776,11 +759,10 @@ def register_party_commands(bot: commands.Bot) -> None:
     ) -> List[app_commands.Choice[str]]:
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
-            party = _get_active_party(db, user, server)
+            party = get_active_party(db, user, server)
             if not party:
                 return []
             return [
@@ -813,8 +795,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -921,8 +902,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -1037,8 +1017,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -1106,8 +1085,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -1199,13 +1177,12 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
 
             if party_name:
                 party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
             else:
-                party = _get_active_party(db, user, server)
+                party = get_active_party(db, user, server)
 
             if not party:
                 await interaction.response.send_message(
@@ -1265,8 +1242,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -1340,8 +1316,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -1410,8 +1385,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:
@@ -1487,8 +1461,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            user, server = resolve_user_server(db, interaction)
             party = db.query(Party).filter_by(name=party_name, server_id=server.id).first()
 
             if not party:

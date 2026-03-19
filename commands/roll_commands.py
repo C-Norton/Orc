@@ -10,8 +10,9 @@ from dice_roller import (
     roll_dice,
 )
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
-from models import Character, PartySettings, Server, User
+from models import Character, PartySettings
 from utils.constants import SKILL_TO_STAT, STAT_NAMES
+from utils.db_helpers import get_active_character, resolve_user_server
 from utils.death_save_logic import character_is_dying, process_death_save
 from utils.dnd_logic import perform_roll
 from utils.logging_config import get_logger
@@ -162,9 +163,8 @@ def register_roll_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             if _needs_character(notation):
-                user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-                server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-                char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+                user, server = resolve_user_server(db, interaction)
+                char = get_active_character(db, user, server)
                 logger.debug(
                     f"Character lookup: {'found: ' + char.name if char else 'not found'}"
                 )
@@ -220,16 +220,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
         # Include "death save" only when the active character is at 0 HP
         death_save_db = SessionLocal()
         try:
-            user = death_save_db.query(User).filter_by(
-                discord_id=str(interaction.user.id)
-            ).first()
-            server = death_save_db.query(Server).filter_by(
-                discord_id=str(interaction.guild_id)
-            ).first()
+            user, server = resolve_user_server(death_save_db, interaction)
             if user and server:
-                char = death_save_db.query(Character).filter_by(
-                    user=user, server=server, is_active=True
-                ).first()
+                char = get_active_character(death_save_db, user, server)
                 if char and character_is_dying(char):
                     suggestions.insert(0, "death save")
         finally:
