@@ -72,6 +72,15 @@ resource "google_iap_tunnel_instance_iam_member" "deploy_sa_iap" {
   member   = "serviceAccount:${google_service_account.deploy_sa.email}"
 }
 
+# Allow the deploy SA to SSH into the VM via OS Login.
+# GCP requires actAs permission on the VM's attached service account
+# whenever the connecting identity uses OS Login on a VM with a SA.
+resource "google_service_account_iam_member" "deploy_sa_act_as_vm_sa" {
+  service_account_id = google_service_account.orc_bot_sa.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.deploy_sa.email}"
+}
+
 # Allow the deploy SA to look up instance details (needed by gcloud compute ssh).
 resource "google_project_iam_member" "deploy_sa_compute_viewer" {
   project = var.project_id
