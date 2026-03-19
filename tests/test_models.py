@@ -20,6 +20,63 @@ def test_character_hp_persists(db_session, sample_user, sample_server):
     assert loaded.temp_hp == 0
 
 
+def test_deleting_character_cascades_to_attacks_and_skills(
+    db_session, sample_user, sample_server
+):
+    """Deleting a Character must cascade-delete all associated Attack and
+    CharacterSkill rows via the SQLAlchemy relationship cascade.
+
+    Migrated from the root-level test_delete.py which tested this against the
+    real database; now uses the in-memory fixture DB.
+    """
+    from models import Attack, Character, CharacterSkill
+
+    char = Character(name="CascadeTest", user=sample_user, server=sample_server, is_active=True)
+    db_session.add(char)
+    db_session.flush()
+
+    db_session.add(Attack(character_id=char.id, name="Test Attack", hit_modifier=5, damage_formula="1d8"))
+    db_session.add(CharacterSkill(character_id=char.id, skill_name="Athletics"))
+    db_session.commit()
+
+    char_id = char.id
+    assert db_session.query(Attack).filter_by(character_id=char_id).first() is not None
+    assert db_session.query(CharacterSkill).filter_by(character_id=char_id).first() is not None
+
+    db_session.delete(char)
+    db_session.commit()
+
+    assert db_session.query(Character).filter_by(id=char_id).first() is None
+    assert db_session.query(Attack).filter_by(character_id=char_id).first() is None
+    assert db_session.query(CharacterSkill).filter_by(character_id=char_id).first() is None
+
+
+def test_different_users_may_share_character_name_on_same_server(
+    db_session, sample_user, sample_server
+):
+    """The unique constraint on Character is (user_id, server_id, name), so two
+    different users on the same server may have characters with identical names.
+
+    Migrated from the root-level test_scenarios.py.
+    """
+    from models import Character, User
+
+    user2 = User(discord_id="9999")
+    db_session.add(user2)
+    db_session.flush()
+
+    char1 = Character(name="Hero", user=sample_user, server=sample_server, is_active=True)
+    char2 = Character(name="Hero", user=user2, server=sample_server, is_active=True)
+    db_session.add_all([char1, char2])
+    db_session.commit()  # must not raise IntegrityError
+
+    heroes = db_session.query(Character).filter_by(name="Hero", server_id=sample_server.id).all()
+    assert len(heroes) == 2
+    owner_ids = {c.user_id for c in heroes}
+    assert sample_user.id in owner_ids
+    assert user2.id in owner_ids
+
+
 def test_party_settings_crit_rule_reads_lowercase_value_from_db(
     db_session, sample_user, sample_server,
 ):
