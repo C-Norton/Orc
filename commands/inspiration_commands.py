@@ -20,25 +20,11 @@ from sqlalchemy import select
 
 from database import SessionLocal
 from models import Character, Party, Server, User, user_server_association
+from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
-
-
-def _get_active_party(db, user: User, server: Server) -> Optional[Party]:
-    """Return the user's active party on this server, or None."""
-    if not user or not server:
-        return None
-    stmt = select(user_server_association.c.active_party_id).where(
-        user_server_association.c.user_id == user.id,
-        user_server_association.c.server_id == server.id,
-    )
-    result = db.execute(stmt).fetchone()
-    if not result or result[0] is None:
-        return None
-    from models import Party as _Party
-    return db.get(_Party, result[0])
 
 
 def _resolve_target(
@@ -51,7 +37,7 @@ def _resolve_target(
     Returns ``(None, error_string)`` on any validation failure.
     """
     if partymember is None:
-        char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+        char = get_active_character(db, user, server)
         if not char:
             return None, Strings.CHARACTER_NOT_FOUND
         return char, None
@@ -98,9 +84,8 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _get_active_party(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
 
             char, error = _resolve_target(db, user, server, party, partymember)
             if error:
@@ -155,9 +140,8 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _get_active_party(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
 
             char, error = _resolve_target(db, user, server, party, partymember)
             if error:
@@ -210,14 +194,11 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _get_active_party(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
 
             if partymember is None:
-                char = db.query(Character).filter_by(
-                    user=user, server=server, is_active=True
-                ).first()
+                char = get_active_character(db, user, server)
                 if not char:
                     await interaction.response.send_message(
                         Strings.CHARACTER_NOT_FOUND, ephemeral=True

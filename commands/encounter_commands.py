@@ -3,12 +3,12 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
-from sqlalchemy import select
 from database import SessionLocal
-from models import User, Server, Party, PartySettings, Character, Encounter, Enemy, EncounterTurn, user_server_association
+from models import User, Server, Party, PartySettings, Character, Encounter, Enemy, EncounterTurn
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from enums.enemy_placement_mode import EnemyPlacementMode
+from utils.db_helpers import get_active_party, resolve_user_server
 from utils.death_save_logic import character_is_dying
 from utils.dnd_logic import roll_initiative_for_character, get_stat_modifier
 from utils.encounter_utils import (
@@ -89,18 +89,63 @@ def _parse_hp_input(value: str) -> int:
         raise ValueError(stripped_value)
 
 
-def _active_party_for_user(db, user: User, server: Server) -> Optional[Party]:
-    """Return the user's active party on this server, or None."""
-    if not user or not server:
-        return None
-    stmt = select(user_server_association.c.active_party_id).where(
-        user_server_association.c.user_id == user.id,
-        user_server_association.c.server_id == server.id,
-    )
-    result = db.execute(stmt).fetchone()
-    if not result or result[0] is None:
-        return None
-    return db.get(Party, result[0])
+def _create_enemies_for_encounter(
+    db,
+    encounter: Encounter,
+    enemy_name: str,
+    initiative_modifier: int,
+    max_hp_str: str,
+    count: int,
+    ac: Optional[int],
+) -> List[Enemy]:
+    """Persist Enemy rows for an encounter and return them.
+
+    Handles both single (``count == 1``) and bulk (``count > 1``) creation.
+    Bulk enemies are named ``"<enemy_name> 1"`` through ``"<enemy_name> N"``.
+    Calls ``db.flush()`` so IDs are available before the caller commits.
+
+    Args:
+        db: An active SQLAlchemy session.
+        encounter: The encounter to attach enemies to.
+        enemy_name: Base name for the enemy or group.
+        initiative_modifier: Initiative modifier shared by all created enemies.
+        max_hp_str: Flat integer string or dice formula (e.g. ``"2d8+4"``).
+        count: Number of enemies to create.
+        ac: Optional armor class value.
+
+    Returns:
+        The list of newly created and flushed ``Enemy`` instances.
+    """
+    enemies: List[Enemy] = []
+    if count == 1:
+        resolved_hp = _parse_hp_input(max_hp_str)
+        enemy = Enemy(
+            encounter_id=encounter.id,
+            name=enemy_name,
+            type_name=enemy_name,
+            initiative_modifier=initiative_modifier,
+            max_hp=resolved_hp,
+            current_hp=resolved_hp,
+            ac=ac,
+        )
+        db.add(enemy)
+        enemies.append(enemy)
+    else:
+        for enemy_index in range(1, count + 1):
+            resolved_hp = _parse_hp_input(max_hp_str)
+            enemy = Enemy(
+                encounter_id=encounter.id,
+                name=f"{enemy_name} {enemy_index}",
+                type_name=enemy_name,
+                initiative_modifier=initiative_modifier,
+                max_hp=resolved_hp,
+                current_hp=resolved_hp,
+                ac=ac,
+            )
+            db.add(enemy)
+            enemies.append(enemy)
+    db.flush()
+    return enemies
 
 
 def _open_encounter(db, party: Party) -> Optional[Encounter]:
@@ -113,6 +158,63 @@ def _open_encounter(db, party: Party) -> Optional[Encounter]:
         )
         .first()
     )
+
+
+def _active_encounter(db, party: Party) -> Optional[Encounter]:
+    """Return the party's ACTIVE encounter, or None.
+
+    Unlike ``_open_encounter``, this only returns encounters that have already
+    been started (``EncounterStatus.ACTIVE``).
+
+    Args:
+        db: An active SQLAlchemy session.
+        party: The party whose encounter is needed.
+
+    Returns:
+        The active ``Encounter`` if one exists, otherwise ``None``.
+    """
+    return (
+        db.query(Encounter)
+        .filter(
+            Encounter.party_id == party.id,
+            Encounter.status == EncounterStatus.ACTIVE,
+        )
+        .first()
+    )
+
+
+async def _require_active_encounter(
+    db,
+    interaction: discord.Interaction,
+    no_party_msg: str = Strings.ENCOUNTER_NOT_ACTIVE,
+    no_encounter_msg: str = Strings.ENCOUNTER_NOT_ACTIVE,
+) -> tuple[Optional[User], Optional[Party], Optional[Encounter]]:
+    """Resolve user, active party, and active encounter for a command handler.
+
+    Sends an ephemeral error and returns ``(None, None, None)`` at the first
+    missing piece so the caller can ``return`` immediately.  All three values
+    are guaranteed non-``None`` when the returned encounter is non-``None``.
+
+    Args:
+        db: An active SQLAlchemy session.
+        interaction: The Discord interaction being handled.
+        no_party_msg: Error string sent when the user has no active party.
+        no_encounter_msg: Error string sent when there is no active encounter.
+
+    Returns:
+        ``(user, party, encounter)`` on success, or ``(None, None, None)`` if
+        any step fails (after sending the appropriate error response).
+    """
+    user, server = resolve_user_server(db, interaction)
+    party = get_active_party(db, user, server)
+    if not party:
+        await interaction.response.send_message(no_party_msg, ephemeral=True)
+        return None, None, None
+    encounter = _active_encounter(db, party)
+    if not encounter:
+        await interaction.response.send_message(no_encounter_msg, ephemeral=True)
+        return None, None, None
+    return user, party, encounter
 
 
 def _build_order_message(encounter: Encounter) -> str:
@@ -218,39 +320,19 @@ class EnemyPlacementView(discord.ui.View):
     def _create_enemies(self, db, encounter: "Encounter") -> List[Enemy]:
         """Persist Enemy rows for this placement and return them.
 
-        Called inside the button callback, after the encounter has been
-        re-verified as ACTIVE.  Flushes so IDs are available immediately.
+        Delegates to the module-level ``_create_enemies_for_encounter`` using
+        this view's stored parameters.  Called inside the button callback after
+        the encounter has been re-verified as ACTIVE.
         """
-        enemies: List[Enemy] = []
-        if self.count == 1:
-            resolved_hp = _parse_hp_input(self.max_hp_str)
-            enemy = Enemy(
-                encounter_id=encounter.id,
-                name=self.enemy_name,
-                type_name=self.enemy_name,
-                initiative_modifier=self.initiative_modifier,
-                max_hp=resolved_hp,
-                current_hp=resolved_hp,
-                ac=self.ac,
-            )
-            db.add(enemy)
-            enemies.append(enemy)
-        else:
-            for enemy_index in range(1, self.count + 1):
-                resolved_hp = _parse_hp_input(self.max_hp_str)
-                enemy = Enemy(
-                    encounter_id=encounter.id,
-                    name=f"{self.enemy_name} {enemy_index}",
-                    type_name=self.enemy_name,
-                    initiative_modifier=self.initiative_modifier,
-                    max_hp=resolved_hp,
-                    current_hp=resolved_hp,
-                    ac=self.ac,
-                )
-                db.add(enemy)
-                enemies.append(enemy)
-        db.flush()
-        return enemies
+        return _create_enemies_for_encounter(
+            db,
+            encounter,
+            self.enemy_name,
+            self.initiative_modifier,
+            self.max_hp_str,
+            self.count,
+            self.ac,
+        )
 
     def _roll_for_enemies(
         self, enemies: List[Enemy], initiative_mode: EnemyInitiativeMode
@@ -425,9 +507,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter create called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
 
             if not party:
                 await interaction.response.send_message(
@@ -496,9 +577,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter enemy called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
 
             if not party:
                 await interaction.response.send_message(
@@ -575,54 +655,28 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
+            created_enemies = _create_enemies_for_encounter(
+                db, encounter, name, initiative_modifier, max_hp, count, ac
+            )
+            db.commit()
+
             if count == 1:
-                resolved_hp = _parse_hp_input(max_hp)
-                enemy = Enemy(
-                    encounter_id=encounter.id,
-                    name=name,
-                    type_name=name,
-                    initiative_modifier=initiative_modifier,
-                    max_hp=resolved_hp,
-                    current_hp=resolved_hp,
-                    ac=ac,
-                )
-                db.add(enemy)
-                db.commit()
+                enemy = created_enemies[0]
+                ac_str = str(ac) if ac is not None else "—"
                 logger.info(
                     f"/encounter enemy completed for user {interaction.user.id}: "
                     f"'{name}' added to '{encounter.name}'"
                 )
-                ac_str = str(ac) if ac is not None else "—"
                 await interaction.response.send_message(
                     Strings.ENCOUNTER_ENEMY_ADDED_SINGLE.format(
-                        name=name,
+                        name=enemy.name,
                         encounter_name=encounter.name,
                         init_mod=initiative_modifier,
-                        hp=resolved_hp,
+                        hp=enemy.max_hp,
                         ac_str=ac_str,
-                    )
-                )
+                    ),
+                ephemeral=True)
             else:
-                created_enemies: List[Enemy] = []
-                for enemy_index in range(1, count + 1):
-                    enemy_name = f"{name} {enemy_index}"
-                    resolved_hp = _parse_hp_input(max_hp)
-                    new_enemy = Enemy(
-                        encounter_id=encounter.id,
-                        name=enemy_name,
-                        type_name=name,
-                        initiative_modifier=initiative_modifier,
-                        max_hp=resolved_hp,
-                        current_hp=resolved_hp,
-                        ac=ac,
-                    )
-                    db.add(new_enemy)
-                    created_enemies.append(new_enemy)
-                db.commit()
-                logger.info(
-                    f"/encounter enemy completed for user {interaction.user.id}: "
-                    f"{count}× '{name}' added to '{encounter.name}'"
-                )
                 ac_part = f", AC: {ac}" if ac is not None else ""
                 enemy_lines = "\n".join(
                     Strings.ENCOUNTER_ENEMY_BULK_LINE.format(
@@ -632,13 +686,17 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                     )
                     for created_enemy in created_enemies
                 )
+                logger.info(
+                    f"/encounter enemy completed for user {interaction.user.id}: "
+                    f"{count}× '{name}' added to '{encounter.name}'"
+                )
                 await interaction.response.send_message(
                     Strings.ENCOUNTER_ENEMIES_ADDED_BULK.format(
                         count=count,
                         type_name=name,
                         encounter_name=encounter.name,
                         enemy_lines=enemy_lines,
-                    )
+                    ),ephemeral=True
                 )
         finally:
             db.close()
@@ -654,9 +712,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter start called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
 
             if not party:
                 await interaction.response.send_message(
@@ -799,29 +856,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter next called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
-                )
-                return
-
-            encounter = (
-                db.query(Encounter)
-                .filter(
-                    Encounter.party_id == party.id,
-                    Encounter.status == EncounterStatus.ACTIVE,
-                )
-                .first()
-            )
-
-            if not encounter:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
-                )
+            user, party, encounter = await _require_active_encounter(db, interaction)
+            if encounter is None:
                 return
 
             turns = sorted(encounter.turns, key=lambda t: t.order_position)
@@ -875,29 +911,13 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter end called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True
-                )
-                return
-
-            encounter = (
-                db.query(Encounter)
-                .filter(
-                    Encounter.party_id == party.id,
-                    Encounter.status == EncounterStatus.ACTIVE,
-                )
-                .first()
+            user, party, encounter = await _require_active_encounter(
+                db,
+                interaction,
+                no_party_msg=Strings.ERROR_NO_ACTIVE_PARTY,
+                no_encounter_msg=Strings.ENCOUNTER_NO_ACTIVE_TO_END,
             )
-
-            if not encounter:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NO_ACTIVE_TO_END, ephemeral=True
-                )
+            if encounter is None:
                 return
 
             if not user or user not in party.gms:
@@ -942,29 +962,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter damage called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
-                )
-                return
-
-            encounter = (
-                db.query(Encounter)
-                .filter(
-                    Encounter.party_id == party.id,
-                    Encounter.status == EncounterStatus.ACTIVE,
-                )
-                .first()
-            )
-
-            if not encounter:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
-                )
+            user, party, encounter = await _require_active_encounter(db, interaction)
+            if encounter is None:
                 return
 
             if not user or user not in party.gms:
@@ -1068,29 +1067,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter view called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
-                )
-                return
-
-            encounter = (
-                db.query(Encounter)
-                .filter(
-                    Encounter.party_id == party.id,
-                    Encounter.status == EncounterStatus.ACTIVE,
-                )
-                .first()
-            )
-
-            if not encounter:
-                await interaction.response.send_message(
-                    Strings.ENCOUNTER_NOT_ACTIVE, ephemeral=True
-                )
+            user, party, encounter = await _require_active_encounter(db, interaction)
+            if encounter is None:
                 return
 
             settings = _get_or_create_party_settings(db, party)

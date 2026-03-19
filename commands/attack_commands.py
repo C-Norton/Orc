@@ -3,13 +3,13 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 import random
-from sqlalchemy import select
 from database import SessionLocal
-from models import User, Server, Character, Attack, Party, Encounter, EncounterTurn, Enemy, user_server_association
+from models import User, Server, Character, Attack, Party, Encounter, EncounterTurn, Enemy
 from enums.encounter_status import EncounterStatus
 from dice_roller import roll_dice
 from enums.crit_rule import CritRule
 from utils.crit_logic import apply_crit_damage
+from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
 from utils.encounter_utils import (
     check_and_auto_end_encounter,
     notify_gms_hp_update,
@@ -20,20 +20,6 @@ from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
-
-
-def _active_party_for_user(db, user: User, server: Server) -> Optional[Party]:
-    """Return the user's active party on this server, or None."""
-    if not user or not server:
-        return None
-    stmt = select(user_server_association.c.active_party_id).where(
-        user_server_association.c.user_id == user.id,
-        user_server_association.c.server_id == server.id,
-    )
-    result = db.execute(stmt).fetchone()
-    if not result or result[0] is None:
-        return None
-    return db.get(Party, result[0])
 
 
 def register_attack_commands(bot: commands.Bot) -> None:
@@ -57,9 +43,8 @@ def register_attack_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -125,9 +110,8 @@ def register_attack_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -155,7 +139,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
             # ----------------------------------------------------------------
             # Determine crit rule and roll damage
             # ----------------------------------------------------------------
-            party = _active_party_for_user(db, user, server)
+            party = get_active_party(db, user, server)
             crit_rule = CritRule.DOUBLE_DICE
             if is_crit and party and party.settings:
                 crit_rule = party.settings.crit_rule
@@ -358,9 +342,8 @@ def register_attack_commands(bot: commands.Bot) -> None:
         """Suggest attacks belonging to the user's active character."""
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
 
             if not char or not char.attacks:
                 return []
@@ -380,9 +363,8 @@ def register_attack_commands(bot: commands.Bot) -> None:
         """Suggest enemy names from the active encounter's initiative order."""
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            party = _active_party_for_user(db, user, server)
+            user, server = resolve_user_server(db, interaction)
+            party = get_active_party(db, user, server)
             if not party:
                 return []
 
@@ -418,9 +400,8 @@ def register_attack_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            char = db.query(Character).filter_by(user=user, server=server, is_active=True).first()
+            user, server = resolve_user_server(db, interaction)
+            char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"

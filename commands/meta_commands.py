@@ -13,6 +13,7 @@ HELP_PAGES: list[tuple[str, str, str, str]] = [
     ("🎲", "Rolling", Strings.HELP_ROLLING_NAME, Strings.HELP_ROLLING_VALUE),
     ("❤️", "Health", Strings.HELP_HEALTH_NAME, Strings.HELP_HEALTH_VALUE),
     ("👥", "Parties", Strings.HELP_PARTIES_NAME, Strings.HELP_PARTIES_VALUE),
+    ("⚙️", "Party Settings", Strings.HELP_PARTY_SETTINGS_NAME, Strings.HELP_PARTY_SETTINGS_VALUE),
     ("🤼", "Encounters", Strings.HELP_ENCOUNTER_NAME, Strings.HELP_ENCOUNTER_VALUE),
     ("💫", "Inspiration", Strings.HELP_INSPIRATION_NAME, Strings.HELP_INSPIRATION_VALUE),
     ("👨‍🔧", "Credits", Strings.HELP_CREDITS_NAME, Strings.HELP_CREDITS_VALUE),
