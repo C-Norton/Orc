@@ -9,12 +9,13 @@ import sqlite3
 
 logger = get_logger(__name__)
 
-# Database path (relative to the project root)
-DB_PATH = "sqlite:///dnd_bot.db"
+# Use DATABASE_URL from the environment (set in production via /etc/orc-bot.env),
+# falling back to a local SQLite file for development.
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///dnd_bot.db")
 
 # Create engine
-logger.debug(f"Connecting to database at {DB_PATH}")
-engine = create_engine(DB_PATH)
+logger.debug(f"Connecting to database at {DATABASE_URL}")
+engine = create_engine(DATABASE_URL)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

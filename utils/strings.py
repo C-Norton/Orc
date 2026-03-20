@@ -288,7 +288,7 @@ class Strings:
     ROLL_RESULT_DICE_EXPR = "🎲 **{notation}**\n{breakdown}\n**Total: {total}**"
     ROLL_ERROR_CHAR = "**{char_name}**: ❌ Error: {error}"
 
-    GMROLL_GM_MESSAGE = "🎲 **{char_name}** privately rolled **{roll}** on **{notation}**."
+    GMROLL_GM_MESSAGE = "🎲 **{char_name}** secretly rolled **{notation}**:\n{result}"
     GMROLL_PLAYER_MESSAGE = "**{char_name}**: `{notation}` → {breakdown} = **{total}**"
 
     # Character Commands

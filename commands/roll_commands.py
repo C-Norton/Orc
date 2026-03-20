@@ -48,6 +48,34 @@ def _needs_character(notation: str) -> bool:
     return has_named_tokens(tokens)
 
 
+async def _notify_gmroll_gms(
+    client: discord.Client,
+    char: Character,
+    gm_message: str,
+) -> None:
+    """DM each GM of every party the character belongs to.
+
+    Each party-GM pairing generates one DM regardless of whether the same user
+    is a GM in multiple parties — the GM sees every party context separately.
+    DM failures (Forbidden, HTTPException) are logged and silently ignored so
+    they never block the player's response.
+
+    Args:
+        client: The Discord client used to fetch users.
+        char: The active character whose party memberships determine recipients.
+        gm_message: The text to send to each GM.
+    """
+    for party in char.parties:
+        for gm in party.gms:
+            try:
+                discord_user = await client.fetch_user(int(gm.discord_id))
+                await discord_user.send(gm_message)
+            except (discord.Forbidden, discord.HTTPException) as exc:
+                logger.warning(
+                    f"Could not DM GM {gm.discord_id} for /gmroll: {exc}"
+                )
+
+
 def _get_nat20_mode(db, character: Character) -> DeathSaveNat20Mode:
     """Return the party's nat-20 death save mode, defaulting to REGAIN_HP."""
     for party in character.parties:
@@ -155,12 +183,21 @@ def register_roll_commands(bot: commands.Bot) -> None:
     async def gmroll(
         interaction: discord.Interaction, notation: str, advantage: str = None
     ) -> None:
+        """Roll dice privately — the player sees the result ephemerally and all
+        GMs of every party the active character belongs to receive a DM.
+
+        Pure dice notation (e.g. ``1d20``) does not require an active character
+        for the roll itself, but the bot still looks up the active character
+        afterwards so GMs can be notified if the character is in any parties.
+        """
         logger.debug(
             f"Command /gmroll called by {interaction.user} (ID: {interaction.user.id}) "
             f"in guild {interaction.guild_id} — notation={notation!r} advantage={advantage}"
         )
         db = SessionLocal()
         try:
+            char = None
+
             if _needs_character(notation):
                 user, server = resolve_user_server(db, interaction)
                 char = get_active_character(db, user, server)
@@ -173,18 +210,10 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     )
                     return
 
-                if notation.lower().strip() == _DEATH_SAVE_NOTATION:
-                    await _handle_death_save(interaction, char, db)
-                    return
-
                 response = await perform_roll(char, notation, db, advantage=advantage)
-                await interaction.response.send_message(response)
-                logger.info(
-                    f"/roll (character) completed for user {interaction.user.id}"
-                )
 
             else:
-                # Pure dice / number expression — no character needed
+                # Pure dice / number expression — no character required for the roll.
                 tokens = parse_expression_tokens(notation)
                 result = evaluate_expression(tokens, advantage=advantage)
                 response = Strings.ROLL_RESULT_DICE_EXPR.format(
@@ -192,15 +221,34 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     breakdown=result.breakdown(),
                     total=result.total,
                 )
-                await interaction.response.send_message(response)
-                logger.info(f"/roll (dice) completed for user {interaction.user.id}")
+                # Still attempt to resolve the active character so GMs can be
+                # notified even when the notation itself didn't need one.
+                try:
+                    user, server = resolve_user_server(db, interaction)
+                    char = get_active_character(db, user, server)
+                except Exception:
+                    char = None
 
-        except ValueError as e:
-            logger.warning(f"ValueError in /roll (notation={notation!r}): {e}")
-            await interaction.response.send_message(f"❌ Error: {e}", ephemeral=True)
-        except Exception as e:
+            # Player always gets an ephemeral response.
+            await interaction.response.send_message(response, ephemeral=True)
+            logger.info(f"/gmroll completed for user {interaction.user.id}")
+
+            # DM every GM across all parties the character belongs to.
+            if char and char.parties:
+                gm_message = Strings.GMROLL_GM_MESSAGE.format(
+                    char_name=char.name,
+                    notation=notation,
+                    result=response,
+                )
+                await _notify_gmroll_gms(interaction.client, char, gm_message)
+
+        except ValueError as exc:
+            logger.warning(f"ValueError in /gmroll (notation={notation!r}): {exc}")
+            await interaction.response.send_message(f"❌ Error: {exc}", ephemeral=True)
+        except Exception as exc:
             logger.error(
-                f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True
+                f"Unexpected error in /gmroll (notation={notation!r}): {exc}",
+                exc_info=True,
             )
             await interaction.response.send_message(
                 Strings.SERVER_ERROR, ephemeral=True
