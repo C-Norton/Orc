@@ -1,4 +1,5 @@
 """Tests for PartySettings model, get_or_create helper, and /party settings commands."""
+
 import pytest
 from models import Party, PartySettings
 from enums.enemy_initiative_mode import EnemyInitiativeMode
@@ -11,7 +12,9 @@ from tests.commands.conftest import get_callback
 # ---------------------------------------------------------------------------
 
 
-def test_party_settings_default_initiative_mode_is_by_type(db_session, sample_active_party):
+def test_party_settings_default_initiative_mode_is_by_type(
+    db_session, sample_active_party
+):
     """PartySettings created with no explicit mode defaults to BY_TYPE."""
     settings = PartySettings(party_id=sample_active_party.id)
     db_session.add(settings)
@@ -20,7 +23,9 @@ def test_party_settings_default_initiative_mode_is_by_type(db_session, sample_ac
     assert settings.initiative_mode == EnemyInitiativeMode.BY_TYPE
 
 
-def test_party_settings_default_enemy_ac_public_is_false(db_session, sample_active_party):
+def test_party_settings_default_enemy_ac_public_is_false(
+    db_session, sample_active_party
+):
     """PartySettings created with no explicit value defaults enemy_ac_public to False."""
     settings = PartySettings(party_id=sample_active_party.id)
     db_session.add(settings)
@@ -39,7 +44,9 @@ def test_get_or_create_returns_defaults_for_new_party(db_session, sample_active_
     assert settings.enemy_ac_public is False
 
 
-def test_get_or_create_does_not_duplicate_on_second_call(db_session, sample_active_party):
+def test_get_or_create_does_not_duplicate_on_second_call(
+    db_session, sample_active_party
+):
     """Calling the helper twice returns the same settings row, not a duplicate."""
     from commands.party_commands import _get_or_create_party_settings
 
@@ -47,9 +54,9 @@ def test_get_or_create_does_not_duplicate_on_second_call(db_session, sample_acti
     db_session.commit()
     settings_second = _get_or_create_party_settings(db_session, sample_active_party)
     assert settings_first.id == settings_second.id
-    all_settings = db_session.query(PartySettings).filter_by(
-        party_id=sample_active_party.id
-    ).all()
+    all_settings = (
+        db_session.query(PartySettings).filter_by(party_id=sample_active_party.id).all()
+    )
     assert len(all_settings) == 1
 
 
@@ -106,9 +113,9 @@ async def test_settings_initiative_mode_update_success(
     assert "individual" in msg.lower()
 
     verify = session_factory()
-    settings = verify.query(PartySettings).filter_by(
-        party_id=sample_active_party.id
-    ).first()
+    settings = (
+        verify.query(PartySettings).filter_by(party_id=sample_active_party.id).first()
+    )
     assert settings is not None
     assert settings.initiative_mode == EnemyInitiativeMode.INDIVIDUAL
     verify.close()
@@ -122,9 +129,9 @@ async def test_settings_initiative_mode_updates_to_shared(
     await cb(interaction, party_name="The Fellowship", mode="shared")
 
     verify = session_factory()
-    settings = verify.query(PartySettings).filter_by(
-        party_id=sample_active_party.id
-    ).first()
+    settings = (
+        verify.query(PartySettings).filter_by(party_id=sample_active_party.id).first()
+    )
     assert settings.initiative_mode == EnemyInitiativeMode.SHARED
     verify.close()
 
@@ -167,9 +174,9 @@ async def test_settings_enemy_ac_set_to_true(
     interaction.response.send_message.assert_called_once()
 
     verify = session_factory()
-    settings = verify.query(PartySettings).filter_by(
-        party_id=sample_active_party.id
-    ).first()
+    settings = (
+        verify.query(PartySettings).filter_by(party_id=sample_active_party.id).first()
+    )
     assert settings.enemy_ac_public is True
     verify.close()
 
@@ -190,9 +197,9 @@ async def test_settings_enemy_ac_set_to_false(
     await cb(interaction, party_name="The Fellowship", public=False)
 
     verify = session_factory()
-    settings = verify.query(PartySettings).filter_by(
-        party_id=sample_active_party.id
-    ).first()
+    settings = (
+        verify.query(PartySettings).filter_by(party_id=sample_active_party.id).first()
+    )
     assert settings.enemy_ac_public is False
     verify.close()
 

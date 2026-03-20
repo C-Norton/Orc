@@ -76,18 +76,14 @@ def test_resolve_user_server_returns_none_for_both_when_guild_and_user_unregiste
     assert server is None
 
 
-def test_get_active_character_returns_none_when_server_is_none(
-    db_session, sample_user
-):
+def test_get_active_character_returns_none_when_server_is_none(db_session, sample_user):
     """``get_active_character`` returns ``None`` immediately when ``server`` is
     ``None``, avoiding a spurious DB query."""
     result = get_active_character(db_session, sample_user, None)
     assert result is None
 
 
-def test_get_active_character_returns_none_when_user_is_none(
-    db_session, sample_server
-):
+def test_get_active_character_returns_none_when_user_is_none(db_session, sample_server):
     """``get_active_character`` returns ``None`` immediately when ``user`` is
     ``None``."""
     result = get_active_character(db_session, None, sample_server)
@@ -101,18 +97,14 @@ def test_get_active_character_returns_none_when_both_none(db_session):
     assert result is None
 
 
-def test_get_active_party_returns_none_when_server_is_none(
-    db_session, sample_user
-):
+def test_get_active_party_returns_none_when_server_is_none(db_session, sample_user):
     """``get_active_party`` returns ``None`` immediately when ``server`` is
     ``None``."""
     result = get_active_party(db_session, sample_user, None)
     assert result is None
 
 
-def test_get_active_party_returns_none_when_user_is_none(
-    db_session, sample_server
-):
+def test_get_active_party_returns_none_when_user_is_none(db_session, sample_server):
     """``get_active_party`` returns ``None`` immediately when ``user`` is
     ``None``."""
     result = get_active_party(db_session, None, sample_server)
@@ -140,15 +132,14 @@ async def test_character_create_auto_registers_unregistered_server(
     await cb(interaction, name="Newbie", character_class="Wizard", level=1)
 
     from models import Server
+
     verify = session_factory()
     server = verify.query(Server).filter_by(discord_id=str(_UNKNOWN_GUILD_ID)).first()
     assert server is not None
     verify.close()
 
 
-async def test_character_create_in_unregistered_server_succeeds(
-    mocker, char_bot
-):
+async def test_character_create_in_unregistered_server_succeeds(mocker, char_bot):
     """``/character create`` does not send an ephemeral error when the server is
     unregistered — it bootstraps and creates the character normally."""
     interaction = _unknown_server_interaction(mocker)
@@ -156,7 +147,9 @@ async def test_character_create_in_unregistered_server_succeeds(
     await cb(interaction, name="Newbie", character_class="Fighter", level=1)
 
     # Success response should NOT be ephemeral
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_character_list_in_unregistered_server_returns_ephemeral(
@@ -170,7 +163,11 @@ async def test_character_list_in_unregistered_server_returns_ephemeral(
 
     # Either ephemeral error or an empty-list message — never a crash
     called_kwargs = interaction.response.send_message.call_args.kwargs
-    msg = interaction.response.send_message.call_args.args[0] if interaction.response.send_message.call_args.args else ""
+    msg = (
+        interaction.response.send_message.call_args.args[0]
+        if interaction.response.send_message.call_args.args
+        else ""
+    )
     assert called_kwargs.get("ephemeral") is True or "no characters" in msg.lower()
 
 
@@ -221,8 +218,12 @@ async def test_character_stats_in_unregistered_server_returns_ephemeral(
     cb = get_callback(char_bot, "character", "stats")
     await cb(
         interaction,
-        strength=10, dexterity=10, constitution=10,
-        intelligence=10, wisdom=10, charisma=10,
+        strength=10,
+        dexterity=10,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
         initiative_bonus=0,
     )
 
@@ -231,9 +232,7 @@ async def test_character_stats_in_unregistered_server_returns_ephemeral(
     assert Strings.CHARACTER_NOT_FOUND in msg
 
 
-async def test_character_ac_in_unregistered_server_returns_ephemeral(
-    mocker, char_bot
-):
+async def test_character_ac_in_unregistered_server_returns_ephemeral(mocker, char_bot):
     """``/character ac`` returns an ephemeral error when the server is
     unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -268,8 +267,12 @@ async def test_character_saves_in_unregistered_server_returns_ephemeral(
     cb = get_callback(char_bot, "character", "saves")
     await cb(
         interaction,
-        strength=True, dexterity=False, constitution=False,
-        intelligence=False, wisdom=False, charisma=False,
+        strength=True,
+        dexterity=False,
+        constitution=False,
+        intelligence=False,
+        wisdom=False,
+        charisma=False,
     )
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -310,9 +313,7 @@ async def test_character_class_remove_in_unregistered_server_returns_ephemeral(
 # ===========================================================================
 
 
-async def test_hp_set_max_in_unregistered_server_returns_ephemeral(
-    mocker, health_bot
-):
+async def test_hp_set_max_in_unregistered_server_returns_ephemeral(mocker, health_bot):
     """``/hp set_max`` returns an ephemeral 'no active character' error when the
     server is unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -380,9 +381,7 @@ async def test_hp_heal_partymember_in_unregistered_server_returns_ephemeral(
     assert Strings.ERROR_NO_ACTIVE_PARTY in msg
 
 
-async def test_hp_status_in_unregistered_server_returns_ephemeral(
-    mocker, health_bot
-):
+async def test_hp_status_in_unregistered_server_returns_ephemeral(mocker, health_bot):
     """``/hp status`` returns an ephemeral error when the server is
     unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -394,9 +393,7 @@ async def test_hp_status_in_unregistered_server_returns_ephemeral(
     assert Strings.ACTIVE_CHARACTER_NOT_FOUND in msg
 
 
-async def test_hp_temp_in_unregistered_server_returns_ephemeral(
-    mocker, health_bot
-):
+async def test_hp_temp_in_unregistered_server_returns_ephemeral(mocker, health_bot):
     """``/hp temp`` returns an ephemeral error when the server is
     unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -427,16 +424,16 @@ async def test_hp_party_temp_in_unregistered_server_returns_ephemeral(
 # ===========================================================================
 
 
-async def test_roll_raw_dice_in_unregistered_server_succeeds(
-    mocker, roll_bot
-):
+async def test_roll_raw_dice_in_unregistered_server_succeeds(mocker, roll_bot):
     """``/roll 1d20`` does NOT require a character or server — it should succeed
     and return a non-ephemeral result even in an unregistered server."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="1d20")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_roll_constant_expression_in_unregistered_server_succeeds(
@@ -448,12 +445,12 @@ async def test_roll_constant_expression_in_unregistered_server_succeeds(
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="2d6+3")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
-async def test_roll_skill_in_unregistered_server_returns_ephemeral(
-    mocker, roll_bot
-):
+async def test_roll_skill_in_unregistered_server_returns_ephemeral(mocker, roll_bot):
     """``/roll perception`` requires an active character and must return an
     ephemeral error when the server is unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -526,9 +523,7 @@ async def test_roll_death_save_in_unregistered_server_returns_ephemeral(
 # ===========================================================================
 
 
-async def test_attack_add_in_unregistered_server_returns_ephemeral(
-    mocker, attack_bot
-):
+async def test_attack_add_in_unregistered_server_returns_ephemeral(mocker, attack_bot):
     """``/attack add`` returns an ephemeral 'no character' error when the
     server is unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -540,9 +535,7 @@ async def test_attack_add_in_unregistered_server_returns_ephemeral(
     assert Strings.CHARACTER_NOT_FOUND in msg
 
 
-async def test_attack_roll_in_unregistered_server_returns_ephemeral(
-    mocker, attack_bot
-):
+async def test_attack_roll_in_unregistered_server_returns_ephemeral(mocker, attack_bot):
     """``/attack roll`` returns an ephemeral 'no character' error when the
     server is unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -554,9 +547,7 @@ async def test_attack_roll_in_unregistered_server_returns_ephemeral(
     assert Strings.CHARACTER_NOT_FOUND in msg
 
 
-async def test_attack_list_in_unregistered_server_returns_ephemeral(
-    mocker, attack_bot
-):
+async def test_attack_list_in_unregistered_server_returns_ephemeral(mocker, attack_bot):
     """``/attack list`` returns an ephemeral 'no character' error when the
     server is unregistered."""
     interaction = _unknown_server_interaction(mocker)
@@ -573,9 +564,7 @@ async def test_attack_list_in_unregistered_server_returns_ephemeral(
 # ===========================================================================
 
 
-async def test_party_create_in_unregistered_server_returns_ephemeral(
-    mocker, party_bot
-):
+async def test_party_create_in_unregistered_server_returns_ephemeral(mocker, party_bot):
     """``/party create`` returns an ephemeral 'user or server not initialized'
     error when the server is unregistered.  Party creation requires both records
     to exist."""
@@ -588,9 +577,7 @@ async def test_party_create_in_unregistered_server_returns_ephemeral(
     assert Strings.ERROR_USER_SERVER_NOT_INIT in msg
 
 
-async def test_party_roll_in_unregistered_server_returns_ephemeral(
-    mocker, party_bot
-):
+async def test_party_roll_in_unregistered_server_returns_ephemeral(mocker, party_bot):
     """``/party roll`` returns an ephemeral error when the server is
     unregistered (no active party can exist)."""
     interaction = _unknown_server_interaction(mocker)
@@ -630,9 +617,7 @@ async def test_party_character_add_in_unregistered_server_returns_ephemeral(
     unregistered, but currently crashes with AttributeError."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "character_add")
-    await cb(
-        interaction, party_name="Wanderers", character_name="Aldric"
-    )
+    await cb(interaction, party_name="Wanderers", character_name="Aldric")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
@@ -651,9 +636,7 @@ async def test_party_character_remove_in_unregistered_server_returns_ephemeral(
     unregistered, but currently crashes with AttributeError."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "character_remove")
-    await cb(
-        interaction, party_name="Wanderers", character_name="Aldric"
-    )
+    await cb(interaction, party_name="Wanderers", character_name="Aldric")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
@@ -703,9 +686,7 @@ async def test_party_active_view_in_unregistered_server_returns_ephemeral(
     ),
     strict=True,
 )
-async def test_party_view_in_unregistered_server_returns_ephemeral(
-    mocker, party_bot
-):
+async def test_party_view_in_unregistered_server_returns_ephemeral(mocker, party_bot):
     """``/party view`` should return an ephemeral error when the server is
     unregistered, but currently crashes with AttributeError."""
     interaction = _unknown_server_interaction(mocker)
@@ -722,9 +703,7 @@ async def test_party_view_in_unregistered_server_returns_ephemeral(
     ),
     strict=True,
 )
-async def test_party_delete_in_unregistered_server_returns_ephemeral(
-    mocker, party_bot
-):
+async def test_party_delete_in_unregistered_server_returns_ephemeral(mocker, party_bot):
     """``/party delete`` should return an ephemeral error when the server is
     unregistered, but currently crashes with AttributeError."""
     interaction = _unknown_server_interaction(mocker)

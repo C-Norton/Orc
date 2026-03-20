@@ -44,7 +44,9 @@ async def test_help_command_sends_help_view(meta_bot, interaction, mocker):
     assert view._owner_id == interaction.user.id
 
 
-async def test_help_command_has_button_per_page_plus_home(meta_bot, interaction, mocker):
+async def test_help_command_has_button_per_page_plus_home(
+    meta_bot, interaction, mocker
+):
     """HelpView contains one button per HELP_PAGES entry plus a Home button."""
     cb = get_callback(meta_bot, "help")
 
@@ -90,7 +92,9 @@ async def test_page_button_edits_to_page_embed(mocker):
 
     # Pick the first page button (not Home)
     emoji, label, embed_title, embed_content = HELP_PAGES[0]
-    page_btn = next(item for item in view.children if getattr(item, "label", "") == label)
+    page_btn = next(
+        item for item in view.children if getattr(item, "label", "") == label
+    )
 
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.user = mocker.MagicMock()
@@ -112,7 +116,9 @@ async def test_home_button_returns_to_toc(mocker):
     owner_id = 111
     view = HelpView(owner_id=owner_id)
 
-    home_btn = next(item for item in view.children if getattr(item, "label", "") == "Home")
+    home_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Home"
+    )
 
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.user = mocker.MagicMock()
@@ -135,7 +141,9 @@ async def test_all_page_buttons_produce_distinct_embeds(mocker):
 
     titles = []
     for emoji, label, embed_title, embed_content in HELP_PAGES:
-        btn = next(item for item in view.children if getattr(item, "label", "") == label)
+        btn = next(
+            item for item in view.children if getattr(item, "label", "") == label
+        )
         btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
         btn_interaction.user = mocker.MagicMock()
         btn_interaction.user.id = owner_id
@@ -146,7 +154,9 @@ async def test_all_page_buttons_produce_distinct_embeds(mocker):
         _, kwargs = btn_interaction.response.edit_message.call_args
         titles.append(kwargs["embed"].title)
 
-    assert len(set(titles)) == len(HELP_PAGES), "Each page button must render a unique embed title"
+    assert len(set(titles)) == len(HELP_PAGES), (
+        "Each page button must render a unique embed title"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +195,10 @@ async def test_interaction_check_blocks_other_users(mocker):
     btn_interaction.response.send_message.assert_called_once()
     _, kwargs = btn_interaction.response.send_message.call_args
     assert kwargs.get("ephemeral") is True
-    assert Strings.HELP_NOT_YOUR_MENU in btn_interaction.response.send_message.call_args.args[0]
+    assert (
+        Strings.HELP_NOT_YOUR_MENU
+        in btn_interaction.response.send_message.call_args.args[0]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +332,9 @@ async def test_on_guild_join_forbidden_is_swallowed(mocker):
     """A Forbidden error from Discord when sending is logged but not re-raised."""
     mock_channel = mocker.AsyncMock(spec=discord.TextChannel)
     mock_channel.name = "general"
-    mock_channel.send.side_effect = discord.Forbidden(mocker.MagicMock(), "Missing Permissions")
+    mock_channel.send.side_effect = discord.Forbidden(
+        mocker.MagicMock(), "Missing Permissions"
+    )
 
     mock_guild = mocker.MagicMock(spec=discord.Guild)
     mock_guild.name = "Test Server"

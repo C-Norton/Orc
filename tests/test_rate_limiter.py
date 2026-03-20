@@ -14,6 +14,7 @@ def reset_windows():
 # Threshold behaviour  (THRESHOLD = 8, so the 9th command triggers the limit)
 # ---------------------------------------------------------------------------
 
+
 def test_under_threshold_returns_false():
     for _ in range(8):
         result = rl.check_rate_limit("user1", "guild1")
@@ -37,6 +38,7 @@ def test_continues_true_while_in_window():
 # Sliding window expiry
 # ---------------------------------------------------------------------------
 
+
 def test_old_entries_expire_and_window_resets(mocker):
     now = 1000.0
 
@@ -55,6 +57,7 @@ def test_old_entries_expire_and_window_resets(mocker):
 # ---------------------------------------------------------------------------
 # Isolation between keys
 # ---------------------------------------------------------------------------
+
 
 def test_different_users_are_independent():
     for _ in range(9):

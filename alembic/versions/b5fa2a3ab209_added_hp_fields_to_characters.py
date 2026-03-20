@@ -5,6 +5,7 @@ Revises: f3a8c1d2e456
 Create Date: 2026-03-16 19:05:48.763108
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -12,8 +13,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b5fa2a3ab209'
-down_revision: Union[str, Sequence[str], None] = 'f3a8c1d2e456'
+revision: str = "b5fa2a3ab209"
+down_revision: Union[str, Sequence[str], None] = "f3a8c1d2e456"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -31,42 +32,54 @@ ACTIVE_PARTY_FK_NAME = "fk_user_server_active_party_id_parties"
 
 def upgrade() -> None:
     """Upgrade schema."""
-    with op.batch_alter_table('characters', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('max_hp', sa.Integer(), server_default=sa.text('-1'), nullable=False))
-        batch_op.add_column(sa.Column('current_hp', sa.Integer(), server_default=sa.text('-1'), nullable=False))
-        batch_op.add_column(sa.Column('temp_hp', sa.Integer(), server_default=sa.text('0'), nullable=False))
+    with op.batch_alter_table("characters", schema=None) as batch_op:
+        batch_op.add_column(
+            sa.Column(
+                "max_hp", sa.Integer(), server_default=sa.text("-1"), nullable=False
+            )
+        )
+        batch_op.add_column(
+            sa.Column(
+                "current_hp", sa.Integer(), server_default=sa.text("-1"), nullable=False
+            )
+        )
+        batch_op.add_column(
+            sa.Column(
+                "temp_hp", sa.Integer(), server_default=sa.text("0"), nullable=False
+            )
+        )
 
     with op.batch_alter_table(
-        'user_server',
+        "user_server",
         schema=None,
         naming_convention=USER_SERVER_NAMING_CONVENTION,
     ) as batch_op:
-        batch_op.drop_constraint(ACTIVE_PARTY_FK_NAME, type_='foreignkey')
+        batch_op.drop_constraint(ACTIVE_PARTY_FK_NAME, type_="foreignkey")
         batch_op.create_foreign_key(
             ACTIVE_PARTY_FK_NAME,
-            'parties',
-            ['active_party_id'],
-            ['id'],
-            ondelete='SET NULL',
+            "parties",
+            ["active_party_id"],
+            ["id"],
+            ondelete="SET NULL",
         )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     with op.batch_alter_table(
-        'user_server',
+        "user_server",
         schema=None,
         naming_convention=USER_SERVER_NAMING_CONVENTION,
     ) as batch_op:
-        batch_op.drop_constraint(ACTIVE_PARTY_FK_NAME, type_='foreignkey')
+        batch_op.drop_constraint(ACTIVE_PARTY_FK_NAME, type_="foreignkey")
         batch_op.create_foreign_key(
             ACTIVE_PARTY_FK_NAME,
-            'parties',
-            ['active_party_id'],
-            ['id'],
+            "parties",
+            ["active_party_id"],
+            ["id"],
         )
 
-    with op.batch_alter_table('characters', schema=None) as batch_op:
-        batch_op.drop_column('temp_hp')
-        batch_op.drop_column('current_hp')
-        batch_op.drop_column('max_hp')
+    with op.batch_alter_table("characters", schema=None) as batch_op:
+        batch_op.drop_column("temp_hp")
+        batch_op.drop_column("current_hp")
+        batch_op.drop_column("max_hp")

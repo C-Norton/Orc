@@ -13,11 +13,15 @@ if TYPE_CHECKING:
 
 
 class Character(Base):
-    __tablename__ = 'characters'
+    __tablename__ = "characters"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id'), nullable=False)
-    server_id: Mapped[int] = mapped_column(Integer, ForeignKey('servers.id'), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False
+    )
+    server_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("servers.id"), nullable=False
+    )
 
     # Core Stats
     strength: Mapped[int] = mapped_column(Integer, nullable=True)
@@ -59,13 +63,21 @@ class Character(Base):
     ac: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
     # Inspiration (5e: awarded by GM or via Perkins crit rule; spent for advantage)
-    inspiration: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    inspiration: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
 
     # Death saving throw counters (reset on stabilize, death, or healing from ≤ 0 HP)
-    death_save_successes: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    death_save_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    death_save_successes: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    death_save_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
-    __table_args__ = (UniqueConstraint('user_id', 'server_id', 'name', name='_user_server_name_uc'),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "server_id", "name", name="_user_server_name_uc"),
+    )
 
     @property
     def level(self) -> int:

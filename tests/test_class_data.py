@@ -17,7 +17,10 @@ from utils.class_data import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_char(constitution: int | None, class_levels: list[tuple[str, int]]) -> MagicMock:
+
+def _make_char(
+    constitution: int | None, class_levels: list[tuple[str, int]]
+) -> MagicMock:
     """Build a lightweight Character mock.
 
     *class_levels* is a list of ``(class_name, level)`` tuples in insertion order.
@@ -37,7 +40,14 @@ def _make_char(constitution: int | None, class_levels: list[tuple[str, int]]) ->
     char.class_levels = cl_mocks
 
     # Saving throw attributes
-    for stat in ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]:
+    for stat in [
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ]:
         setattr(char, f"st_prof_{stat}", False)
 
     return char
@@ -46,6 +56,7 @@ def _make_char(constitution: int | None, class_levels: list[tuple[str, int]]) ->
 # ---------------------------------------------------------------------------
 # CLASS_HIT_DICE coverage
 # ---------------------------------------------------------------------------
+
 
 class TestClassHitDice:
     def test_all_classes_present(self):
@@ -76,6 +87,7 @@ class TestClassHitDice:
 # CLASS_SAVE_PROFS coverage
 # ---------------------------------------------------------------------------
 
+
 class TestClassSaveProfs:
     def test_all_classes_present(self):
         """Every CharacterClass entry must have save prof data."""
@@ -85,16 +97,22 @@ class TestClassSaveProfs:
     def test_standard_classes_have_two_saves(self):
         """Every standard (non-homebrew) class has exactly 2 save profs."""
         from enums.character_class import CharacterClass as CC
+
         for cls in CC:
             if cls == CC.OTHER:
                 continue
-            assert len(CLASS_SAVE_PROFS[cls]) == 2, f"{cls} should have exactly 2 save profs"
+            assert len(CLASS_SAVE_PROFS[cls]) == 2, (
+                f"{cls} should have exactly 2 save profs"
+            )
 
     def test_homebrew_class_has_no_automatic_saves(self):
         assert CLASS_SAVE_PROFS[CharacterClass.OTHER] == []
 
     def test_barbarian_str_con(self):
-        assert CLASS_SAVE_PROFS[CharacterClass.BARBARIAN] == ["strength", "constitution"]
+        assert CLASS_SAVE_PROFS[CharacterClass.BARBARIAN] == [
+            "strength",
+            "constitution",
+        ]
 
     def test_bard_dex_cha(self):
         assert CLASS_SAVE_PROFS[CharacterClass.BARD] == ["dexterity", "charisma"]
@@ -134,6 +152,7 @@ class TestClassSaveProfs:
 # calculate_max_hp — edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestCalculateMaxHpEdgeCases:
     def test_returns_negative_one_when_con_not_set(self):
         char = _make_char(constitution=None, class_levels=[("Fighter", 1)])
@@ -154,6 +173,7 @@ class TestCalculateMaxHpEdgeCases:
 # ---------------------------------------------------------------------------
 # calculate_max_hp — single class
 # ---------------------------------------------------------------------------
+
 
 class TestCalculateMaxHpSingleClass:
     def test_fighter_level_1_con_10(self):
@@ -203,6 +223,7 @@ class TestCalculateMaxHpSingleClass:
 # calculate_max_hp — multiclass
 # ---------------------------------------------------------------------------
 
+
 class TestCalculateMaxHpMulticlass:
     def test_fighter3_rogue2_con_12(self):
         """Fighter 3 / Rogue 2, CON +1 (mod from 12).
@@ -221,7 +242,9 @@ class TestCalculateMaxHpMulticlass:
         Lvl 1 Barbarian: 7+0=7
         Total: 13 with CON 10.
         """
-        char = _make_char(constitution=10, class_levels=[("Wizard", 1), ("Barbarian", 1)])
+        char = _make_char(
+            constitution=10, class_levels=[("Wizard", 1), ("Barbarian", 1)]
+        )
         assert calculate_max_hp(char) == 13
 
     def test_multiclass_second_level_not_max_die(self):
@@ -234,6 +257,7 @@ class TestCalculateMaxHpMulticlass:
 # ---------------------------------------------------------------------------
 # apply_class_save_profs
 # ---------------------------------------------------------------------------
+
 
 class TestApplyClassSaveProfs:
     def test_fighter_sets_str_con_true_rest_false(self):
@@ -276,16 +300,32 @@ class TestApplyClassSaveProfs:
                 continue
             char = _make_char(constitution=10, class_levels=[])
             apply_class_save_profs(char, cls)
-            all_stats = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+            all_stats = [
+                "strength",
+                "dexterity",
+                "constitution",
+                "intelligence",
+                "wisdom",
+                "charisma",
+            ]
             prof_count = sum(getattr(char, f"st_prof_{s}") for s in all_stats)
-            assert prof_count == 2, f"{cls} should grant exactly 2 save profs, got {prof_count}"
+            assert prof_count == 2, (
+                f"{cls} should grant exactly 2 save profs, got {prof_count}"
+            )
 
     def test_homebrew_class_sets_zero_profs(self):
         char = _make_char(constitution=10, class_levels=[])
         # Pre-set some profs that should be cleared
         char.st_prof_strength = True
         apply_class_save_profs(char, CharacterClass.OTHER)
-        all_stats = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+        all_stats = [
+            "strength",
+            "dexterity",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "charisma",
+        ]
         prof_count = sum(getattr(char, f"st_prof_{s}") for s in all_stats)
         assert prof_count == 0
 
@@ -293,6 +333,7 @@ class TestApplyClassSaveProfs:
 # ---------------------------------------------------------------------------
 # get_class_save_profs
 # ---------------------------------------------------------------------------
+
 
 class TestGetClassSaveProfs:
     def test_returns_list_for_every_class(self):

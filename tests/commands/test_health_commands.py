@@ -31,7 +31,9 @@ from tests.commands.conftest import get_callback
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-async def test_set_hp_success(health_bot, sample_character, interaction, session_factory):
+async def test_set_hp_success(
+    health_bot, sample_character, interaction, session_factory
+):
     # get_callback walks bot.tree and returns the raw async function behind the
     # slash command, letting us call it directly without Discord's dispatch.
     cb = get_callback(health_bot, "hp", "set_max")
@@ -79,7 +81,9 @@ async def test_set_hp_zero(health_bot, sample_character, interaction, session_fa
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_set_hp_negative(health_bot, sample_character, interaction, session_factory):
+async def test_set_hp_negative(
+    health_bot, sample_character, interaction, session_factory
+):
     cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=30)
     verify = session_factory()
@@ -98,7 +102,9 @@ async def test_set_hp_negative(health_bot, sample_character, interaction, sessio
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_damage_reduces_hp(health_bot, sample_character, db_session, interaction, session_factory):
+async def test_damage_reduces_hp(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
     # sample_character has no HP set yet (max_hp=-1). Assign values and commit
     # BEFORE calling the command. The command opens a brand-new session, so any
     # changes that only exist in db_session's local cache won't be visible unless
@@ -117,14 +123,18 @@ async def test_damage_reduces_hp(health_bot, sample_character, db_session, inter
     verify.close()
 
 
-async def test_damage_burns_temp_hp_first(health_bot, sample_character, db_session, interaction, session_factory):
+async def test_damage_burns_temp_hp_first(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
     sample_character.max_hp = 30
     sample_character.current_hp = 30
     sample_character.temp_hp = 5
     db_session.commit()
 
     cb = get_callback(health_bot, "hp", "damage")
-    await cb(interaction, amount="3")  # 3 damage < 5 temp HP, so current HP is untouched
+    await cb(
+        interaction, amount="3"
+    )  # 3 damage < 5 temp HP, so current HP is untouched
 
     verify = session_factory()
     char = verify.query(Character).filter_by(name="Aldric").first()
@@ -133,7 +143,9 @@ async def test_damage_burns_temp_hp_first(health_bot, sample_character, db_sessi
     verify.close()
 
 
-async def test_damage_can_go_below_zero(health_bot, sample_character, db_session, interaction, session_factory):
+async def test_damage_can_go_below_zero(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
     # HP is allowed to go negative. If current_hp drops to -max_hp or below,
     # the character dies from the massive damage rule (non-ephemeral message).
     sample_character.max_hp = 10
@@ -142,7 +154,9 @@ async def test_damage_can_go_below_zero(health_bot, sample_character, db_session
     db_session.commit()
 
     cb = get_callback(health_bot, "hp", "damage")
-    await cb(interaction, amount="100")  # 5 - 100 = -95, which is <= -10 (massive damage)
+    await cb(
+        interaction, amount="100"
+    )  # 5 - 100 = -95, which is <= -10 (massive damage)
 
     verify = session_factory()
     char = verify.query(Character).filter_by(name="Aldric").first()
@@ -150,7 +164,9 @@ async def test_damage_can_go_below_zero(health_bot, sample_character, db_session
     verify.close()
 
     # Massive damage death message must be non-ephemeral so the whole table sees it
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_damage_requires_hp_set(health_bot, sample_character, interaction):
@@ -164,7 +180,10 @@ async def test_damage_requires_hp_set(health_bot, sample_character, interaction)
 
 # /heal ------------------------------------------------------------------
 
-async def test_heal_restores_hp(health_bot, sample_character, db_session, interaction, session_factory):
+
+async def test_heal_restores_hp(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
     sample_character.max_hp = 30
     sample_character.current_hp = 15
     sample_character.temp_hp = 0
@@ -179,7 +198,9 @@ async def test_heal_restores_hp(health_bot, sample_character, db_session, intera
     verify.close()
 
 
-async def test_heal_capped_at_max(health_bot, sample_character, db_session, interaction, session_factory):
+async def test_heal_capped_at_max(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
     sample_character.max_hp = 30
     sample_character.current_hp = 28
     db_session.commit()
@@ -195,7 +216,10 @@ async def test_heal_capped_at_max(health_bot, sample_character, db_session, inte
 
 # /add_temp_hp -----------------------------------------------------------
 
-async def test_temp_hp_set(health_bot, sample_character, db_session, interaction, session_factory):
+
+async def test_temp_hp_set(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
     sample_character.max_hp = 30
     sample_character.current_hp = 30
     sample_character.temp_hp = 0
@@ -210,7 +234,9 @@ async def test_temp_hp_set(health_bot, sample_character, db_session, interaction
     verify.close()
 
 
-async def test_temp_hp_does_not_stack(health_bot, sample_character, db_session, interaction, session_factory):
+async def test_temp_hp_does_not_stack(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
     # D&D 5e rule: temp HP replaces rather than adds. If the new value is lower,
     # keep the existing amount.
     sample_character.max_hp = 30
@@ -229,7 +255,10 @@ async def test_temp_hp_does_not_stack(health_bot, sample_character, db_session, 
 
 # /hp --------------------------------------------------------------------
 
-async def test_hp_view_sends_message(health_bot, sample_character, db_session, interaction):
+
+async def test_hp_view_sends_message(
+    health_bot, sample_character, db_session, interaction
+):
     sample_character.max_hp = 30
     sample_character.current_hp = 22
     sample_character.temp_hp = 5
@@ -247,7 +276,9 @@ async def test_hp_view_sends_message(health_bot, sample_character, db_session, i
     assert "30" in msg
 
 
-async def test_hp_view_no_character(health_bot, sample_user, sample_server, interaction):
+async def test_hp_view_no_character(
+    health_bot, sample_user, sample_server, interaction
+):
     # No sample_character fixture — user exists but has no active character.
     cb = get_callback(health_bot, "hp", "status")
     await cb(interaction)

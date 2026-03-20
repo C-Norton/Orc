@@ -31,7 +31,9 @@ def upgrade() -> None:
         sa.Column("character_id", sa.Integer(), nullable=False),
         sa.Column("class_name", sa.String(length=50), nullable=False),
         sa.Column("level", sa.Integer(), nullable=False),
-        sa.ForeignKeyConstraint(["character_id"], ["characters.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["character_id"], ["characters.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("character_id", "class_name", name="_character_class_uc"),
     )

@@ -11,6 +11,7 @@ Existing gm_id values are migrated into the new table before the column is
 dropped.  SQLite does not support DROP COLUMN inline, so we use Alembic's
 batch mode (which rebuilds the table) to remove the column cleanly.
 """
+
 from typing import Sequence, Union
 
 import sqlalchemy as sa

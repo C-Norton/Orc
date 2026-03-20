@@ -37,7 +37,15 @@ def db_session(session_factory):
 # Discord interaction mock
 # ---------------------------------------------------------------------------
 
-def make_interaction(mocker, user_id=111, guild_id=222, channel_id=333, guild_name="Test Server", username="TestUser"):
+
+def make_interaction(
+    mocker,
+    user_id=111,
+    guild_id=222,
+    channel_id=333,
+    guild_name="Test Server",
+    username="TestUser",
+):
     """Build a mock discord.Interaction. Usable both as a helper and via the
     `interaction` fixture below."""
     interaction = mocker.Mock(spec=discord.Interaction)
@@ -86,6 +94,7 @@ def interaction(mocker):
 # commands can find these records when processing a default interaction.
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def sample_user(db_session):
     user = User(discord_id="111")
@@ -112,12 +121,12 @@ def sample_character(db_session, sample_user, sample_server):
         user=sample_user,
         server=sample_server,
         is_active=True,
-        strength=16,       # mod +3
-        dexterity=14,      # mod +2
-        constitution=15,   # mod +2
-        intelligence=10,   # mod  0
-        wisdom=12,         # mod +1
-        charisma=8,        # mod -1
+        strength=16,  # mod +3
+        dexterity=14,  # mod +2
+        constitution=15,  # mod +2
+        intelligence=10,  # mod  0
+        wisdom=12,  # mod +1
+        charisma=8,  # mod -1
         st_prof_strength=True,
         st_prof_constitution=True,
     )

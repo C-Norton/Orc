@@ -6,6 +6,7 @@ Tests cover:
 - /damage records a failure when character already at 0 HP
 - /heal resets death save counters when healing from ≤ 0 HP
 """
+
 import pytest
 
 from models import Character, ClassLevel, PartySettings
@@ -162,9 +163,11 @@ async def test_death_save_nat20_double_success_records_two_successes(
     _set_character_hp(db_session, sample_character, current_hp=0, max_hp=10)
     sample_active_party.characters.append(sample_character)
 
-    party_settings = db_session.query(PartySettings).filter_by(
-        party_id=sample_active_party.id
-    ).first()
+    party_settings = (
+        db_session.query(PartySettings)
+        .filter_by(party_id=sample_active_party.id)
+        .first()
+    )
     if party_settings is None:
         party_settings = PartySettings(party_id=sample_active_party.id)
         db_session.add(party_settings)

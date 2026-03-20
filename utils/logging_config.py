@@ -13,7 +13,7 @@ def setup_logging():
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     formatter = logging.Formatter(log_format)
 
     # Root logger captures everything; handlers filter by level independently.
@@ -29,7 +29,7 @@ def setup_logging():
     info_file_handler = RotatingFileHandler(
         os.path.join(log_dir, "bot.log"),
         maxBytes=5 * 1024 * 1024,  # 5MB
-        backupCount=5
+        backupCount=5,
     )
     info_file_handler.setLevel(logging.INFO)
     info_file_handler.setFormatter(formatter)
@@ -39,17 +39,18 @@ def setup_logging():
     debug_file_handler = RotatingFileHandler(
         os.path.join(log_dir, "bot_debug.log"),
         maxBytes=10 * 1024 * 1024,  # 10MB
-        backupCount=3
+        backupCount=3,
     )
     debug_file_handler.setLevel(logging.DEBUG)
     debug_file_handler.setFormatter(formatter)
     root_logger.addHandler(debug_file_handler)
 
     # Silence noisy third-party libraries.
-    logging.getLogger('discord').setLevel(logging.WARNING)
-    logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+    logging.getLogger("discord").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
     logging.info("Logging initialized")
+
 
 def get_logger(name):
     return logging.getLogger(name)

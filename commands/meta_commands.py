@@ -7,15 +7,30 @@ logger = get_logger(__name__)
 
 # Each entry: (emoji, short_button_label, embed_title, embed_content)
 HELP_PAGES: list[tuple[str, str, str, str]] = [
-    ("⭐", "Quick Start", Strings.HELP_GETTING_STARTED_NAME, Strings.HELP_GETTING_STARTED_VALUE),
+    (
+        "⭐",
+        "Quick Start",
+        Strings.HELP_GETTING_STARTED_NAME,
+        Strings.HELP_GETTING_STARTED_VALUE,
+    ),
     ("👤", "Characters", Strings.HELP_CHAR_MGMT_NAME, Strings.HELP_CHAR_MGMT_VALUE),
     ("⚔️", "Combat", Strings.HELP_COMBAT_NAME, Strings.HELP_COMBAT_VALUE),
     ("🎲", "Rolling", Strings.HELP_ROLLING_NAME, Strings.HELP_ROLLING_VALUE),
     ("❤️", "Health", Strings.HELP_HEALTH_NAME, Strings.HELP_HEALTH_VALUE),
     ("👥", "Parties", Strings.HELP_PARTIES_NAME, Strings.HELP_PARTIES_VALUE),
-    ("⚙️", "Party Settings", Strings.HELP_PARTY_SETTINGS_NAME, Strings.HELP_PARTY_SETTINGS_VALUE),
+    (
+        "⚙️",
+        "Party Settings",
+        Strings.HELP_PARTY_SETTINGS_NAME,
+        Strings.HELP_PARTY_SETTINGS_VALUE,
+    ),
     ("🤼", "Encounters", Strings.HELP_ENCOUNTER_NAME, Strings.HELP_ENCOUNTER_VALUE),
-    ("💫", "Inspiration", Strings.HELP_INSPIRATION_NAME, Strings.HELP_INSPIRATION_VALUE),
+    (
+        "💫",
+        "Inspiration",
+        Strings.HELP_INSPIRATION_NAME,
+        Strings.HELP_INSPIRATION_VALUE,
+    ),
     ("👨‍🔧", "Credits", Strings.HELP_CREDITS_NAME, Strings.HELP_CREDITS_VALUE),
 ]
 
@@ -24,7 +39,9 @@ def _toc_embed() -> discord.Embed:
     """Build the table-of-contents embed."""
     embed = discord.Embed(
         title=Strings.HELP_TITLE,
-        description=Strings.HELP_TOC_DESCRIPTION.format(description=Strings.HELP_DESCRIPTION),
+        description=Strings.HELP_TOC_DESCRIPTION.format(
+            description=Strings.HELP_DESCRIPTION
+        ),
         color=discord.Color.gold(),
     )
     embed.set_footer(text=Strings.HELP_FOOTER)
@@ -45,8 +62,12 @@ def _page_embed(title: str, content: str) -> discord.Embed:
 class _HelpPageButton(discord.ui.Button):
     """Navigate to a specific help page."""
 
-    def __init__(self, emoji: str, label: str, embed_title: str, embed_content: str, row: int) -> None:
-        super().__init__(emoji=emoji, label=label, style=discord.ButtonStyle.secondary, row=row)
+    def __init__(
+        self, emoji: str, label: str, embed_title: str, embed_content: str, row: int
+    ) -> None:
+        super().__init__(
+            emoji=emoji, label=label, style=discord.ButtonStyle.secondary, row=row
+        )
         self._embed_title = embed_title
         self._embed_content = embed_content
 
@@ -60,7 +81,9 @@ class _HelpHomeButton(discord.ui.Button):
     """Return to the help table of contents."""
 
     def __init__(self, row: int) -> None:
-        super().__init__(emoji="🏠", label="Home", style=discord.ButtonStyle.primary, row=row)
+        super().__init__(
+            emoji="🏠", label="Home", style=discord.ButtonStyle.primary, row=row
+        )
 
     async def callback(self, interaction: discord.Interaction) -> None:
         """Edit the help message to show the table of contents."""
@@ -81,14 +104,24 @@ class HelpView(discord.ui.View):
 
         for index, (emoji, label, embed_title, embed_content) in enumerate(HELP_PAGES):
             row = index // 4  # rows 0 and 1, four buttons each
-            self.add_item(_HelpPageButton(emoji=emoji, label=label, embed_title=embed_title, embed_content=embed_content, row=row))
+            self.add_item(
+                _HelpPageButton(
+                    emoji=emoji,
+                    label=label,
+                    embed_title=embed_title,
+                    embed_content=embed_content,
+                    row=row,
+                )
+            )
 
         self.add_item(_HelpHomeButton(row=2))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Allow only the user who opened this menu to interact with it."""
         if interaction.user.id != self._owner_id:
-            await interaction.response.send_message(Strings.HELP_NOT_YOUR_MENU, ephemeral=True)
+            await interaction.response.send_message(
+                Strings.HELP_NOT_YOUR_MENU, ephemeral=True
+            )
             return False
         return True
 
@@ -113,23 +146,32 @@ async def on_guild_join(guild: discord.Guild) -> None:
     if channel is None:
         channel = next(
             (
-                c for c in guild.text_channels
+                c
+                for c in guild.text_channels
                 if c.permissions_for(guild.me).send_messages
             ),
             None,
         )
 
     if channel is None:
-        logger.warning(f"No writable channel found in {guild.name} ({guild.id}) for welcome message")
+        logger.warning(
+            f"No writable channel found in {guild.name} ({guild.id}) for welcome message"
+        )
         return
 
     try:
         await channel.send(Strings.GUILD_JOIN_WELCOME)
-        logger.info(f"Sent welcome message to {guild.name} ({guild.id}) in #{channel.name}")
+        logger.info(
+            f"Sent welcome message to {guild.name} ({guild.id}) in #{channel.name}"
+        )
     except discord.Forbidden:
-        logger.warning(f"No permission to send welcome message in {guild.name} ({guild.id})")
+        logger.warning(
+            f"No permission to send welcome message in {guild.name} ({guild.id})"
+        )
     except Exception as e:
-        logger.error(f"Failed to send welcome message to {guild.name} ({guild.id}): {e}")
+        logger.error(
+            f"Failed to send welcome message to {guild.name} ({guild.id}): {e}"
+        )
 
 
 def register_meta_commands(bot: commands.Bot) -> None:
@@ -138,7 +180,9 @@ def register_meta_commands(bot: commands.Bot) -> None:
     @bot.tree.command(name="help", description="Show help for all bot commands")
     async def help_command(interaction: discord.Interaction) -> None:
         """Show an interactive help menu with button navigation."""
-        logger.debug(f"Command /help called by {interaction.user} (ID: {interaction.user.id})")
+        logger.debug(
+            f"Command /help called by {interaction.user} (ID: {interaction.user.id})"
+        )
 
         view = HelpView(owner_id=interaction.user.id)
         await interaction.response.send_message(embed=_toc_embed(), view=view)

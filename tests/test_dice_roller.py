@@ -12,13 +12,17 @@ from dice_roller import (
 # Valid notation
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("notation,expected_count,sides", [
-    ("1d20", 1, 20),
-    ("2d6",  2, 6),
-    ("d10",  1, 10),   # no count prefix → defaults to 1
-    ("3d8",  3, 8),
-    ("1d1",  1, 1),
-])
+
+@pytest.mark.parametrize(
+    "notation,expected_count,sides",
+    [
+        ("1d20", 1, 20),
+        ("2d6", 2, 6),
+        ("d10", 1, 10),  # no count prefix → defaults to 1
+        ("3d8", 3, 8),
+        ("1d1", 1, 1),
+    ],
+)
 def test_valid_notation_returns_correct_structure(notation, expected_count, sides):
     rolls, modifier, total = roll_dice(notation)
     assert len(rolls) == expected_count
@@ -64,6 +68,7 @@ def test_roll_is_within_bounds():
 # Boundary: limits
 # ---------------------------------------------------------------------------
 
+
 def test_exactly_100_dice_is_allowed():
     rolls, _, _ = roll_dice("100d6")
     assert len(rolls) == 100
@@ -88,14 +93,18 @@ def test_1001_sides_raises():
 # Invalid notation
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("bad", [
-    "abc",
-    "1d",
-    "d",
-    "20",
-    "1d6d6",
-    "",
-])
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "abc",
+        "1d",
+        "d",
+        "20",
+        "1d6d6",
+        "",
+    ],
+)
 def test_invalid_notation_raises_value_error(bad):
     with pytest.raises(ValueError, match="Invalid dice notation"):
         roll_dice(bad)
@@ -104,6 +113,7 @@ def test_invalid_notation_raises_value_error(bad):
 # ===========================================================================
 # parse_expression_tokens
 # ===========================================================================
+
 
 class TestParseExpressionTokens:
     def test_single_dice(self):
@@ -148,6 +158,7 @@ class TestParseExpressionTokens:
 # ===========================================================================
 # evaluate_expression — pure dice / numbers
 # ===========================================================================
+
 
 class TestEvaluateExpressionPure:
     def test_single_die(self, mocker):
@@ -212,6 +223,7 @@ class TestEvaluateExpressionPure:
 # evaluate_expression — named modifiers
 # ===========================================================================
 
+
 class TestEvaluateExpressionNamed:
     def test_named_requires_resolver(self):
         with pytest.raises(ValueError, match="requires a character"):
@@ -220,21 +232,27 @@ class TestEvaluateExpressionNamed:
     def test_named_with_resolver(self, mocker):
         mocker.patch("dice_roller.random.randint", side_effect=[3, 5])
         resolver = lambda name: (5, "Perception(+5)")
-        result = evaluate_expression([(1, "2d6"), (1, "perception")], named_resolver=resolver)
+        result = evaluate_expression(
+            [(1, "2d6"), (1, "perception")], named_resolver=resolver
+        )
         assert result.total == 13  # 3+5 + 5
 
     def test_named_negative_modifier(self, mocker):
         # -Initiative where modifier=-2: contribution = sign(-1) * value(-2) = +2
         mocker.patch("dice_roller.random.randint", side_effect=[5, 5])
         resolver = lambda name: (-2, "Initiative(-2)")
-        result = evaluate_expression([(1, "2d8"), (-1, "initiative")], named_resolver=resolver)
+        result = evaluate_expression(
+            [(1, "2d8"), (-1, "initiative")], named_resolver=resolver
+        )
         assert result.total == 12  # (5+5) + (-1 * -2)
 
     def test_named_resolver_receives_correct_name(self):
         calls = []
+
         def resolver(name):
             calls.append(name)
             return (3, "X(+3)")
+
         evaluate_expression([(1, "testname")], named_resolver=resolver)
         assert calls == ["testname"]
 
@@ -242,8 +260,14 @@ class TestEvaluateExpressionNamed:
         # 2d8 - initiative + 8 + 2d6 + perception
         # 2d8=[3,5]=8, -init=-(-2)=+2, +8, 2d6=[4,2]=6, +perc=+5 → total=29
         mocker.patch("dice_roller.random.randint", side_effect=[3, 5, 4, 2])
+
         def resolver(name):
-            return (-2, "Initiative(-2)") if name == "initiative" else (5, "Perception(+5)")
+            return (
+                (-2, "Initiative(-2)")
+                if name == "initiative"
+                else (5, "Perception(+5)")
+            )
+
         tokens = parse_expression_tokens("2d8-initiative+8+2d6+perception")
         result = evaluate_expression(tokens, named_resolver=resolver)
         assert result.total == 29
@@ -252,6 +276,7 @@ class TestEvaluateExpressionNamed:
 # ===========================================================================
 # evaluate_expression — advantage / disadvantage
 # ===========================================================================
+
 
 class TestEvaluateExpressionAdvantage:
     def test_advantage_on_1d20_takes_higher(self, mocker):
@@ -297,6 +322,7 @@ class TestEvaluateExpressionAdvantage:
 # ExpressionResult.breakdown
 # ===========================================================================
 
+
 class TestBreakdown:
     def test_single_term_contains_dice_label(self, mocker):
         mocker.patch("dice_roller.random.randint", return_value=5)
@@ -317,8 +343,7 @@ class TestBreakdown:
     def test_named_modifier_in_breakdown(self, mocker):
         mocker.patch("dice_roller.random.randint", return_value=3)
         result = evaluate_expression(
-            [(1, "1d6"), (1, "perc")],
-            named_resolver=lambda n: (5, "Perception(+5)")
+            [(1, "1d6"), (1, "perc")], named_resolver=lambda n: (5, "Perception(+5)")
         )
         assert "Perception(+5)" in result.breakdown()
 

@@ -3,6 +3,7 @@
 /weapon search uses defer() + followup.send().
 /weapon add uses response.send_message() directly.
 """
+
 import time
 
 import pytest
@@ -23,9 +24,7 @@ LONGSWORD_DATA = {
     "is_simple": False,
     "range": 0.0,
     "long_range": 0.0,
-    "properties": [
-        {"property": {"name": "Versatile", "desc": ""}, "detail": "1d10"}
-    ],
+    "properties": [{"property": {"name": "Versatile", "desc": ""}, "detail": "1d10"}],
 }
 
 SHORTBOW_DATA = {
@@ -299,7 +298,9 @@ async def test_weapon_add_success_message_not_ephemeral(
     cb = get_callback(weapon_bot, "weapon", "add")
     await cb(interaction, number=1)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_weapon_add_success_message_contains_name_and_hit_modifier(
@@ -501,7 +502,9 @@ async def test_weapon_add_attack_limit_does_not_block_update(
     cb = get_callback(weapon_bot, "weapon", "add")
     await cb(interaction, number=1)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ---------------------------------------------------------------------------

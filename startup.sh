@@ -124,6 +124,21 @@ apt-get install -y -qq \
 echo "Python $(python3 --version) installed."
 
 # ─────────────────────────────────────────────
+# 4b. Install Google Cloud Ops Agent
+# ─────────────────────────────────────────────
+# Ships systemd journal logs (including orc-bot) to Cloud Logging
+# for the 60-day retention bucket provisioned in database.tf.
+
+if ! systemctl is-active --quiet google-cloud-ops-agent; then
+    curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
+    bash add-google-cloud-ops-agent-repo.sh --also-install
+    rm -f add-google-cloud-ops-agent-repo.sh
+    echo "Ops agent installed."
+else
+    echo "Ops agent already running, skipping."
+fi
+
+# ─────────────────────────────────────────────
 # 5. Provision the bot directory and venv
 # ─────────────────────────────────────────────
 # CHANGE: replaced docker-compose.yml write with venv setup under /opt/orc.
@@ -131,7 +146,13 @@ echo "Python $(python3 --version) installed."
 # On first boot we create the directory and venv; Actions handles git clone/pull.
 
 mkdir -p /opt/orc
-chown -R root:root /opt/orc
+# Own the directory as the deploy SA user so GitHub Actions can write to it.
+# If the unique ID isn't available yet, fall back to root temporarily.
+if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
+    chown -R "sa_${DEPLOY_SA_UNIQUE_ID}:sa_${DEPLOY_SA_UNIQUE_ID}" /opt/orc
+else
+    chown -R root:root /opt/orc
+fi
 chmod 755 /opt/orc
 
 # Grant the deploy service account passwordless sudo for service restart only.
@@ -143,7 +164,7 @@ DEPLOY_SA_UNIQUE_ID=$(curl -sf \
 DEPLOY_SA_USER="sa_${DEPLOY_SA_UNIQUE_ID}"
 
 if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
-    echo "$DEPLOY_SA_UNIQUE_ID ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart orc-bot.service, /usr/bin/systemctl is-active orc-bot.service" \
+    echo "${DEPLOY_SA_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart orc-bot.service, /usr/bin/systemctl is-active orc-bot.service" \
         > /etc/sudoers.d/orc-bot-deploy
     chmod 440 /etc/sudoers.d/orc-bot-deploy
     echo "Sudoers rule written for ${DEPLOY_SA_USER}."
@@ -154,7 +175,11 @@ fi
 
 # Create the venv if it doesn't exist yet.
 if [ ! -d /opt/orc/.venv ]; then
-    python3 -m venv /opt/orc/.venv
+    if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
+        sudo -u "sa_${DEPLOY_SA_UNIQUE_ID}" python3 -m venv /opt/orc/.venv
+    else
+        python3 -m venv /opt/orc/.venv
+    fi
     echo "venv created at /opt/orc/.venv"
 else
     echo "venv already exists, skipping creation."

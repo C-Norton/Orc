@@ -4,7 +4,16 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 from database import SessionLocal
-from models import User, Server, Party, PartySettings, Character, Encounter, Enemy, EncounterTurn
+from models import (
+    User,
+    Server,
+    Party,
+    PartySettings,
+    Character,
+    Encounter,
+    Enemy,
+    EncounterTurn,
+)
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from enums.enemy_placement_mode import EnemyPlacementMode
@@ -54,14 +63,15 @@ def _validate_hp_format(value: str) -> None:
             contains the original input for use in user-facing error messages.
     """
     import re as _re
+
     stripped_value = value.strip()
     if stripped_value.isdigit():
         if int(stripped_value) <= 0:
             raise ValueError(stripped_value)
         return
     # Accept standard dice notation: optional NdX, optional +/- modifier
-    dice_pattern = _re.compile(r'^(\d+)?d(\d+)([+-]\d+)?$', _re.IGNORECASE)
-    if not dice_pattern.match(stripped_value.replace(' ', '')):
+    dice_pattern = _re.compile(r"^(\d+)?d(\d+)([+-]\d+)?$", _re.IGNORECASE)
+    if not dice_pattern.match(stripped_value.replace(" ", "")):
         raise ValueError(stripped_value)
 
 
@@ -383,9 +393,7 @@ class EnemyPlacementView(discord.ui.View):
             initiative_mode = encounter_settings.initiative_mode
 
             enemies = self._create_enemies(db, encounter)
-            all_turns_count = len(
-                [t for t in encounter.turns]
-            )
+            all_turns_count = len([t for t in encounter.turns])
 
             if placement == EnemyPlacementMode.TOP:
                 roll = random.randint(1, 20) + self.initiative_modifier
@@ -467,7 +475,9 @@ class EnemyPlacementView(discord.ui.View):
         """Place the enemy(ies) at position 1 in the initiative order."""
         await self._place_enemies(interaction, EnemyPlacementMode.TOP)
 
-    @discord.ui.button(label="Bottom of Initiative", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label="Bottom of Initiative", style=discord.ButtonStyle.secondary
+    )
     async def bottom_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -551,7 +561,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
     # ------------------------------------------------------------------
 
     @encounter_group.command(
-        name="enemy", description="Add one or more enemies to the current pending encounter"
+        name="enemy",
+        description="Add one or more enemies to the current pending encounter",
     )
     @app_commands.describe(
         name="Enemy name (e.g. 'Goblin')",
@@ -675,7 +686,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                         hp=enemy.max_hp,
                         ac_str=ac_str,
                     ),
-                ephemeral=True)
+                    ephemeral=True,
+                )
             else:
                 ac_part = f", AC: {ac}" if ac is not None else ""
                 enemy_lines = "\n".join(
@@ -696,7 +708,8 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                         type_name=name,
                         encounter_name=encounter.name,
                         enemy_lines=enemy_lines,
-                    ),ephemeral=True
+                    ),
+                    ephemeral=True,
                 )
         finally:
             db.close()
@@ -753,12 +766,16 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             for char in members:
                 total, bonus = roll_initiative_for_character(char)
-                participants.append((
-                    total,
-                    EncounterTurn(
-                        encounter_id=encounter.id, character_id=char.id, initiative_roll=total
-                    ),
-                ))
+                participants.append(
+                    (
+                        total,
+                        EncounterTurn(
+                            encounter_id=encounter.id,
+                            character_id=char.id,
+                            initiative_roll=total,
+                        ),
+                    )
+                )
 
             encounter_settings = _get_or_create_party_settings(db, party)
             initiative_mode = encounter_settings.initiative_mode
@@ -767,18 +784,21 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 # All enemies share a single initiative roll.
                 # Use the highest initiative_modifier among all enemies.
                 shared_modifier = max(
-                    (enemy.initiative_modifier for enemy in encounter.enemies), default=0
+                    (enemy.initiative_modifier for enemy in encounter.enemies),
+                    default=0,
                 )
                 shared_roll = random.randint(1, 20) + shared_modifier
                 for enemy in encounter.enemies:
-                    participants.append((
-                        shared_roll,
-                        EncounterTurn(
-                            encounter_id=encounter.id,
-                            enemy_id=enemy.id,
-                            initiative_roll=shared_roll,
-                        ),
-                    ))
+                    participants.append(
+                        (
+                            shared_roll,
+                            EncounterTurn(
+                                encounter_id=encounter.id,
+                                enemy_id=enemy.id,
+                                initiative_roll=shared_roll,
+                            ),
+                        )
+                    )
 
             elif initiative_mode == EnemyInitiativeMode.BY_TYPE:
                 # Enemies sharing the same type_name share one initiative roll.
@@ -789,26 +809,30 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                             random.randint(1, 20) + enemy.initiative_modifier
                         )
                     roll = type_rolls[enemy.type_name]
-                    participants.append((
-                        roll,
-                        EncounterTurn(
-                            encounter_id=encounter.id,
-                            enemy_id=enemy.id,
-                            initiative_roll=roll,
-                        ),
-                    ))
+                    participants.append(
+                        (
+                            roll,
+                            EncounterTurn(
+                                encounter_id=encounter.id,
+                                enemy_id=enemy.id,
+                                initiative_roll=roll,
+                            ),
+                        )
+                    )
 
             else:  # EnemyInitiativeMode.INDIVIDUAL
                 for enemy in encounter.enemies:
                     roll = random.randint(1, 20) + enemy.initiative_modifier
-                    participants.append((
-                        roll,
-                        EncounterTurn(
-                            encounter_id=encounter.id,
-                            enemy_id=enemy.id,
-                            initiative_roll=roll,
-                        ),
-                    ))
+                    participants.append(
+                        (
+                            roll,
+                            EncounterTurn(
+                                encounter_id=encounter.id,
+                                enemy_id=enemy.id,
+                                initiative_roll=roll,
+                            ),
+                        )
+                    )
 
             participants.sort(
                 key=lambda x: (x[0], 1 if x[1].character_id else 0), reverse=True
@@ -839,9 +863,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             ping = _ping_for_turn(encounter)
             await interaction.followup.send(ping)
-            logger.info(
-                f"/encounter start completed: '{encounter.name}' is now ACTIVE"
-            )
+            logger.info(f"/encounter start completed: '{encounter.name}' is now ACTIVE")
         finally:
             db.close()
 
@@ -887,7 +909,9 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             db.refresh(encounter)
 
             order_msg = _build_order_message(encounter)
-            original = await interaction.channel.fetch_message(int(encounter.message_id))
+            original = await interaction.channel.fetch_message(
+                int(encounter.message_id)
+            )
             await original.edit(content=order_msg)
 
             ping = _ping_for_turn(encounter)
@@ -928,9 +952,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
             encounter.status = EncounterStatus.COMPLETE
             db.commit()
-            logger.info(
-                f"/encounter end completed: '{encounter.name}' marked COMPLETE"
-            )
+            logger.info(f"/encounter end completed: '{encounter.name}' marked COMPLETE")
             await interaction.response.send_message(
                 Strings.ENCOUNTER_ENDED.format(encounter_name=encounter.name)
             )

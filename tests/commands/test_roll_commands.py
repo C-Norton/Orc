@@ -6,6 +6,7 @@ from tests.commands.conftest import get_callback
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _sent_message(interaction):
     return interaction.response.send_message.call_args.args[0]
 
@@ -13,6 +14,7 @@ def _sent_message(interaction):
 # ---------------------------------------------------------------------------
 # Character-based rolls (need sample_character in DB)
 # ---------------------------------------------------------------------------
+
 
 async def test_roll_skill_success(mocker, roll_bot, sample_character, interaction):
     cb = get_callback(roll_bot, "roll")
@@ -25,14 +27,18 @@ async def test_roll_skill_success(mocker, roll_bot, sample_character, interactio
     assert "Perception" in msg
 
 
-async def test_roll_skill_no_character(roll_bot, sample_user, sample_server, interaction):
+async def test_roll_skill_no_character(
+    roll_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="Perception")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_roll_saving_throw_success(mocker, roll_bot, sample_character, interaction):
+async def test_roll_saving_throw_success(
+    mocker, roll_bot, sample_character, interaction
+):
     cb = get_callback(roll_bot, "roll")
     mocker.patch("utils.dnd_logic.random.randint", return_value=10)
     await cb(interaction, notation="strength save")
@@ -63,6 +69,7 @@ async def test_roll_stat_check_success(mocker, roll_bot, sample_character, inter
 # Raw dice rolls (no character needed)
 # ---------------------------------------------------------------------------
 
+
 async def test_roll_raw_dice_no_character_needed(roll_bot, interaction):
     """Raw dice notation should work even without a character in the DB."""
     cb = get_callback(roll_bot, "roll")
@@ -86,6 +93,7 @@ async def test_roll_raw_dice_total_present(roll_bot, interaction):
 # Invalid notation
 # ---------------------------------------------------------------------------
 
+
 async def test_roll_invalid_notation_sends_ephemeral_error(roll_bot, interaction):
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="notdice")
@@ -96,6 +104,7 @@ async def test_roll_invalid_notation_sends_ephemeral_error(roll_bot, interaction
 # ---------------------------------------------------------------------------
 # Complex multi-dice expressions (no character needed)
 # ---------------------------------------------------------------------------
+
 
 async def test_roll_multi_dice_expression(roll_bot, interaction):
     """1d4+1d6+1d8 — three different dice, no character needed."""
@@ -114,7 +123,9 @@ async def test_roll_multi_dice_no_character_required(roll_bot, interaction):
     await cb(interaction, notation="2d6+1d4+3")
 
     msg = _sent_message(interaction)
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
     assert "Total" in msg
 
 
@@ -131,7 +142,10 @@ async def test_roll_complex_notation_in_message(roll_bot, interaction):
 # Named modifiers inside expressions (require character)
 # ---------------------------------------------------------------------------
 
-async def test_roll_named_modifier_in_expression(mocker, roll_bot, sample_character, interaction):
+
+async def test_roll_named_modifier_in_expression(
+    mocker, roll_bot, sample_character, interaction
+):
     """2d6+perception — dice plus a named skill modifier."""
     mocker.patch("dice_roller.random.randint", return_value=4)
     cb = get_callback(roll_bot, "roll")
@@ -142,7 +156,9 @@ async def test_roll_named_modifier_in_expression(mocker, roll_bot, sample_charac
     assert "Perception" in msg
 
 
-async def test_roll_named_modifier_no_character(roll_bot, sample_user, sample_server, interaction):
+async def test_roll_named_modifier_no_character(
+    roll_bot, sample_user, sample_server, interaction
+):
     """Named modifier without an active character → ephemeral error."""
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="2d6+perception")
@@ -150,7 +166,9 @@ async def test_roll_named_modifier_no_character(roll_bot, sample_user, sample_se
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_roll_complex_full_expression(mocker, roll_bot, sample_character, interaction):
+async def test_roll_complex_full_expression(
+    mocker, roll_bot, sample_character, interaction
+):
     """2d8-initiative+8+2d6+perception — full mixed expression."""
     mocker.patch("dice_roller.random.randint", side_effect=[3, 5, 4, 2])
     cb = get_callback(roll_bot, "roll")
@@ -164,26 +182,31 @@ async def test_roll_complex_full_expression(mocker, roll_bot, sample_character, 
 # Advantage / disadvantage
 # ---------------------------------------------------------------------------
 
-async def test_roll_advantage_skill_check(mocker, roll_bot, sample_character, interaction):
+
+async def test_roll_advantage_skill_check(
+    mocker, roll_bot, sample_character, interaction
+):
     """Advantage on a plain skill check: higher of two d20 rolls is kept."""
     mocker.patch("utils.dnd_logic.random.randint", side_effect=[15, 9])
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="perception", advantage="advantage")
 
     msg = _sent_message(interaction)
-    assert "15" in msg   # kept d20 appears in the message
-    assert "9" in msg    # discarded roll also shown
+    assert "15" in msg  # kept d20 appears in the message
+    assert "9" in msg  # discarded roll also shown
 
 
-async def test_roll_disadvantage_skill_check(mocker, roll_bot, sample_character, interaction):
+async def test_roll_disadvantage_skill_check(
+    mocker, roll_bot, sample_character, interaction
+):
     """Disadvantage on a skill check: lower of two d20 rolls is kept."""
     mocker.patch("utils.dnd_logic.random.randint", side_effect=[15, 9])
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="perception", advantage="disadvantage")
 
     msg = _sent_message(interaction)
-    assert "9" in msg    # lower roll kept
-    assert "15" in msg   # discarded shown
+    assert "9" in msg  # lower roll kept
+    assert "15" in msg  # discarded shown
 
 
 async def test_roll_advantage_on_raw_d20(mocker, roll_bot, interaction):
@@ -193,8 +216,8 @@ async def test_roll_advantage_on_raw_d20(mocker, roll_bot, interaction):
     await cb(interaction, notation="1d20", advantage="advantage")
 
     msg = _sent_message(interaction)
-    assert "18" in msg   # higher kept
-    assert "7" in msg    # discarded shown
+    assert "18" in msg  # higher kept
+    assert "7" in msg  # discarded shown
 
 
 async def test_roll_disadvantage_on_raw_d20(mocker, roll_bot, interaction):
@@ -204,11 +227,13 @@ async def test_roll_disadvantage_on_raw_d20(mocker, roll_bot, interaction):
     await cb(interaction, notation="1d20", advantage="disadvantage")
 
     msg = _sent_message(interaction)
-    assert "7" in msg    # lower kept
-    assert "18" in msg   # discarded shown
+    assert "7" in msg  # lower kept
+    assert "18" in msg  # discarded shown
 
 
-async def test_roll_advantage_saving_throw(mocker, roll_bot, sample_character, interaction):
+async def test_roll_advantage_saving_throw(
+    mocker, roll_bot, sample_character, interaction
+):
     mocker.patch("utils.dnd_logic.random.randint", side_effect=[14, 6])
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="strength save", advantage="advantage")
@@ -218,7 +243,9 @@ async def test_roll_advantage_saving_throw(mocker, roll_bot, sample_character, i
     assert "6" in msg
 
 
-async def test_roll_no_advantage_is_default(mocker, roll_bot, sample_character, interaction):
+async def test_roll_no_advantage_is_default(
+    mocker, roll_bot, sample_character, interaction
+):
     """When advantage is not passed the command still works normally."""
     mocker.patch("utils.dnd_logic.random.randint", return_value=12)
     cb = get_callback(roll_bot, "roll")

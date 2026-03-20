@@ -14,10 +14,12 @@ if TYPE_CHECKING:
 class Party(Base):
     """A group of characters and their GMs within a server."""
 
-    __tablename__ = 'parties'
+    __tablename__ = "parties"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    server_id: Mapped[int] = mapped_column(Integer, ForeignKey('servers.id'), nullable=False)
+    server_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("servers.id"), nullable=False
+    )
 
     gms: Mapped[list["User"]] = relationship(
         "User", secondary=party_gm_association, back_populates="gm_parties"
@@ -30,7 +32,12 @@ class Party(Base):
         "Encounter", back_populates="party", cascade="all, delete-orphan"
     )
     settings: Mapped[Optional["PartySettings"]] = relationship(
-        "PartySettings", back_populates="party", uselist=False, cascade="all, delete-orphan"
+        "PartySettings",
+        back_populates="party",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
-    __table_args__ = (UniqueConstraint('server_id', 'name', name='_server_party_name_uc'),)
+    __table_args__ = (
+        UniqueConstraint("server_id", "name", name="_server_party_name_uc"),
+    )

@@ -2,7 +2,14 @@ import pytest
 import discord
 from sqlalchemy import select
 from enums.crit_rule import CritRule
-from models import Party, Character, User, Server, PartySettings, user_server_association
+from models import (
+    Party,
+    Character,
+    User,
+    Server,
+    PartySettings,
+    user_server_association,
+)
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
 
@@ -11,7 +18,10 @@ from tests.commands.conftest import get_callback
 # /party create
 # ---------------------------------------------------------------------------
 
-async def test_create_party_empty(party_bot, sample_user, sample_server, interaction, session_factory):
+
+async def test_create_party_empty(
+    party_bot, sample_user, sample_server, interaction, session_factory
+):
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="The Fellowship")
 
@@ -25,7 +35,9 @@ async def test_create_party_empty(party_bot, sample_user, sample_server, interac
     verify.close()
 
 
-async def test_create_party_with_existing_character(party_bot, sample_character, interaction, session_factory):
+async def test_create_party_with_existing_character(
+    party_bot, sample_character, interaction, session_factory
+):
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="Heroes", characters_list="Aldric")
 
@@ -36,7 +48,9 @@ async def test_create_party_with_existing_character(party_bot, sample_character,
     verify.close()
 
 
-async def test_create_party_partial_char_list_reports_not_found(party_bot, sample_character, interaction):
+async def test_create_party_partial_char_list_reports_not_found(
+    party_bot, sample_character, interaction
+):
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="Mixed", characters_list="Aldric, Ghost")
 
@@ -45,14 +59,18 @@ async def test_create_party_partial_char_list_reports_not_found(party_bot, sampl
     assert "not found" in msg.lower()
 
 
-async def test_create_party_duplicate_name_rejected(party_bot, sample_party, interaction):
+async def test_create_party_duplicate_name_rejected(
+    party_bot, sample_party, interaction
+):
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="The Fellowship")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_create_party_sets_active_party(party_bot, sample_user, sample_server, interaction, session_factory):
+async def test_create_party_sets_active_party(
+    party_bot, sample_user, sample_server, interaction, session_factory
+):
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="Test Party")
 
@@ -71,7 +89,10 @@ async def test_create_party_sets_active_party(party_bot, sample_user, sample_ser
 # /party character_add
 # ---------------------------------------------------------------------------
 
-async def test_party_add_success(party_bot, sample_party, sample_character, interaction, session_factory):
+
+async def test_party_add_success(
+    party_bot, sample_party, sample_character, interaction, session_factory
+):
     cb = get_callback(party_bot, "party", "character_add")
     await cb(interaction, party_name="The Fellowship", character_name="Aldric")
 
@@ -81,30 +102,41 @@ async def test_party_add_success(party_bot, sample_party, sample_character, inte
     verify.close()
 
 
-async def test_party_add_party_not_found(party_bot, sample_user, sample_server, interaction):
+async def test_party_add_party_not_found(
+    party_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(party_bot, "party", "character_add")
     await cb(interaction, party_name="Nonexistent", character_name="Anyone")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_party_add_not_gm(mocker, party_bot, sample_party, sample_character, db_session, session_factory):
+async def test_party_add_not_gm(
+    mocker, party_bot, sample_party, sample_character, db_session, session_factory
+):
     """A user who isn't the GM cannot add members."""
     other_interaction = make_interaction(mocker, user_id=999)
     cb = get_callback(party_bot, "party", "character_add")
     await cb(other_interaction, party_name="The Fellowship", character_name="Aldric")
 
-    assert other_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        other_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
 
 
-async def test_party_add_character_not_found(party_bot, sample_party, sample_user, sample_server, interaction):
+async def test_party_add_character_not_found(
+    party_bot, sample_party, sample_user, sample_server, interaction
+):
     cb = get_callback(party_bot, "party", "character_add")
     await cb(interaction, party_name="The Fellowship", character_name="Nobody")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_party_add_already_in_party(party_bot, sample_party, sample_character, db_session, interaction):
+async def test_party_add_already_in_party(
+    party_bot, sample_party, sample_character, db_session, interaction
+):
     sample_party.characters.append(sample_character)
     db_session.commit()
 
@@ -118,7 +150,16 @@ async def test_party_add_already_in_party(party_bot, sample_party, sample_charac
 # /party character_remove
 # ---------------------------------------------------------------------------
 
-async def test_party_remove_success(mocker, party_bot, sample_party, sample_character, db_session, interaction, session_factory):
+
+async def test_party_remove_success(
+    mocker,
+    party_bot,
+    sample_party,
+    sample_character,
+    db_session,
+    interaction,
+    session_factory,
+):
     """Removing a character shows a confirmation; pressing Confirm removes them."""
     sample_party.characters.append(sample_character)
     db_session.commit()
@@ -129,7 +170,9 @@ async def test_party_remove_success(mocker, party_bot, sample_party, sample_char
     # Confirmation view shown
     view = interaction.response.send_message.call_args.kwargs.get("view")
     assert view is not None
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Remove")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Remove"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -140,7 +183,9 @@ async def test_party_remove_success(mocker, party_bot, sample_party, sample_char
     verify.close()
 
 
-async def test_party_remove_not_gm(mocker, party_bot, sample_party, sample_character, db_session):
+async def test_party_remove_not_gm(
+    mocker, party_bot, sample_party, sample_character, db_session
+):
     sample_party.characters.append(sample_character)
     db_session.commit()
 
@@ -148,12 +193,16 @@ async def test_party_remove_not_gm(mocker, party_bot, sample_party, sample_chara
     cb = get_callback(party_bot, "party", "character_remove")
     await cb(other_interaction, party_name="The Fellowship", character_name="Aldric")
 
-    assert other_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        other_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
 
 
 # ---------------------------------------------------------------------------
 # /party active (set and view)
 # ---------------------------------------------------------------------------
+
 
 async def test_active_party_set_success(party_bot, sample_party, interaction):
     cb = get_callback(party_bot, "party", "active")
@@ -161,10 +210,14 @@ async def test_active_party_set_success(party_bot, sample_party, interaction):
 
     msg = interaction.response.send_message.call_args.args[0]
     assert "The Fellowship" in msg
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
-async def test_active_party_set_not_found(party_bot, sample_user, sample_server, interaction):
+async def test_active_party_set_not_found(
+    party_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(party_bot, "party", "active")
     await cb(interaction, party_name="Ghost Party")
 
@@ -179,7 +232,9 @@ async def test_active_party_view(party_bot, sample_active_party, interaction):
     assert "The Fellowship" in msg
 
 
-async def test_active_party_view_none_set(party_bot, sample_user, sample_server, interaction):
+async def test_active_party_view_none_set(
+    party_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(party_bot, "party", "active")
     await cb(interaction)
 
@@ -191,7 +246,10 @@ async def test_active_party_view_none_set(party_bot, sample_user, sample_server,
 # /party roll_as
 # ---------------------------------------------------------------------------
 
-async def test_rollas_success(mocker, party_bot, sample_active_party, sample_character, db_session, interaction):
+
+async def test_rollas_success(
+    mocker, party_bot, sample_active_party, sample_character, db_session, interaction
+):
     sample_active_party.characters.append(sample_character)
     db_session.commit()
 
@@ -202,7 +260,9 @@ async def test_rollas_success(mocker, party_bot, sample_active_party, sample_cha
     interaction.response.send_message.assert_called_once()
 
 
-async def test_rollas_no_active_party(party_bot, sample_user, sample_server, interaction):
+async def test_rollas_no_active_party(
+    party_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(party_bot, "party", "roll_as")
     await cb(interaction, member_name="Aldric", notation="perception")
 
@@ -220,7 +280,10 @@ async def test_rollas_member_not_found(party_bot, sample_active_party, interacti
 # /party roll
 # ---------------------------------------------------------------------------
 
-async def test_partyroll_success(mocker, party_bot, sample_active_party, sample_character, db_session, interaction):
+
+async def test_partyroll_success(
+    mocker, party_bot, sample_active_party, sample_character, db_session, interaction
+):
     sample_active_party.characters.append(sample_character)
     db_session.commit()
 
@@ -232,7 +295,9 @@ async def test_partyroll_success(mocker, party_bot, sample_active_party, sample_
     interaction.followup.send.assert_called_once()
 
 
-async def test_partyroll_no_active_party(party_bot, sample_user, sample_server, interaction):
+async def test_partyroll_no_active_party(
+    party_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(party_bot, "party", "roll")
     await cb(interaction, notation="perception")
 
@@ -249,6 +314,7 @@ async def test_partyroll_empty_party(party_bot, sample_active_party, interaction
 # ---------------------------------------------------------------------------
 # /party view
 # ---------------------------------------------------------------------------
+
 
 async def test_view_party_success(party_bot, sample_party, interaction):
     cb = get_callback(party_bot, "party", "view")
@@ -270,14 +336,19 @@ async def test_view_party_not_found(party_bot, sample_user, sample_server, inter
 # /party delete
 # ---------------------------------------------------------------------------
 
-async def test_delete_party_success(mocker, party_bot, sample_party, interaction, session_factory):
+
+async def test_delete_party_success(
+    mocker, party_bot, sample_party, interaction, session_factory
+):
     """Deleting a party shows a confirmation; pressing Delete removes the party."""
     cb = get_callback(party_bot, "party", "delete")
     await cb(interaction, party_name="The Fellowship")
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
     assert view is not None
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Delete")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Delete"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -292,7 +363,10 @@ async def test_delete_party_not_gm(mocker, party_bot, sample_party, session_fact
     cb = get_callback(party_bot, "party", "delete")
     await cb(other_interaction, party_name="The Fellowship")
 
-    assert other_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        other_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
 
     verify = session_factory()
     assert verify.query(Party).filter_by(name="The Fellowship").first() is not None
@@ -303,7 +377,16 @@ async def test_delete_party_not_gm(mocker, party_bot, sample_party, session_fact
 # /party gm_add
 # ---------------------------------------------------------------------------
 
-async def test_add_gm_success(mocker, party_bot, sample_party, sample_server, db_session, interaction, session_factory):
+
+async def test_add_gm_success(
+    mocker,
+    party_bot,
+    sample_party,
+    sample_server,
+    db_session,
+    interaction,
+    session_factory,
+):
     """A GM can add another Discord user as a GM."""
     target_user = User(discord_id="555")
     db_session.add(target_user)
@@ -315,7 +398,9 @@ async def test_add_gm_success(mocker, party_bot, sample_party, sample_server, db
     cb = get_callback(party_bot, "party", "gm_add")
     await cb(interaction, party_name="The Fellowship", new_gm=mock_member)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
     msg = interaction.response.send_message.call_args.args[0]
     assert "555" in msg
 
@@ -338,10 +423,15 @@ async def test_add_gm_not_gm(mocker, party_bot, sample_party, db_session):
     cb = get_callback(party_bot, "party", "gm_add")
     await cb(non_gm_interaction, party_name="The Fellowship", new_gm=mock_member)
 
-    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
 
 
-async def test_add_gm_target_not_registered(mocker, party_bot, sample_party, interaction):
+async def test_add_gm_target_not_registered(
+    mocker, party_bot, sample_party, interaction
+):
     """Adding a user who has never used the bot is rejected."""
     mock_member = mocker.Mock()
     mock_member.id = 9999
@@ -352,7 +442,9 @@ async def test_add_gm_target_not_registered(mocker, party_bot, sample_party, int
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_add_gm_already_gm(mocker, party_bot, sample_party, sample_user, interaction):
+async def test_add_gm_already_gm(
+    mocker, party_bot, sample_party, sample_user, interaction
+):
     """Adding a user who is already a GM is rejected."""
     mock_member = mocker.Mock()
     mock_member.id = int(sample_user.discord_id)
@@ -363,7 +455,9 @@ async def test_add_gm_already_gm(mocker, party_bot, sample_party, sample_user, i
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_add_gm_party_not_found(mocker, party_bot, sample_user, sample_server, interaction):
+async def test_add_gm_party_not_found(
+    mocker, party_bot, sample_user, sample_server, interaction
+):
     """gm_add on a nonexistent party returns an error."""
     mock_member = mocker.Mock()
     mock_member.id = 555
@@ -378,7 +472,16 @@ async def test_add_gm_party_not_found(mocker, party_bot, sample_user, sample_ser
 # /party gm_remove
 # ---------------------------------------------------------------------------
 
-async def test_remove_gm_success(mocker, party_bot, sample_party, sample_user, db_session, interaction, session_factory):
+
+async def test_remove_gm_success(
+    mocker,
+    party_bot,
+    sample_party,
+    sample_user,
+    db_session,
+    interaction,
+    session_factory,
+):
     """A GM can remove another GM from the party."""
     second_gm = User(discord_id="555")
     db_session.add(second_gm)
@@ -392,7 +495,9 @@ async def test_remove_gm_success(mocker, party_bot, sample_party, sample_user, d
     cb = get_callback(party_bot, "party", "gm_remove")
     await cb(interaction, party_name="The Fellowship", target_gm=mock_member)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
     verify = session_factory()
     party = verify.query(Party).filter_by(name="The Fellowship").first()
@@ -400,7 +505,15 @@ async def test_remove_gm_success(mocker, party_bot, sample_party, sample_user, d
     verify.close()
 
 
-async def test_remove_gm_self_shows_confirmation(mocker, party_bot, sample_party, sample_user, db_session, interaction, session_factory):
+async def test_remove_gm_self_shows_confirmation(
+    mocker,
+    party_bot,
+    sample_party,
+    sample_user,
+    db_session,
+    interaction,
+    session_factory,
+):
     """Removing yourself as GM shows an ephemeral confirmation prompt."""
     second_gm = User(discord_id="555")
     db_session.add(second_gm)
@@ -424,7 +537,15 @@ async def test_remove_gm_self_shows_confirmation(mocker, party_bot, sample_party
     verify.close()
 
 
-async def test_remove_gm_self_confirmed_removes_gm(mocker, party_bot, sample_party, sample_user, db_session, interaction, session_factory):
+async def test_remove_gm_self_confirmed_removes_gm(
+    mocker,
+    party_bot,
+    sample_party,
+    sample_user,
+    db_session,
+    interaction,
+    session_factory,
+):
     """Pressing the confirm button on self-GM-removal removes the GM."""
     second_gm = User(discord_id="555")
     db_session.add(second_gm)
@@ -439,7 +560,9 @@ async def test_remove_gm_self_confirmed_removes_gm(mocker, party_bot, sample_par
     await cb(interaction, party_name="The Fellowship", target_gm=mock_member)
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Remove myself")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Remove myself"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -450,7 +573,9 @@ async def test_remove_gm_self_confirmed_removes_gm(mocker, party_bot, sample_par
     verify.close()
 
 
-async def test_remove_gm_last_gm_blocked(mocker, party_bot, sample_party, sample_user, interaction):
+async def test_remove_gm_last_gm_blocked(
+    mocker, party_bot, sample_party, sample_user, interaction
+):
     """Removing the last GM is rejected to prevent orphaned parties."""
     mock_member = mocker.Mock()
     mock_member.id = int(sample_user.discord_id)
@@ -463,7 +588,9 @@ async def test_remove_gm_last_gm_blocked(mocker, party_bot, sample_party, sample
     assert "last" in msg.lower()
 
 
-async def test_remove_gm_not_gm(mocker, party_bot, sample_party, sample_user, db_session):
+async def test_remove_gm_not_gm(
+    mocker, party_bot, sample_party, sample_user, db_session
+):
     """A non-GM cannot remove GMs."""
     non_gm_interaction = make_interaction(mocker, user_id=999)
     mock_member = mocker.Mock()
@@ -472,10 +599,15 @@ async def test_remove_gm_not_gm(mocker, party_bot, sample_party, sample_user, db
     cb = get_callback(party_bot, "party", "gm_remove")
     await cb(non_gm_interaction, party_name="The Fellowship", target_gm=mock_member)
 
-    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
 
 
-async def test_remove_gm_target_not_a_gm(mocker, party_bot, sample_party, db_session, interaction):
+async def test_remove_gm_target_not_a_gm(
+    mocker, party_bot, sample_party, db_session, interaction
+):
     """Trying to remove someone who isn't a GM returns an error."""
     non_gm_user = User(discord_id="555")
     db_session.add(non_gm_user)
@@ -490,7 +622,9 @@ async def test_remove_gm_target_not_a_gm(mocker, party_bot, sample_party, db_ses
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_remove_gm_party_not_found(mocker, party_bot, sample_user, sample_server, interaction):
+async def test_remove_gm_party_not_found(
+    mocker, party_bot, sample_user, sample_server, interaction
+):
     """gm_remove on a nonexistent party returns an error."""
     mock_member = mocker.Mock()
     mock_member.id = 111
@@ -505,7 +639,10 @@ async def test_remove_gm_party_not_found(mocker, party_bot, sample_user, sample_
 # view_party shows multiple GMs
 # ---------------------------------------------------------------------------
 
-async def test_view_party_shows_multiple_gms(mocker, party_bot, sample_party, sample_user, db_session, interaction):
+
+async def test_view_party_shows_multiple_gms(
+    mocker, party_bot, sample_party, sample_user, db_session, interaction
+):
     """view embed lists all GMs when there are multiple."""
     second_gm = User(discord_id="555")
     db_session.add(second_gm)
@@ -525,6 +662,7 @@ async def test_view_party_shows_multiple_gms(mocker, party_bot, sample_party, sa
 # ---------------------------------------------------------------------------
 # Resource limits
 # ---------------------------------------------------------------------------
+
 
 async def test_create_party_over_gm_limit(
     mocker, party_bot, sample_user, sample_server, db_session, interaction
@@ -605,8 +743,12 @@ async def test_party_add_over_member_limit(
 # /party settings crit_rule
 # ---------------------------------------------------------------------------
 
+
 async def test_party_settings_crit_rule_set_by_gm(
-    party_bot, sample_party, interaction, session_factory,
+    party_bot,
+    sample_party,
+    interaction,
+    session_factory,
 ):
     """GM can set the crit rule for their party."""
     cb = get_callback(party_bot, "party", "settings", "crit_rule")
@@ -616,31 +758,32 @@ async def test_party_settings_crit_rule_set_by_gm(
     assert "perkins" in msg.lower()
 
     verify = session_factory()
-    settings = verify.query(PartySettings).filter_by(
-        party_id=sample_party.id
-    ).first()
+    settings = verify.query(PartySettings).filter_by(party_id=sample_party.id).first()
     assert settings is not None
     assert settings.crit_rule == CritRule.PERKINS
     verify.close()
 
 
 async def test_party_settings_crit_rule_default_is_double_dice(
-    party_bot, sample_party, interaction, session_factory,
+    party_bot,
+    sample_party,
+    interaction,
+    session_factory,
 ):
     """A party with no settings defaults to DOUBLE_DICE."""
     cb = get_callback(party_bot, "party", "settings", "crit_rule")
     await cb(interaction, party_name="The Fellowship", rule="double_dice")
 
     verify = session_factory()
-    settings = verify.query(PartySettings).filter_by(
-        party_id=sample_party.id
-    ).first()
+    settings = verify.query(PartySettings).filter_by(party_id=sample_party.id).first()
     assert settings.crit_rule == CritRule.DOUBLE_DICE
     verify.close()
 
 
 async def test_party_settings_crit_rule_invalid_value(
-    party_bot, sample_party, interaction,
+    party_bot,
+    sample_party,
+    interaction,
 ):
     """An unrecognised crit rule name returns an ephemeral error."""
     cb = get_callback(party_bot, "party", "settings", "crit_rule")
@@ -650,7 +793,12 @@ async def test_party_settings_crit_rule_invalid_value(
 
 
 async def test_party_settings_crit_rule_requires_gm(
-    party_bot, sample_party, db_session, interaction, session_factory, mocker,
+    party_bot,
+    sample_party,
+    db_session,
+    interaction,
+    session_factory,
+    mocker,
 ):
     """A non-GM cannot change the crit rule."""
     non_gm = User(discord_id="999")
@@ -664,9 +812,7 @@ async def test_party_settings_crit_rule_requires_gm(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     # Settings should be unchanged
     verify = session_factory()
-    settings = verify.query(PartySettings).filter_by(
-        party_id=sample_party.id
-    ).first()
+    settings = verify.query(PartySettings).filter_by(party_id=sample_party.id).first()
     assert settings is None or settings.crit_rule == CritRule.DOUBLE_DICE
     verify.close()
 
@@ -676,7 +822,9 @@ async def test_party_settings_crit_rule_requires_gm(
 # ---------------------------------------------------------------------------
 
 
-async def test_party_list_shows_embed(party_bot, sample_party, sample_server, interaction):
+async def test_party_list_shows_embed(
+    party_bot, sample_party, sample_server, interaction
+):
     """/party list returns an embed when at least one party exists."""
     cb = get_callback(party_bot, "party", "list")
     await cb(interaction)
@@ -723,7 +871,9 @@ async def test_party_list_empty_server_sends_ephemeral(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_party_list_no_character_needed(party_bot, sample_party, sample_server, interaction):
+async def test_party_list_no_character_needed(
+    party_bot, sample_party, sample_server, interaction
+):
     """/party list works for a user who has no active character."""
     cb = get_callback(party_bot, "party", "list")
     await cb(interaction)
@@ -743,8 +893,12 @@ async def test_party_list_single_page_buttons_disabled(
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
     assert isinstance(view, PartyListView)
-    prev_btn = next(item for item in view.children if getattr(item, "label", "") == "◀ Previous")
-    next_btn = next(item for item in view.children if getattr(item, "label", "") == "Next ▶")
+    prev_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "◀ Previous"
+    )
+    next_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Next ▶"
+    )
     assert prev_btn.disabled is True
     assert next_btn.disabled is True
 
@@ -763,7 +917,9 @@ async def test_party_list_multi_page_next_button_enabled(
     await cb(interaction)
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
-    next_btn = next(item for item in view.children if getattr(item, "label", "") == "Next ▶")
+    next_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Next ▶"
+    )
     assert next_btn.disabled is False
 
 
@@ -774,7 +930,9 @@ async def test_party_list_next_button_advances_page(
     from commands.party_commands import PartyListView
 
     for i in range(PartyListView.PARTIES_PER_PAGE + 2):
-        db_session.add(Party(name=f"Party{i:02d}", gms=[sample_user], server=sample_server))
+        db_session.add(
+            Party(name=f"Party{i:02d}", gms=[sample_user], server=sample_server)
+        )
     db_session.commit()
 
     cb = get_callback(party_bot, "party", "list")
@@ -785,7 +943,9 @@ async def test_party_list_next_button_advances_page(
 
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
-    next_btn = next(item for item in view.children if getattr(item, "label", "") == "Next ▶")
+    next_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Next ▶"
+    )
     await next_btn.callback(btn_interaction)
 
     assert view.current_page == 1
@@ -798,13 +958,18 @@ async def test_party_list_next_button_advances_page(
 
 
 async def test_settings_death_save_nat20_set_regain_hp(
-    party_bot, sample_party, interaction, session_factory,
+    party_bot,
+    sample_party,
+    interaction,
+    session_factory,
 ):
     """GM can set death_save_nat20 to regain_hp."""
     cb = get_callback(party_bot, "party", "settings", "death_save_nat20")
     await cb(interaction, party_name="The Fellowship", mode="regain_hp")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
     msg = interaction.response.send_message.call_args.args[0]
     assert "regain_hp" in msg.lower()
 
@@ -816,7 +981,10 @@ async def test_settings_death_save_nat20_set_regain_hp(
 
 
 async def test_settings_death_save_nat20_set_double_success(
-    party_bot, sample_party, interaction, session_factory,
+    party_bot,
+    sample_party,
+    interaction,
+    session_factory,
 ):
     """GM can set death_save_nat20 to double_success."""
     from enums.death_save_nat20_mode import DeathSaveNat20Mode
@@ -832,7 +1000,9 @@ async def test_settings_death_save_nat20_set_double_success(
 
 
 async def test_settings_death_save_nat20_invalid_mode(
-    party_bot, sample_party, interaction,
+    party_bot,
+    sample_party,
+    interaction,
 ):
     """An invalid mode string returns an ephemeral error."""
     cb = get_callback(party_bot, "party", "settings", "death_save_nat20")
@@ -842,7 +1012,10 @@ async def test_settings_death_save_nat20_invalid_mode(
 
 
 async def test_settings_death_save_nat20_transition(
-    party_bot, sample_party, interaction, session_factory,
+    party_bot,
+    sample_party,
+    interaction,
+    session_factory,
 ):
     """Setting double_success then regain_hp → final value is regain_hp."""
     from enums.death_save_nat20_mode import DeathSaveNat20Mode
@@ -858,7 +1031,9 @@ async def test_settings_death_save_nat20_transition(
 
 
 async def test_settings_view_shows_death_save_nat20_mode(
-    party_bot, sample_party, interaction,
+    party_bot,
+    sample_party,
+    interaction,
 ):
     """/party settings view includes the death_save_nat20 field."""
     cb = get_callback(party_bot, "party", "settings", "view")
@@ -866,4 +1041,9 @@ async def test_settings_view_shows_death_save_nat20_mode(
 
     msg = interaction.response.send_message.call_args.args[0]
     # PARTY_SETTINGS_VIEW contains "Death save nat-20 rule:" label
-    assert "death" in msg.lower() or "nat" in msg.lower() or "nat20" in msg.lower() or "nat-20" in msg.lower()
+    assert (
+        "death" in msg.lower()
+        or "nat" in msg.lower()
+        or "nat20" in msg.lower()
+        or "nat-20" in msg.lower()
+    )

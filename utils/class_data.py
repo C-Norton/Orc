@@ -45,7 +45,14 @@ CLASS_SAVE_PROFS: dict[CharacterClass, list[str]] = {
     CharacterClass.OTHER: [],
 }
 
-_ALL_STATS = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+_ALL_STATS = [
+    "strength",
+    "dexterity",
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "charisma",
+]
 
 
 def get_class_save_profs(character_class: CharacterClass) -> list[str]:
@@ -88,7 +95,9 @@ def calculate_max_hp(character: "Character") -> int:
     return total_hp
 
 
-def apply_class_save_profs(character: "Character", character_class: CharacterClass) -> None:
+def apply_class_save_profs(
+    character: "Character", character_class: CharacterClass
+) -> None:
     """Overwrite all six saving throw proficiencies on *character* to match *character_class*.
 
     This should only be called when creating a fresh character (first class assignment).

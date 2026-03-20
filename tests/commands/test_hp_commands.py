@@ -6,6 +6,7 @@ Tests focus on edge cases not covered in test_death_save_commands.py:
 - Temp HP replacement logic via /add_temp_hp
 - Damage absorption through temp HP
 """
+
 import pytest
 
 from tests.commands.conftest import get_callback
@@ -43,7 +44,12 @@ async def test_damage_massive_instant_death_at_double_max_hp(
 
     msg = _sent_message(interaction)
     # current_hp = 10 - 21 = -11, which is ≤ -10 (max_hp) → instant death
-    assert "died" in msg.lower() or "slain" in msg.lower() or "death" in msg.lower() or "killed" in msg.lower()
+    assert (
+        "died" in msg.lower()
+        or "slain" in msg.lower()
+        or "death" in msg.lower()
+        or "killed" in msg.lower()
+    )
 
 
 async def test_damage_massive_does_not_add_death_save_failure(

@@ -2,6 +2,7 @@
 
 These are pure-function tests with no database access required.
 """
+
 import pytest
 
 from utils.hp_logic import apply_damage, apply_temp_hp, apply_healing, parse_amount

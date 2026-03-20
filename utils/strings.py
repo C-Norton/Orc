@@ -1,13 +1,13 @@
 class Strings:
     # Common
-    CHARACTER_NOT_FOUND = "You don't have a character in this server. Use `/character create` first."
+    CHARACTER_NOT_FOUND = (
+        "You don't have a character in this server. Use `/character create` first."
+    )
     ACTIVE_CHARACTER_NOT_FOUND = "You don't have an active character."
     SERVER_ERROR = "❌ An unexpected error occurred."
 
     # Resource limits
-    ERROR_LIMIT_CHARACTERS = (
-        "You have reached the maximum number of characters ({limit}) across all servers."
-    )
+    ERROR_LIMIT_CHARACTERS = "You have reached the maximum number of characters ({limit}) across all servers."
     ERROR_LIMIT_GM_PARTIES = (
         "You are already a GM of the maximum number of parties ({limit})."
     )
@@ -23,12 +23,16 @@ class Strings:
     ERROR_LIMIT_PARTIES_SERVER = (
         "This server has reached the maximum number of parties ({limit})."
     )
-    
+
     # Meta Commands
-    HELP_TITLE = "Thank you for using ORC - the Opensource Roleplaying Companion bot for D&D 5e"
+    HELP_TITLE = (
+        "Thank you for using ORC - the Opensource Roleplaying Companion bot for D&D 5e"
+    )
     HELP_DESCRIPTION = "Check out our shared setting: [Open Source Gaming and Roleplaying environment (OGRE)](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)"
     HELP_FOOTER = "Tip: Use autocomplete for character, party, skill names, and more!"
-    HELP_NOT_YOUR_MENU = "This help menu belongs to someone else. Use `/help` to open your own."
+    HELP_NOT_YOUR_MENU = (
+        "This help menu belongs to someone else. Use `/help` to open your own."
+    )
     HELP_TOC_DESCRIPTION = (
         "{description}\n\n"
         "Click a reaction below to see more information about each command category:\n\n"
@@ -43,7 +47,7 @@ class Strings:
         "👨‍🔧 **Credits & Support**\n"
         "🏠 **Back to Home**"
     )
-    
+
     HELP_CHAR_MGMT_NAME = "👤 Character Management"
     HELP_CHAR_MGMT_VALUE = (
         "**/character create <name> <class> <level>**: Create a new character for this server. Class save proficiencies are set automatically.\n"
@@ -58,7 +62,7 @@ class Strings:
         "**/character saves**: Mark which saves your active character is proficient in.\n"
         "**/character skill <skill> <status>**: Set proficiency for your active character."
     )
-    
+
     HELP_COMBAT_NAME = "⚔️ Combat"
     HELP_COMBAT_VALUE = (
         "**/weapon search <query>**: Search for weapons in the 2024 SRD (via Open5e). Shows up to 5 results.\n"
@@ -70,14 +74,14 @@ class Strings:
         "In an active encounter, pass `target` as the enemy's position number to resolve the hit "
         "against their AC and automatically update their HP.\n"
     )
-    
+
     HELP_ROLLING_NAME = "🎲 Rolling"
     HELP_ROLLING_VALUE = (
         "**/roll <notation>**: Roll anything! Use skill names (e.g., `perception`), saves (e.g., `wis save`), or dice (e.g., `1d20+5`).\n"
         "**/roll death save**: Roll a death saving throw (autocomplete-only; only shown when your character is at 0 HP). "
         "3 successes stabilizes; 3 failures slays. Nat 20 behaviour is configurable per party."
     )
-    
+
     HELP_HEALTH_NAME = "❤️ Health & HP"
     HELP_HEALTH_VALUE = (
         "**/hp status**: View your active character's current HP and temporary HP.\n"
@@ -87,7 +91,7 @@ class Strings:
         "**/hp temp <amount>**: Add temporary HP to your active character (5e rule: replaces if higher, keeps if lower).\n"
         "**/hp party_temp <amount>**: Add temporary HP to all members of your active party."
     )
-    
+
     HELP_PARTIES_NAME = "👥 Parties & GM Tools"
     HELP_PARTIES_VALUE = (
         "**/party create <name>**: Create a new group of characters.\n"
@@ -110,7 +114,7 @@ class Strings:
         "**/party settings death_save_nat20 <party> <mode>**: Set how a natural 20 on a death save is resolved: "
         "`regain_hp` (5e 2024 RAW — regain 1 HP) or `double_success` (house rule — count as 2 successes) (GM only)."
     )
-    
+
     HELP_ENCOUNTER_NAME = "⚔️ Encounter & Initiative Tracking"
     HELP_ENCOUNTER_VALUE = (
         "**Setup (GM only)**\n"
@@ -168,7 +172,6 @@ class Strings:
         "and [Discord Server](https://discord.gg/2cBKmVTpHR)."
     )
 
-
     GUILD_JOIN_WELCOME = (
         "Hi! I'm **ORC** (Open-Source Roleplaying Companion), a D&D 5e assistant bot.\n\n"
         "Use `/help` to see everything I can do — character sheets, dice rolls, party management, "
@@ -177,19 +180,19 @@ class Strings:
         "[OGRE WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)."
     )
 
-
-
     # Health Commands
     HP_SET_SUCCESS = "Set **{char_name}**'s HP to {current}/{max}."
     HP_VIEW = "**{char_name}** — HP: {current}/{max}"
     HP_VIEW_TEMP = " (+{temp} temp)"
     HP_DAMAGE_MSG = "**{char_name}** took {amount} damage! HP: {current}/{max}"
-    HP_DEATH_MSG = "\n**{char_name} has died from massive damage!**\nMay they rest in peace."
+    HP_DEATH_MSG = (
+        "\n**{char_name} has died from massive damage!**\nMay they rest in peace."
+    )
     HP_HEAL_MSG = "**{char_name}** healed {amount} HP! HP: {current}/{max}"
     HP_TEMP_MSG = "**{char_name}** now has {temp} temporary HP."
     HP_TEMP_PARTY_HEADER = "Temporary HP updated for the party:\n"
     HP_TEMP_PARTY_LINE = "**{char_name}**: {temp} temp HP"
-    
+
     ERROR_INVALID_MAX_HP = "Max HP must be at least 1."
     ERROR_NO_ACTIVE_PARTY = "No active party set."
     ERROR_GM_ONLY_DAMAGE = "Only the GM can apply damage to other party members."
@@ -200,7 +203,9 @@ class Strings:
     ATTACK_ADDED = "Added attack **{attack_name}** to **{char_name}**."
     ATTACK_UPDATED = "Updated attack **{attack_name}** for **{char_name}**."
     ATTACK_NOT_FOUND = "Attack '**{attack_name}**' not found."
-    ATTACK_NO_ATTACKS = "**{char_name}** has no attacks saved. Use `/attack add` to add some!"
+    ATTACK_NO_ATTACKS = (
+        "**{char_name}** has no attacks saved. Use `/attack add` to add some!"
+    )
     ATTACK_LIST_TITLE = "Attacks for {char_name}"
     ATTACK_ROLL_MSG = "⚔️ **{char_name}** attacks with **{attack_obj_name}**!\n**To Hit**: `d20({d20_roll}) + {hit_modifier}` = **{hit_total}**\n**Damage**: `{damage_formula}` -> `{damage_detail}` = **{damage_total}**"
     ATTACK_ROLL_HIT_TARGET = (
@@ -212,15 +217,11 @@ class Strings:
         "⚔️ **{char_name}** attacks **{enemy_name}** with **{attack_name}**!\n"
         "**To Hit**: `d20({d20_roll}) + {hit_modifier}` = **{hit_total}** vs AC {ac} — **MISS!**"
     )
-    ATTACK_TARGET_NO_ENCOUNTER = (
-        "No active encounter found. Targeted attacks require an active combat encounter."
-    )
+    ATTACK_TARGET_NO_ENCOUNTER = "No active encounter found. Targeted attacks require an active combat encounter."
     ATTACK_TARGET_NOT_FOUND = (
         "❌ No enemy named **{enemy_name}** found in the current encounter."
     )
-    ATTACK_TARGET_NO_AC = (
-        "❌ **{enemy_name}** has no AC set. Ask the GM to add it with `/encounter enemy`."
-    )
+    ATTACK_TARGET_NO_AC = "❌ **{enemy_name}** has no AC set. Ask the GM to add it with `/encounter enemy`."
     ATTACK_GM_DAMAGE_NOTIFY = (
         "⚔️ **{enemy_name}** took {damage} damage from {char_name}'s {attack_name}. "
         "HP: {current_hp}/{max_hp}"
@@ -228,6 +229,7 @@ class Strings:
     ATTACK_GM_ENEMY_DEFEATED = (
         "💀 **{enemy_name}** was defeated by {char_name}'s {attack_name}!"
     )
+
     ENCOUNTER_GM_DM_EMBED_TITLE = "⚔️ {encounter_name}"
     ENCOUNTER_GM_DM_EMBED_FOOTER = "Party: {party_name}"
     CRIT_HIT_HEADER = "🎯 **CRITICAL HIT!**\n"
@@ -240,27 +242,25 @@ class Strings:
     INSPIRATION_NOT_HELD = "**{char_name}** does not currently have Inspiration."
     INSPIRATION_STATUS_HAS = "✨ **{char_name}** has Inspiration."
     INSPIRATION_STATUS_NONE = "**{char_name}** does not have Inspiration."
-    ERROR_GM_ONLY_INSPIRATION = "Only a GM can grant or remove Inspiration for other party members."
-    PARTY_SETTINGS_INVALID_CRIT_RULE = (
-        "❌ Invalid crit rule. Valid options: `double_dice`, `perkins`, `double_damage`, `max_damage`, `none`."
+    ERROR_GM_ONLY_INSPIRATION = (
+        "Only a GM can grant or remove Inspiration for other party members."
     )
+    PARTY_SETTINGS_INVALID_CRIT_RULE = "❌ Invalid crit rule. Valid options: `double_dice`, `perkins`, `double_damage`, `max_damage`, `none`."
 
     # Weapon Commands
-    WEAPON_SEARCH_HEADER = "Weapon search results for \"{query}\":"
+    WEAPON_SEARCH_HEADER = 'Weapon search results for "{query}":'
     WEAPON_SEARCH_FOOTER = (
         "\n\nUse `/weapon add <number>` to add one to **{char_name}**.\n"
         "*(Results expire in 5 minutes)*"
     )
     WEAPON_SEARCH_NO_RESULTS = (
-        "❌ No weapons found matching \"{query}\" in the 2024 SRD. "
+        '❌ No weapons found matching "{query}" in the 2024 SRD. '
         "Try a different search term."
     )
     WEAPON_SEARCH_SESSION_NOT_FOUND = (
         "❌ No weapon search results found. Run `/weapon search` first."
     )
-    WEAPON_SEARCH_ERROR = (
-        "❌ Could not reach the Open5e API. Please try again later."
-    )
+    WEAPON_SEARCH_ERROR = "❌ Could not reach the Open5e API. Please try again later."
     WEAPON_ADD_SUCCESS_HEADER = "✅ Added **{name}** to **{char_name}**."
     WEAPON_ADD_UPDATED_HEADER = "✅ Updated **{name}** on **{char_name}**."
     WEAPON_ADD_HIT_LINE = "**To-hit**: {hit_modifier:+d} ({breakdown})"
@@ -274,13 +274,22 @@ class Strings:
     ERROR_DICE_LIMIT = "Too many dice or too many sides! Keep it reasonable."
 
     # Roll Commands
-    ROLL_RESULT_DICE = "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**"
+    ROLL_RESULT_DICE = (
+        "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**"
+    )
     # {d20_roll} now accepts either "d20(15)" or "d20[15↑,9]" (advantage)
-    ROLL_RESULT_CHAR = "**{char_name}**: {label} `{d20_roll} + {modifier}` = **{total}**"
-    ROLL_RESULT_SIMPLE = "**{char_name}**: `{notation}` ({rolls}){modifier} = **{total}**"
+    ROLL_RESULT_CHAR = (
+        "**{char_name}**: {label} `{d20_roll} + {modifier}` = **{total}**"
+    )
+    ROLL_RESULT_SIMPLE = (
+        "**{char_name}**: `{notation}` ({rolls}){modifier} = **{total}**"
+    )
     ROLL_RESULT_CHAR_EXPR = "**{char_name}**: `{notation}` → {breakdown} = **{total}**"
     ROLL_RESULT_DICE_EXPR = "🎲 **{notation}**\n{breakdown}\n**Total: {total}**"
     ROLL_ERROR_CHAR = "**{char_name}**: ❌ Error: {error}"
+
+    GMROLL_GM_MESSAGE = "🎲 **{char_name}** privately rolled **{roll}** on **{notation}**."
+    GMROLL_PLAYER_MESSAGE = "**{char_name}**: `{notation}` → {breakdown} = **{total}**"
 
     # Character Commands
     CHAR_CREATE_NAME_LIMIT = "Character name cannot exceed 100 characters."
@@ -333,10 +342,14 @@ class Strings:
     # Class Commands
     CHAR_CLASS_ADDED = "**{char_name}** is now a level **{level}** **{char_class}**! (Total level: {total_level})"
     CHAR_CLASS_UPDATED = "**{char_name}**'s **{char_class}** level updated to **{level}**. (Total level: {total_level})"
-    CHAR_CLASS_REMOVED = "Removed **{char_class}** from **{char_name}**. (Total level: {total_level})"
+    CHAR_CLASS_REMOVED = (
+        "Removed **{char_class}** from **{char_name}**. (Total level: {total_level})"
+    )
     CHAR_CLASS_NOT_FOUND = "**{char_name}** does not have the **{char_class}** class."
     CHAR_CLASS_TOTAL_LEVEL_EXCEEDED = "Adding {level} level(s) of **{char_class}** would bring **{char_name}** above level 20 (current total: {current_total})."
-    ERROR_CHAR_NO_CLASSES = "**{char_name}** has no class assigned yet. Use `/character class_add` first."
+    ERROR_CHAR_NO_CLASSES = (
+        "**{char_name}** has no class assigned yet. Use `/character class_add` first."
+    )
     CHAR_SKILL_UNKNOWN = "Unknown skill: {skill}"
     CHAR_SKILL_UPDATED = "Updated **{skill}** for **{char_name}** to **{status}**"
     CHAR_LIST_NONE = "You don't have any characters in this server."
@@ -347,22 +360,32 @@ class Strings:
 
     # Party Commands
     PARTY_CREATE_SUCCESS_EMPTY = "Empty party '**{party_name}**' created successfully!"
-    PARTY_CREATE_SUCCESS_MEMBERS = "Party '**{party_name}**' created successfully with {count} characters!"
+    PARTY_CREATE_SUCCESS_MEMBERS = (
+        "Party '**{party_name}**' created successfully with {count} characters!"
+    )
     PARTY_NOT_FOUND = "Party '**{party_name}**' not found."
-    PARTY_ALREADY_EXISTS = "A party named '**{party_name}**' already exists in this server."
+    PARTY_ALREADY_EXISTS = (
+        "A party named '**{party_name}**' already exists in this server."
+    )
     PARTY_MEMBER_ALREADY_IN = "**{character_name}** is already in the party."
     PARTY_MEMBER_ADDED = "Added **{character_name}** (owned by <@{discord_id}>) to party '**{party_name}**'."
     PARTY_MEMBER_REMOVED = "Removed **{character_name}** from party '**{party_name}**'."
     PARTY_ACTIVE_SET = "Set '**{party_name}**' as your active party."
-    PARTY_ACTIVE_VIEW = "Your active party is '**{party_name}**'.\nMembers: {char_names}"
+    PARTY_ACTIVE_VIEW = (
+        "Your active party is '**{party_name}**'.\nMembers: {char_names}"
+    )
     PARTY_ACTIVE_NONE = "You don't have an active party set."
-    PARTY_ACTIVE_MEMBER_NOT_FOUND = "Member '**{member_name}**' not found in your active party."
+    PARTY_ACTIVE_MEMBER_NOT_FOUND = (
+        "Member '**{member_name}**' not found in your active party."
+    )
     PARTY_ROLL_HEADER = "🎲 **Party Roll: {notation}** (Party: {party_name})\n"
     PARTY_VIEW_TITLE = "Party: {party_name}"
     PARTY_VIEW_GM = "GMs"
     PARTY_VIEW_MEMBERS = "Members"
     PARTY_VIEW_EMPTY = "This party has no members."
-    PARTY_VIEW_MEMBER_LINE = "● **{char_name}** (Level {char_level}) - Controlled by <@{discord_id}>"
+    PARTY_VIEW_MEMBER_LINE = (
+        "● **{char_name}** (Level {char_level}) - Controlled by <@{discord_id}>"
+    )
     PARTY_DELETE_SUCCESS = "Party '**{party_name}**' deleted successfully."
     PARTY_ROLL_EMPTY = "Your active party is empty."
 
@@ -371,11 +394,15 @@ class Strings:
     ERROR_GM_ALREADY = "<@{discord_id}> is already a GM of '**{party_name}**'."
     ERROR_GM_NOT_IN_PARTY = "<@{discord_id}> is not a GM of '**{party_name}**'."
     ERROR_GM_LAST = "Cannot remove the last GM from a party."
-    ERROR_GM_TARGET_NOT_REGISTERED = "That user has no account in this bot. They need to use a command first."
+    ERROR_GM_TARGET_NOT_REGISTERED = (
+        "That user has no account in this bot. They need to use a command first."
+    )
     ERROR_GM_ONLY_ADD_GM = "Only a GM of this party can add other GMs."
     ERROR_GM_ONLY_REMOVE_GM = "Only a GM of this party can remove GMs."
 
-    ERROR_GM_ONLY_PARTY_CREATE = "Only the GM of the party can create an encounter."  # reused in encounter
+    ERROR_GM_ONLY_PARTY_CREATE = (
+        "Only the GM of the party can create an encounter."  # reused in encounter
+    )
     ERROR_GM_ONLY_PARTY_ADD = "Only a GM of the party can add members."
     ERROR_GM_ONLY_PARTY_REMOVE = "Only a GM of the party can remove members."
     ERROR_GM_ONLY_PARTY_DELETE = "Only a GM can delete the party."
@@ -384,9 +411,7 @@ class Strings:
     ERROR_PARTY_SET_ACTIVE_FIRST = "Set an active party first with `/party active`."
 
     # Character deletion confirmations
-    CHAR_DELETE_CONFIRM = (
-        "⚠️ Are you sure you want to permanently delete **{name}**? This cannot be undone."
-    )
+    CHAR_DELETE_CONFIRM = "⚠️ Are you sure you want to permanently delete **{name}**? This cannot be undone."
     CHAR_DELETE_ENCOUNTER_CONFIRM = (
         "⚠️ **{name}** is currently in the active encounter '**{encounter_name}**'.\n"
         "Deleting them will also remove their turn from the initiative order.\n\n"
@@ -403,9 +428,7 @@ class Strings:
     PARTY_CHAR_REMOVE_CONFIRM = (
         "⚠️ Are you sure you want to remove **{char_name}** from '**{party_name}**'?"
     )
-    PARTY_REMOVE_ENCOUNTER_CONFIRMED = (
-        "Removed **{char_name}** from party '**{party_name}**' and from the initiative order."
-    )
+    PARTY_REMOVE_ENCOUNTER_CONFIRMED = "Removed **{char_name}** from party '**{party_name}**' and from the initiative order."
     PARTY_REMOVE_CANCELLED = "Removal cancelled."
     PARTY_DELETE_CONFIRM = (
         "⚠️ Are you sure you want to permanently delete party '**{party_name}**'? "
@@ -417,9 +440,7 @@ class Strings:
         "Are you sure?"
     )
     PARTY_DELETE_CANCELLED = "Deletion cancelled."
-    PARTY_DELETE_ENCOUNTER_COMPLETED = (
-        "Open encounter '**{encounter_name}**' was automatically completed before the party was deleted."
-    )
+    PARTY_DELETE_ENCOUNTER_COMPLETED = "Open encounter '**{encounter_name}**' was automatically completed before the party was deleted."
     PARTY_GM_REMOVE_SELF_CONFIRM = (
         "⚠️ Are you sure you want to remove yourself as GM of '**{party_name}**'? "
         "You will no longer be able to manage this party."
@@ -430,35 +451,59 @@ class Strings:
     ENCOUNTER_ORDER_HEADER = "⚔️ **{name}** | Round {round_number}"
     ENCOUNTER_TURN_PING = "{ping} It is now **{name}**'s turn. When you have described your actions and made your rolls, end your turn with `/encounter next`."
     ENCOUNTER_CREATED = "⚔️ Encounter **{name}** created! Add enemies with `/encounter enemy`, then start combat with `/encounter start`."
-    ENCOUNTER_ALREADY_OPEN = "This party already has an open encounter. End it with `/encounter end` first."
-    ENCOUNTER_ENEMY_ADDED = "Added **{name}** (Initiative +{init_mod}, HP {hp}) to **{encounter_name}**."
+    ENCOUNTER_ALREADY_OPEN = (
+        "This party already has an open encounter. End it with `/encounter end` first."
+    )
+    ENCOUNTER_ENEMY_ADDED = (
+        "Added **{name}** (Initiative +{init_mod}, HP {hp}) to **{encounter_name}**."
+    )
     ENCOUNTER_ENEMY_ADDED_SINGLE = "Added **{name}** to **{encounter_name}** (Init: {init_mod:+d}, HP: {hp}, AC: {ac_str})."
-    ENCOUNTER_ENEMIES_ADDED_BULK = "Added {count}× **{type_name}** to **{encounter_name}**:\n{enemy_lines}"
+    ENCOUNTER_ENEMIES_ADDED_BULK = (
+        "Added {count}× **{type_name}** to **{encounter_name}**:\n{enemy_lines}"
+    )
     ENCOUNTER_ENEMY_BULK_LINE = "• **{name}** — HP: {hp}{ac_part}"
     ENCOUNTER_INVALID_HP = "❌ Invalid HP value `{value}`. Use a number (e.g. `15`) or dice formula (e.g. `2d8+4`)."
     ENCOUNTER_ENEMY_COUNT_OVER_LIMIT = "❌ Cannot add {count} {enemy_word}: the encounter limit is {limit} and {remaining} slot(s) remain."
     ENCOUNTER_ALREADY_STARTED = "The encounter has already started."
     ENCOUNTER_NOT_STARTED = "Enemies can only be added before the encounter starts."
-    ENCOUNTER_NO_ENEMIES = "Add at least one enemy with `/encounter enemy` before starting."
+    ENCOUNTER_NO_ENEMIES = (
+        "Add at least one enemy with `/encounter enemy` before starting."
+    )
     ENCOUNTER_PARTY_NO_MEMBERS = "The party has no members."
     ENCOUNTER_NOT_ACTIVE = "There is no active encounter on this server."
-    ENCOUNTER_NEXT_TURN_DENIED = "You can only use `/encounter next` on your own turn, or if you are the GM."
+    ENCOUNTER_NEXT_TURN_DENIED = (
+        "You can only use `/encounter next` on your own turn, or if you are the GM."
+    )
     ENCOUNTER_TURN_ADVANCED = "Turn advanced."
     ENCOUNTER_ENDED = "⚔️ Encounter **{encounter_name}** has ended."
     ENCOUNTER_NO_ACTIVE_TO_END = "No active encounter to end."
     ENCOUNTER_VIEW_TITLE = "⚔️ {name}"
     ENCOUNTER_VIEW_DESC = "Round {round_number}"
     ENCOUNTER_VIEW_ORDER_FIELD = "Initiative Order"
-    
-    ENCOUNTER_DAMAGE_HP_UPDATE = "⚔️ **{name}** takes {damage} damage. HP: {current_hp}/{max_hp}"
-    ENCOUNTER_DAMAGE_ENEMY_DEFEATED = "💀 **{name}** has been defeated and removed from the initiative order!"
-    ENCOUNTER_ALL_ENEMIES_DEFEATED = "🏆 All enemies have been defeated! Encounter **{encounter_name}** has ended."
+
+    ENCOUNTER_DAMAGE_HP_UPDATE = (
+        "⚔️ **{name}** takes {damage} damage. HP: {current_hp}/{max_hp}"
+    )
+    ENCOUNTER_DAMAGE_ENEMY_DEFEATED = (
+        "💀 **{name}** has been defeated and removed from the initiative order!"
+    )
+    ENCOUNTER_ALL_ENEMIES_DEFEATED = (
+        "🏆 All enemies have been defeated! Encounter **{encounter_name}** has ended."
+    )
     ENCOUNTER_ENEMY_PLACEMENT_PROMPT = "⚔️ **{encounter_name}** is active. Where should {enemy_description} enter initiative?"
-    ENCOUNTER_ENEMY_ADDED_TOP = "✅ {enemy_description} added at the **top** of initiative."
-    ENCOUNTER_ENEMY_ADDED_BOTTOM = "✅ {enemy_description} added at the **bottom** of initiative."
-    ENCOUNTER_ENEMY_ADDED_AFTER_CURRENT = "✅ {enemy_description} added **after the current turn**."
+    ENCOUNTER_ENEMY_ADDED_TOP = (
+        "✅ {enemy_description} added at the **top** of initiative."
+    )
+    ENCOUNTER_ENEMY_ADDED_BOTTOM = (
+        "✅ {enemy_description} added at the **bottom** of initiative."
+    )
+    ENCOUNTER_ENEMY_ADDED_AFTER_CURRENT = (
+        "✅ {enemy_description} added **after the current turn**."
+    )
     ENCOUNTER_ENEMY_ADDED_ROLLED = "✅ {enemy_description} rolled into initiative."
-    ENCOUNTER_ENEMY_PLACEMENT_EXPIRED = "❌ No placement selected — no enemies were added."
+    ENCOUNTER_ENEMY_PLACEMENT_EXPIRED = (
+        "❌ No placement selected — no enemies were added."
+    )
     ENCOUNTER_ENEMY_JOINED_PUBLIC = "⚔️ {enemy_description} joins **{encounter_name}**!"
     ENCOUNTER_DAMAGE_INVALID_POSITION = "❌ Position {position} is not valid. The initiative order has {count} position(s)."
     ENCOUNTER_DAMAGE_NOT_ENEMY = "❌ Position {position} is a player character. Use `/hp damage` for player characters."
@@ -468,12 +513,16 @@ class Strings:
     ENCOUNTER_VIEW_CHARACTER_HP = "HP: {current_hp}/{max_hp}"
     ENCOUNTER_VIEW_CHARACTER_HP_UNKNOWN = "HP: unknown"
     ENCOUNTER_VIEW_GM_DETAILS_TITLE = "GM Details — {name}"
-    ENCOUNTER_VIEW_GM_ENEMY_VALUE = "HP: {current_hp}/{max_hp} | AC: {ac_str} | Init mod: {init_mod:+d}"
+    ENCOUNTER_VIEW_GM_ENEMY_VALUE = (
+        "HP: {current_hp}/{max_hp} | AC: {ac_str} | Init mod: {init_mod:+d}"
+    )
     ERROR_GM_ONLY_ENCOUNTER_CREATE = "Only the GM of the party can create an encounter."
     ERROR_GM_ONLY_ENEMY_ADD = "Only the GM can add enemies."
     ERROR_GM_ONLY_ENCOUNTER_DAMAGE = "Only a GM can apply damage to enemies."
     ERROR_GM_ONLY_ENCOUNTER_END = "Only the GM can end the encounter."
-    ERROR_NO_PENDING_ENCOUNTER = "No pending encounter found. Create one with `/encounter create`."
+    ERROR_NO_PENDING_ENCOUNTER = (
+        "No pending encounter found. Create one with `/encounter create`."
+    )
 
     # Party Settings
     PARTY_SETTINGS_UPDATED = (
@@ -503,9 +552,7 @@ class Strings:
     PARTY_LIST_EMPTY = "No parties have been created on this server yet."
 
     # Death Save Strings
-    DEATH_SAVE_NOT_DYING = (
-        "❌ **{char_name}** is not currently dying — death saves are only rolled at 0 HP."
-    )
+    DEATH_SAVE_NOT_DYING = "❌ **{char_name}** is not currently dying — death saves are only rolled at 0 HP."
     DEATH_SAVE_RESULT_SUCCESS = (
         "🎲 **Death Save — Success** (rolled {roll}): "
         "{successes}/3 successes, {failures}/3 failures."
@@ -514,10 +561,10 @@ class Strings:
         "🎲 **Death Save — Failure** (rolled {roll}): "
         "{successes}/3 successes, {failures}/3 failures."
     )
-    DEATH_SAVE_STABILIZED = (
-        "✅ **{char_name} has stabilized!** Three successes — death save counters reset."
+    DEATH_SAVE_STABILIZED = "✅ **{char_name} has stabilized!** Three successes — death save counters reset."
+    DEATH_SAVE_SLAIN = (
+        ":skull: **{char_name} has been slain** after three failed death saves."
     )
-    DEATH_SAVE_SLAIN = ":skull: **{char_name} has been slain** after three failed death saves."
     DEATH_SAVE_NAT20_HEAL = (
         "🌟 **Natural 20!** {char_name} regains 1 HP and is no longer dying."
     )
@@ -537,9 +584,11 @@ class Strings:
     )
     DEATH_SAVE_COUNTER_DISPLAY = "(Dying: {successes}✓ {failures}✗)"
 
-
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]
-    NAT_1_ATTACK = ["That'll be a miss", "Oops; did you intend to hit an ally? Or was that just happenstance?"]
+    NAT_1_ATTACK = [
+        "That'll be a miss",
+        "Oops; did you intend to hit an ally? Or was that just happenstance?",
+    ]
     NAT_20_SKILLCHECK = []
     NAT_1_SKILLCHECK = []
     NAT_20_SAVE = []

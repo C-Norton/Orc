@@ -6,6 +6,7 @@ from utils.logging_config import get_logger
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
 import sqlite3
+
 logger = get_logger(__name__)
 
 # Database path (relative to the project root)
@@ -17,6 +18,7 @@ engine = create_engine(DB_PATH)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):

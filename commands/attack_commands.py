@@ -4,7 +4,16 @@ from discord.ext import commands
 from typing import List, Optional
 import random
 from database import SessionLocal
-from models import User, Server, Character, Attack, Party, Encounter, EncounterTurn, Enemy
+from models import (
+    User,
+    Server,
+    Character,
+    Attack,
+    Party,
+    Encounter,
+    EncounterTurn,
+    Enemy,
+)
 from enums.encounter_status import EncounterStatus
 from dice_roller import roll_dice
 from enums.crit_rule import CritRule
@@ -28,7 +37,9 @@ def register_attack_commands(bot: commands.Bot) -> None:
         name="attack", description="Manage and roll attacks for your active character"
     )
 
-    @attack_group.command(name="add", description="Add or update an attack on your character")
+    @attack_group.command(
+        name="add", description="Add or update an attack on your character"
+    )
     @app_commands.describe(
         name="Name of the attack (e.g., Longsword)",
         hit_mod="Bonus to hit (e.g., 5)",
@@ -53,14 +64,18 @@ def register_attack_commands(bot: commands.Bot) -> None:
             roll_dice(damage_formula)  # raises ValueError on invalid formula
 
             if not char:
-                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                )
                 return
 
             attack = db.query(Attack).filter_by(character_id=char.id, name=name).first()
             if attack:
                 attack.hit_modifier = hit_mod
                 attack.damage_formula = damage_formula
-                msg = Strings.ATTACK_UPDATED.format(attack_name=name, char_name=char.name)
+                msg = Strings.ATTACK_UPDATED.format(
+                    attack_name=name, char_name=char.name
+                )
             else:
                 attack_count = db.query(Attack).filter_by(character_id=char.id).count()
                 if attack_count >= MAX_ATTACKS_PER_CHARACTER:
@@ -85,7 +100,9 @@ def register_attack_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(msg)
         except ValueError as e:
             logger.error(f"Error adding attack for user {interaction.user.id}: {e}")
-            await interaction.response.send_message(f"Error adding attack: {e}.", ephemeral=True)
+            await interaction.response.send_message(
+                f"Error adding attack: {e}.", ephemeral=True
+            )
         finally:
             db.close()
 
@@ -118,23 +135,31 @@ def register_attack_commands(bot: commands.Bot) -> None:
             )
 
             if not char:
-                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                )
                 return
 
-            attack_obj = db.query(Attack).filter_by(character_id=char.id, name=attack_name).first()
+            attack_obj = (
+                db.query(Attack)
+                .filter_by(character_id=char.id, name=attack_name)
+                .first()
+            )
             if not attack_obj:
                 attack_obj = next(
-                    (a for a in char.attacks if a.name.lower() == attack_name.lower()), None
+                    (a for a in char.attacks if a.name.lower() == attack_name.lower()),
+                    None,
                 )
                 if not attack_obj:
                     await interaction.response.send_message(
-                        Strings.ATTACK_NOT_FOUND.format(attack_name=attack_name), ephemeral=True
+                        Strings.ATTACK_NOT_FOUND.format(attack_name=attack_name),
+                        ephemeral=True,
                     )
                     return
 
             d20_roll = random.randint(1, 20)
             hit_total = d20_roll + attack_obj.hit_modifier
-            is_crit = (d20_roll == 20)
+            is_crit = d20_roll == 20
 
             # ----------------------------------------------------------------
             # Determine crit rule and roll damage
@@ -146,7 +171,9 @@ def register_attack_commands(bot: commands.Bot) -> None:
 
             try:
                 if is_crit:
-                    crit_result = apply_crit_damage(attack_obj.damage_formula, crit_rule)
+                    crit_result = apply_crit_damage(
+                        attack_obj.damage_formula, crit_rule
+                    )
                     rolls = crit_result.rolls
                     modifier = crit_result.modifier
                     damage_total = crit_result.total
@@ -167,11 +194,17 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            crit_prefix = Strings.CRIT_HIT_HEADER if is_crit and crit_rule != CritRule.NONE else ""
+            crit_prefix = (
+                Strings.CRIT_HIT_HEADER
+                if is_crit and crit_rule != CritRule.NONE
+                else ""
+            )
             if grants_inspiration:
                 char.inspiration = True
                 db.commit()
-                inspiration_suffix = Strings.CRIT_PERKINS_INSPIRATION.format(char_name=char.name)
+                inspiration_suffix = Strings.CRIT_PERKINS_INSPIRATION.format(
+                    char_name=char.name
+                )
             else:
                 inspiration_suffix = ""
 
@@ -225,10 +258,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 return
 
             target_turn = next(
-                (
-                    t for t in encounter.turns
-                    if t.enemy_id and t.enemy.name == target
-                ),
+                (t for t in encounter.turns if t.enemy_id and t.enemy.name == target),
                 None,
             )
 
@@ -314,7 +344,9 @@ def register_attack_commands(bot: commands.Bot) -> None:
                         f"({new_hp}/{enemy.max_hp} HP) in '{encounter.name}'"
                     )
 
-                await notify_gms_hp_update(party, gm_message, interaction.client, encounter)
+                await notify_gms_hp_update(
+                    party, gm_message, interaction.client, encounter
+                )
 
             else:
                 # Miss — no HP change
@@ -392,7 +424,9 @@ def register_attack_commands(bot: commands.Bot) -> None:
         finally:
             db.close()
 
-    @attack_group.command(name="list", description="List all attacks for your active character")
+    @attack_group.command(
+        name="list", description="List all attacks for your active character"
+    )
     async def attack_list(interaction: discord.Interaction) -> None:
         logger.debug(
             f"Command /attack list called by {interaction.user} (ID: {interaction.user.id}) "
@@ -408,7 +442,9 @@ def register_attack_commands(bot: commands.Bot) -> None:
             )
 
             if not char:
-                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                )
                 return
 
             if not char.attacks:

@@ -18,7 +18,7 @@ from utils.rate_limiter import check_rate_limit
 
 # Load environment variables
 dotenv.load_dotenv()
-TOKEN = os.getenv('DISCORD_API_TOKEN')
+TOKEN = os.getenv("DISCORD_API_TOKEN")
 
 # Setup logging
 setup_logging()
@@ -28,9 +28,10 @@ logger = get_logger(__name__)
 intents = discord.Intents.default()
 intents.message_content = True
 
+
 class DnDBot(commands.Bot):
     def __init__(self) -> None:
-        super().__init__(command_prefix='!', intents=intents)
+        super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self) -> None:
         """Called by the bot to perform asynchronous setup tasks."""
@@ -67,8 +68,8 @@ class DnDBot(commands.Bot):
                     logger.error(f"Failed to send rate limit DM to owner: {e}")
 
     async def on_ready(self) -> None:
-        logger.info(f'Logged in as {self.user} (ID: {self.user.id})')
-        logger.debug('Bot is ready and running')
+        logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
+        logger.debug("Bot is ready and running")
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Update the database when the bot joins a new server."""
@@ -84,6 +85,7 @@ class DnDBot(commands.Bot):
             logger.error(f"Error on guild join {guild.name}: {e}")
         finally:
             db.close()
+
 
 bot = DnDBot()
 

@@ -16,7 +16,7 @@ SKILL_TO_STAT = {
     "Religion": "intelligence",
     "Sleight of Hand": "dexterity",
     "Stealth": "dexterity",
-    "Survival": "wisdom"
+    "Survival": "wisdom",
 }
 
 STAT_NAMES = {
@@ -31,5 +31,5 @@ STAT_NAMES = {
     "con": "constitution",
     "int": "intelligence",
     "wis": "wisdom",
-    "cha": "charisma"
+    "cha": "charisma",
 }

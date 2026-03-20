@@ -9,7 +9,10 @@ from tests.conftest import make_interaction
 # /attack add
 # ---------------------------------------------------------------------------
 
-async def test_add_attack_creates_new(attack_bot, sample_character, interaction, session_factory):
+
+async def test_add_attack_creates_new(
+    attack_bot, sample_character, interaction, session_factory
+):
     cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Longsword", hit_mod=5, damage_formula="1d8+3")
 
@@ -26,8 +29,15 @@ async def test_add_attack_creates_new(attack_bot, sample_character, interaction,
     verify.close()
 
 
-async def test_add_attack_updates_existing(attack_bot, sample_character, interaction, db_session, session_factory):
-    existing = Attack(character_id=sample_character.id, name="Dagger", hit_modifier=3, damage_formula="1d4+1")
+async def test_add_attack_updates_existing(
+    attack_bot, sample_character, interaction, db_session, session_factory
+):
+    existing = Attack(
+        character_id=sample_character.id,
+        name="Dagger",
+        hit_modifier=3,
+        damage_formula="1d4+1",
+    )
     db_session.add(existing)
     db_session.commit()
 
@@ -43,7 +53,9 @@ async def test_add_attack_updates_existing(attack_bot, sample_character, interac
     verify.close()
 
 
-async def test_add_attack_invalid_formula_rejected(attack_bot, sample_character, interaction):
+async def test_add_attack_invalid_formula_rejected(
+    attack_bot, sample_character, interaction
+):
     cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Sword", hit_mod=5, damage_formula="notadice")
 
@@ -51,7 +63,9 @@ async def test_add_attack_invalid_formula_rejected(attack_bot, sample_character,
     assert kwargs.get("ephemeral") is True
 
 
-async def test_add_attack_no_character(attack_bot, sample_user, sample_server, interaction):
+async def test_add_attack_no_character(
+    attack_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Sword", hit_mod=5, damage_formula="1d8")
 
@@ -63,8 +77,16 @@ async def test_add_attack_no_character(attack_bot, sample_user, sample_server, i
 # /attack roll
 # ---------------------------------------------------------------------------
 
+
 async def test_attack_success(attack_bot, sample_character, interaction, db_session):
-    db_session.add(Attack(character_id=sample_character.id, name="Longsword", hit_modifier=5, damage_formula="1d8+3"))
+    db_session.add(
+        Attack(
+            character_id=sample_character.id,
+            name="Longsword",
+            hit_modifier=5,
+            damage_formula="1d8+3",
+        )
+    )
     db_session.commit()
 
     cb = get_callback(attack_bot, "attack", "roll")
@@ -74,17 +96,30 @@ async def test_attack_success(attack_bot, sample_character, interaction, db_sess
     msg = interaction.response.send_message.call_args.args[0]
     assert "Aldric" in msg
     assert "Longsword" in msg
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
-async def test_attack_case_insensitive_lookup(attack_bot, sample_character, interaction, db_session):
-    db_session.add(Attack(character_id=sample_character.id, name="Longsword", hit_modifier=5, damage_formula="1d8"))
+async def test_attack_case_insensitive_lookup(
+    attack_bot, sample_character, interaction, db_session
+):
+    db_session.add(
+        Attack(
+            character_id=sample_character.id,
+            name="Longsword",
+            hit_modifier=5,
+            damage_formula="1d8",
+        )
+    )
     db_session.commit()
 
     cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="longsword")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_attack_not_found(attack_bot, sample_character, interaction):
@@ -105,8 +140,18 @@ async def test_attack_no_character(attack_bot, sample_user, sample_server, inter
 # /attack list
 # ---------------------------------------------------------------------------
 
-async def test_attacks_list_sends_embed(attack_bot, sample_character, interaction, db_session):
-    db_session.add(Attack(character_id=sample_character.id, name="Bow", hit_modifier=4, damage_formula="1d6+2"))
+
+async def test_attacks_list_sends_embed(
+    attack_bot, sample_character, interaction, db_session
+):
+    db_session.add(
+        Attack(
+            character_id=sample_character.id,
+            name="Bow",
+            hit_modifier=4,
+            damage_formula="1d6+2",
+        )
+    )
     db_session.commit()
 
     cb = get_callback(attack_bot, "attack", "list")
@@ -125,7 +170,9 @@ async def test_attacks_list_empty(attack_bot, sample_character, interaction):
     assert "no attacks" in msg.lower()
 
 
-async def test_attacks_list_no_character(attack_bot, sample_user, sample_server, interaction):
+async def test_attacks_list_no_character(
+    attack_bot, sample_user, sample_server, interaction
+):
     cb = get_callback(attack_bot, "attack", "list")
     await cb(interaction)
 
@@ -136,6 +183,7 @@ async def test_attacks_list_no_character(attack_bot, sample_user, sample_server,
 # Resource limits
 # ---------------------------------------------------------------------------
 
+
 async def test_add_attack_over_limit_rejected(
     mocker, attack_bot, sample_character, db_session, interaction
 ):
@@ -143,12 +191,14 @@ async def test_add_attack_over_limit_rejected(
     mocker.patch("commands.attack_commands.MAX_ATTACKS_PER_CHARACTER", 2)
 
     for i in range(2):
-        db_session.add(Attack(
-            character_id=sample_character.id,
-            name=f"Attack{i}",
-            hit_modifier=0,
-            damage_formula="1d4",
-        ))
+        db_session.add(
+            Attack(
+                character_id=sample_character.id,
+                name=f"Attack{i}",
+                hit_modifier=0,
+                damage_formula="1d4",
+            )
+        )
     db_session.commit()
 
     cb = get_callback(attack_bot, "attack", "add")
@@ -165,18 +215,22 @@ async def test_add_attack_update_existing_ignores_limit(
     """Updating an existing attack is always allowed even when at the cap."""
     mocker.patch("commands.attack_commands.MAX_ATTACKS_PER_CHARACTER", 1)
 
-    db_session.add(Attack(
-        character_id=sample_character.id,
-        name="Longsword",
-        hit_modifier=3,
-        damage_formula="1d8+3",
-    ))
+    db_session.add(
+        Attack(
+            character_id=sample_character.id,
+            name="Longsword",
+            hit_modifier=3,
+            damage_formula="1d8+3",
+        )
+    )
     db_session.commit()
 
     cb = get_callback(attack_bot, "attack", "add")
     await cb(interaction, name="Longsword", hit_mod=5, damage_formula="1d8+5")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -210,8 +264,14 @@ def _add_longsword(db_session, character, hit_modifier=5):
 
 
 async def test_attack_roll_targeted_hit_reduces_enemy_hp(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, session_factory, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    session_factory,
+    interaction,
+    mocker,
 ):
     """A hit reduces the enemy's current_hp by the rolled damage amount."""
     sample_enemy.ac = 12
@@ -232,8 +292,14 @@ async def test_attack_roll_targeted_hit_reduces_enemy_hp(
 
 
 async def test_attack_roll_targeted_miss_no_hp_change(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, session_factory, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    session_factory,
+    interaction,
+    mocker,
 ):
     """A miss leaves the enemy's HP unchanged."""
     sample_enemy.ac = 20
@@ -254,8 +320,13 @@ async def test_attack_roll_targeted_miss_no_hp_change(
 
 
 async def test_attack_roll_targeted_hit_message_not_ephemeral(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """A hit produces a public (non-ephemeral) message."""
     sample_enemy.ac = 12
@@ -268,12 +339,19 @@ async def test_attack_roll_targeted_hit_message_not_ephemeral(
     cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Longsword", target="Goblin")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_attack_roll_targeted_miss_message_not_ephemeral(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """A miss also produces a public message."""
     sample_enemy.ac = 20
@@ -286,12 +364,19 @@ async def test_attack_roll_targeted_miss_message_not_ephemeral(
     cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Longsword", target="Goblin")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_attack_roll_targeted_hit_message_shows_hit_and_damage(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """The public hit message contains the enemy name, 'HIT', and the damage total."""
     sample_enemy.ac = 12
@@ -311,8 +396,13 @@ async def test_attack_roll_targeted_hit_message_shows_hit_and_damage(
 
 
 async def test_attack_roll_targeted_miss_message_hides_damage(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """The public miss message shows 'MISS' and does not include the damage roll."""
     sample_enemy.ac = 20
@@ -332,8 +422,14 @@ async def test_attack_roll_targeted_miss_message_hides_damage(
 
 
 async def test_attack_roll_targeted_enemy_at_zero_removed_from_turns(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, session_factory, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    session_factory,
+    interaction,
+    mocker,
 ):
     """An enemy reduced to 0 HP is removed from the initiative order."""
     sample_enemy.ac = 12
@@ -359,8 +455,13 @@ async def test_attack_roll_targeted_enemy_at_zero_removed_from_turns(
 
 
 async def test_attack_roll_targeted_enemy_death_announced_publicly(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """Killing an enemy produces a public death-announcement followup."""
     sample_enemy.ac = 12
@@ -387,8 +488,13 @@ async def test_attack_roll_targeted_enemy_death_announced_publicly(
 
 
 async def test_attack_roll_targeted_notifies_gms_on_hit(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """After a hit the GM is DMed with the HP update."""
     sample_enemy.ac = 12
@@ -413,8 +519,13 @@ async def test_attack_roll_targeted_notifies_gms_on_hit(
 
 
 async def test_attack_roll_targeted_no_ac_shows_error(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """Targeting an enemy with no AC set returns an ephemeral error."""
     # sample_enemy.ac is None by default
@@ -432,8 +543,12 @@ async def test_attack_roll_targeted_no_ac_shows_error(
 
 
 async def test_attack_roll_targeted_enemy_not_found(
-    attack_bot, sample_active_encounter, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """Typing a name that doesn't match any enemy returns an ephemeral error."""
     _add_longsword(db_session, sample_character)
@@ -450,8 +565,12 @@ async def test_attack_roll_targeted_enemy_not_found(
 
 
 async def test_attack_roll_targeted_no_active_encounter(
-    attack_bot, sample_active_party, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_party,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """Providing a target when there is no active encounter returns an error."""
     _add_longsword(db_session, sample_character)
@@ -466,7 +585,10 @@ async def test_attack_roll_targeted_no_active_encounter(
 
 
 async def test_attack_roll_target_autocomplete_returns_enemy_names(
-    attack_bot, sample_active_encounter, sample_enemy, interaction,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    interaction,
 ):
     """Target autocomplete returns the names of enemies in the active encounter."""
     from commands.attack_commands import register_attack_commands
@@ -483,10 +605,15 @@ async def test_attack_roll_target_autocomplete_returns_enemy_names(
 
 
 async def test_attack_roll_target_autocomplete_filters_by_current(
-    attack_bot, sample_active_encounter, db_session, sample_pending_encounter, interaction,
+    attack_bot,
+    sample_active_encounter,
+    db_session,
+    sample_pending_encounter,
+    interaction,
 ):
     """Target autocomplete filters suggestions based on the current input."""
     from models import Enemy, EncounterTurn
+
     # Add a second enemy so we can verify filtering
     orc = Enemy(
         encounter_id=sample_active_encounter.id,
@@ -517,8 +644,12 @@ async def test_attack_roll_target_autocomplete_filters_by_current(
 
 
 async def test_attack_roll_without_target_unchanged(
-    attack_bot, sample_active_encounter, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """Omitting target produces the original non-targeted message with no HP change."""
     _add_longsword(db_session, sample_character)
@@ -532,22 +663,32 @@ async def test_attack_roll_without_target_unchanged(
     msg = interaction.response.send_message.call_args.args[0]
     assert "HIT" not in msg
     assert "MISS" not in msg
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ---------------------------------------------------------------------------
 # Critical hit tests
 # ---------------------------------------------------------------------------
 
+
 async def test_attack_roll_nat20_untargeted_shows_crit(
-    attack_bot, sample_character, db_session, interaction, mocker,
+    attack_bot,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """A natural 20 on an untargeted attack produces a CRITICAL HIT message."""
     _add_longsword(db_session, sample_character)
     mocker.patch("commands.attack_commands.random.randint", return_value=20)
-    mocker.patch("commands.attack_commands.apply_crit_damage", return_value=mocker.Mock(
-        rolls=[6, 6], modifier=3, total=15, grants_inspiration=False
-    ))
+    mocker.patch(
+        "commands.attack_commands.apply_crit_damage",
+        return_value=mocker.Mock(
+            rolls=[6, 6], modifier=3, total=15, grants_inspiration=False
+        ),
+    )
 
     cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Longsword", target=None)
@@ -557,7 +698,11 @@ async def test_attack_roll_nat20_untargeted_shows_crit(
 
 
 async def test_attack_roll_non_nat20_no_crit(
-    attack_bot, sample_character, db_session, interaction, mocker,
+    attack_bot,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """A non-20 roll does not produce a critical hit header."""
     _add_longsword(db_session, sample_character)
@@ -572,14 +717,22 @@ async def test_attack_roll_non_nat20_no_crit(
 
 
 async def test_attack_roll_nat20_perkins_shows_inspiration(
-    attack_bot, sample_active_encounter, sample_character, db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """Perkins crit rule adds an inspiration line to the attack message."""
     _add_longsword(db_session, sample_character)
     mocker.patch("commands.attack_commands.random.randint", return_value=20)
-    mocker.patch("commands.attack_commands.apply_crit_damage", return_value=mocker.Mock(
-        rolls=[5], modifier=3, total=8, grants_inspiration=True
-    ))
+    mocker.patch(
+        "commands.attack_commands.apply_crit_damage",
+        return_value=mocker.Mock(
+            rolls=[5], modifier=3, total=8, grants_inspiration=True
+        ),
+    )
 
     cb = get_callback(attack_bot, "attack", "roll")
     await cb(interaction, attack_name="Longsword", target=None)
@@ -589,14 +742,22 @@ async def test_attack_roll_nat20_perkins_shows_inspiration(
 
 
 async def test_attack_roll_nat20_none_rule_no_crit_header(
-    attack_bot, sample_active_encounter, sample_character, db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """CritRule.NONE suppresses the CRITICAL HIT header."""
     _add_longsword(db_session, sample_character)
     mocker.patch("commands.attack_commands.random.randint", return_value=20)
-    mocker.patch("commands.attack_commands.apply_crit_damage", return_value=mocker.Mock(
-        rolls=[4], modifier=3, total=7, grants_inspiration=False
-    ))
+    mocker.patch(
+        "commands.attack_commands.apply_crit_damage",
+        return_value=mocker.Mock(
+            rolls=[4], modifier=3, total=7, grants_inspiration=False
+        ),
+    )
     # apply_crit_damage is still called (for NONE it returns normal damage)
     # The header should NOT appear when grants_inspiration is False and rule is NONE
 
@@ -611,16 +772,24 @@ async def test_attack_roll_nat20_none_rule_no_crit_header(
 
 
 async def test_attack_roll_nat20_auto_hits_targeted(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """A natural 20 always hits regardless of the enemy's AC."""
     sample_enemy.ac = 30  # impossibly high AC
     _add_longsword(db_session, sample_character)
     mocker.patch("commands.attack_commands.random.randint", return_value=20)
-    mocker.patch("commands.attack_commands.apply_crit_damage", return_value=mocker.Mock(
-        rolls=[8], modifier=3, total=11, grants_inspiration=False
-    ))
+    mocker.patch(
+        "commands.attack_commands.apply_crit_damage",
+        return_value=mocker.Mock(
+            rolls=[8], modifier=3, total=11, grants_inspiration=False
+        ),
+    )
     interaction.client.fetch_user = mocker.AsyncMock(return_value=mocker.AsyncMock())
 
     cb = get_callback(attack_bot, "attack", "roll")
@@ -631,16 +800,25 @@ async def test_attack_roll_nat20_auto_hits_targeted(
 
 
 async def test_attack_roll_nat20_targeted_uses_crit_damage(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, session_factory, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    session_factory,
+    interaction,
+    mocker,
 ):
     """A natural 20 on a targeted attack applies crit damage to the enemy."""
     sample_enemy.ac = 12
     _add_longsword(db_session, sample_character)
     mocker.patch("commands.attack_commands.random.randint", return_value=20)
-    mocker.patch("commands.attack_commands.apply_crit_damage", return_value=mocker.Mock(
-        rolls=[6, 6], modifier=3, total=15, grants_inspiration=False
-    ))
+    mocker.patch(
+        "commands.attack_commands.apply_crit_damage",
+        return_value=mocker.Mock(
+            rolls=[6, 6], modifier=3, total=15, grants_inspiration=False
+        ),
+    )
     interaction.client.fetch_user = mocker.AsyncMock(return_value=mocker.AsyncMock())
 
     cb = get_callback(attack_bot, "attack", "roll")
@@ -653,8 +831,14 @@ async def test_attack_roll_nat20_targeted_uses_crit_damage(
 
 
 async def test_attack_roll_last_enemy_defeated_auto_ends_encounter(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, session_factory, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    session_factory,
+    interaction,
+    mocker,
 ):
     """Killing the last enemy via /attack roll auto-ends the encounter."""
     sample_enemy.ac = 12
@@ -676,8 +860,13 @@ async def test_attack_roll_last_enemy_defeated_auto_ends_encounter(
 
 
 async def test_attack_roll_last_enemy_defeated_sends_auto_end_message(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """A public victory announcement is sent when /attack roll kills the last enemy."""
     sample_enemy.ac = 12
@@ -698,12 +887,20 @@ async def test_attack_roll_last_enemy_defeated_sends_auto_end_message(
         for call in followup_calls
         if not call.kwargs.get("ephemeral")
     ]
-    assert any("All enemies" in msg or "ended" in msg.lower() for msg in public_messages)
+    assert any(
+        "All enemies" in msg or "ended" in msg.lower() for msg in public_messages
+    )
 
 
 async def test_attack_roll_non_last_enemy_defeated_does_not_end_encounter(
-    attack_bot, sample_active_encounter, sample_enemy, sample_character,
-    db_session, session_factory, interaction, mocker,
+    attack_bot,
+    sample_active_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    session_factory,
+    interaction,
+    mocker,
 ):
     """Killing one of several enemies via /attack roll leaves the encounter ACTIVE."""
     sample_enemy.ac = 12
@@ -718,12 +915,14 @@ async def test_attack_roll_non_last_enemy_defeated_does_not_end_encounter(
     )
     db_session.add(second_enemy)
     db_session.flush()
-    db_session.add(EncounterTurn(
-        encounter_id=sample_active_encounter.id,
-        enemy_id=second_enemy.id,
-        initiative_roll=5,
-        order_position=2,
-    ))
+    db_session.add(
+        EncounterTurn(
+            encounter_id=sample_active_encounter.id,
+            enemy_id=second_enemy.id,
+            initiative_roll=5,
+            order_position=2,
+        )
+    )
     db_session.commit()
 
     _add_longsword(db_session, sample_character)
@@ -749,15 +948,21 @@ async def test_attack_roll_non_last_enemy_defeated_does_not_end_encounter(
 
 
 async def test_attack_roll_negative_hit_modifier(
-    attack_bot, sample_character, db_session, interaction, mocker,
+    attack_bot,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """An attack with hit_modifier=-2 produces a correct hit_total and no crash."""
-    db_session.add(Attack(
-        character_id=sample_character.id,
-        name="OldSword",
-        hit_modifier=-2,
-        damage_formula="1d6",
-    ))
+    db_session.add(
+        Attack(
+            character_id=sample_character.id,
+            name="OldSword",
+            hit_modifier=-2,
+            damage_formula="1d6",
+        )
+    )
     db_session.commit()
 
     mocker.patch("commands.attack_commands.random.randint", return_value=15)
@@ -769,7 +974,9 @@ async def test_attack_roll_negative_hit_modifier(
     msg = interaction.response.send_message.call_args.args[0]
     # hit_total = 15 + (-2) = 13; message should show the modifier
     assert "-2" in msg or "13" in msg
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -825,19 +1032,25 @@ def test_crit_none_treats_nat20_as_normal():
 
 
 async def test_perkins_crit_when_already_inspired(
-    attack_bot, sample_character, db_session,
-    sample_active_party, interaction, mocker,
+    attack_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
+    mocker,
 ):
     """Perkins crit fires on a character who already has inspiration — no error, stays True."""
     from models import PartySettings
     from enums.crit_rule import CritRule
 
-    db_session.add(Attack(
-        character_id=sample_character.id,
-        name="Rapier",
-        hit_modifier=5,
-        damage_formula="1d6+3",
-    ))
+    db_session.add(
+        Attack(
+            character_id=sample_character.id,
+            name="Rapier",
+            hit_modifier=5,
+            damage_formula="1d6+3",
+        )
+    )
     sample_character.inspiration = True
     party_settings = PartySettings(
         party_id=sample_active_party.id,
@@ -850,7 +1063,9 @@ async def test_perkins_crit_when_already_inspired(
     mocker.patch("commands.attack_commands.random.randint", return_value=20)
     mocker.patch(
         "commands.attack_commands.apply_crit_damage",
-        return_value=mocker.Mock(rolls=[5], modifier=3, total=8, grants_inspiration=True),
+        return_value=mocker.Mock(
+            rolls=[5], modifier=3, total=8, grants_inspiration=True
+        ),
     )
 
     cb = get_callback(attack_bot, "attack", "roll")

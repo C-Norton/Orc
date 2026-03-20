@@ -3,7 +3,16 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 from database import SessionLocal
-from models import User, Server, Character, CharacterSkill, ClassLevel, Encounter, EncounterTurn, Party
+from models import (
+    User,
+    Server,
+    Character,
+    CharacterSkill,
+    ClassLevel,
+    Encounter,
+    EncounterTurn,
+    Party,
+)
 from enums.character_class import CharacterClass
 from enums.encounter_status import EncounterStatus
 from enums.skill_proficiency_status import SkillProficiencyStatus
@@ -80,7 +89,8 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
                 f"Confirmed deletion of character '{self.char_name}' (id={self.char_id})"
             )
             await interaction.response.edit_message(
-                content=Strings.CHAR_DELETE_SUCCESS.format(name=self.char_name), view=None
+                content=Strings.CHAR_DELETE_SUCCESS.format(name=self.char_name),
+                view=None,
             )
         finally:
             db.close()
@@ -101,7 +111,14 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
 # Character-sheet page definitions
 # ---------------------------------------------------------------------------
 
-_STAT_NAMES = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+_STAT_NAMES = [
+    "strength",
+    "dexterity",
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "charisma",
+]
 _STAT_ABBR = {
     "strength": "STR",
     "dexterity": "DEX",
@@ -115,7 +132,11 @@ _STAT_ABBR = {
 def _class_summary(char: Character) -> str:
     """Return e.g. 'Fighter 5' or 'Fighter 3 / Rogue 2'."""
     sorted_cls = sorted(char.class_levels, key=lambda cl: cl.id)
-    return " / ".join(f"{cl.class_name} {cl.level}" for cl in sorted_cls) if sorted_cls else "No class"
+    return (
+        " / ".join(f"{cl.class_name} {cl.level}" for cl in sorted_cls)
+        if sorted_cls
+        else "No class"
+    )
 
 
 def _build_sheet_page0(char: Character) -> discord.Embed:
@@ -274,7 +295,9 @@ def _build_sheet_page3(char: Character) -> discord.Embed:
     )
 
     if not char.attacks:
-        embed.add_field(name="\u200b", value=Strings.CHAR_SHEET_NO_ATTACKS, inline=False)
+        embed.add_field(
+            name="\u200b", value=Strings.CHAR_SHEET_NO_ATTACKS, inline=False
+        )
     else:
         for atk in char.attacks:
             embed.add_field(
@@ -300,7 +323,9 @@ class _CharacterSheetPageButton(discord.ui.Button):
     """Navigate to a specific character-sheet page, re-fetching from the DB."""
 
     def __init__(self, emoji: str, label: str, builder: object, char_id: int) -> None:
-        super().__init__(emoji=emoji, label=label, style=discord.ButtonStyle.secondary, row=0)
+        super().__init__(
+            emoji=emoji, label=label, style=discord.ButtonStyle.secondary, row=0
+        )
         self._builder = builder
         self._char_id = char_id
 
@@ -336,7 +361,9 @@ class CharacterSheetView(discord.ui.View):
 
         for emoji, label, builder in _SHEET_PAGES:
             self.add_item(
-                _CharacterSheetPageButton(emoji=emoji, label=label, builder=builder, char_id=char_id)
+                _CharacterSheetPageButton(
+                    emoji=emoji, label=label, builder=builder, char_id=char_id
+                )
             )
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -379,7 +406,8 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
     @app_commands.choices(
         character_class=[
-            app_commands.Choice(name=cls.value, value=cls.value) for cls in CharacterClass
+            app_commands.Choice(name=cls.value, value=cls.value)
+            for cls in CharacterClass
         ]
     )
     async def character_create(
@@ -392,7 +420,9 @@ def register_character_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
 
         if len(name) > 100:
-            await interaction.response.send_message(Strings.CHAR_CREATE_NAME_LIMIT, ephemeral=True)
+            await interaction.response.send_message(
+                Strings.CHAR_CREATE_NAME_LIMIT, ephemeral=True
+            )
             return
         try:
             user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
@@ -401,38 +431,56 @@ def register_character_commands(bot: commands.Bot) -> None:
                 db.add(user)
                 db.flush()
 
-            server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            server = (
+                db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+            )
             if not server:
-                server = Server(discord_id=str(interaction.guild_id), name=interaction.guild.name)
+                server = Server(
+                    discord_id=str(interaction.guild_id), name=interaction.guild.name
+                )
                 db.add(server)
                 db.flush()
 
             char_count = db.query(Character).filter_by(user_id=user.id).count()
             if char_count >= MAX_CHARACTERS_PER_USER:
                 await interaction.response.send_message(
-                    Strings.ERROR_LIMIT_CHARACTERS.format(limit=MAX_CHARACTERS_PER_USER),
+                    Strings.ERROR_LIMIT_CHARACTERS.format(
+                        limit=MAX_CHARACTERS_PER_USER
+                    ),
                     ephemeral=True,
                 )
                 return
 
-            existing_char = db.query(Character).filter_by(user=user, server=server, name=name).first()
+            existing_char = (
+                db.query(Character)
+                .filter_by(user=user, server=server, name=name)
+                .first()
+            )
             if existing_char:
                 await interaction.response.send_message(
                     Strings.CHAR_EXISTS.format(name=name), ephemeral=True
                 )
                 return
             if level < 1 or level > 20:
-                await interaction.response.send_message(Strings.CHAR_LEVEL_LIMIT, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHAR_LEVEL_LIMIT, ephemeral=True
+                )
                 return
 
-            db.query(Character).filter_by(user=user, server=server).update({"is_active": False})
+            db.query(Character).filter_by(user=user, server=server).update(
+                {"is_active": False}
+            )
 
             new_char = Character(name=name, user=user, server=server, is_active=True)
             db.add(new_char)
             db.flush()
 
             cls_enum = CharacterClass(character_class)
-            db.add(ClassLevel(character_id=new_char.id, class_name=cls_enum.value, level=level))
+            db.add(
+                ClassLevel(
+                    character_id=new_char.id, class_name=cls_enum.value, level=level
+                )
+            )
             db.flush()
             db.refresh(new_char)
 
@@ -443,7 +491,9 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"created '{name}' as level {level} {character_class}"
             )
             await interaction.response.send_message(
-                Strings.CHAR_CREATED_ACTIVE.format(name=name, level=level, char_class=character_class)
+                Strings.CHAR_CREATED_ACTIVE.format(
+                    name=name, level=level, char_class=character_class
+                )
             )
         finally:
             db.close()
@@ -452,7 +502,9 @@ def register_character_commands(bot: commands.Bot) -> None:
     # /character stats
     # ------------------------------------------------------------------
 
-    @character_group.command(name="stats", description="Set your character's core ability scores")
+    @character_group.command(
+        name="stats", description="Set your character's core ability scores"
+    )
     @app_commands.describe(
         strength="Strength score (1-30)",
         dexterity="Dexterity score (1-30)",
@@ -486,17 +538,34 @@ def register_character_commands(bot: commands.Bot) -> None:
             )
 
             if not char:
-                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                )
                 return
 
             is_first_time = any(
                 getattr(char, s) is None
-                for s in ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]
+                for s in [
+                    "strength",
+                    "dexterity",
+                    "constitution",
+                    "intelligence",
+                    "wisdom",
+                    "charisma",
+                ]
             )
 
             if is_first_time:
                 if any(
-                    s is None for s in [strength, dexterity, constitution, intelligence, wisdom, charisma]
+                    s is None
+                    for s in [
+                        strength,
+                        dexterity,
+                        constitution,
+                        intelligence,
+                        wisdom,
+                        charisma,
+                    ]
                 ):
                     await interaction.response.send_message(
                         Strings.CHAR_STATS_FIRST_TIME, ephemeral=True
@@ -580,7 +649,9 @@ def register_character_commands(bot: commands.Bot) -> None:
             )
 
             if not char:
-                await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                )
                 return
 
             char.st_prof_strength = strength
@@ -605,7 +676,9 @@ def register_character_commands(bot: commands.Bot) -> None:
     # /character skill
     # ------------------------------------------------------------------
 
-    @character_group.command(name="skill", description="Set proficiency status for a skill")
+    @character_group.command(
+        name="skill", description="Set proficiency status for a skill"
+    )
     @app_commands.describe(skill="The skill to set", status="Proficiency status")
     @app_commands.choices(
         status=[
@@ -641,20 +714,26 @@ def register_character_commands(bot: commands.Bot) -> None:
                 (s for s in SKILL_TO_STAT.keys() if s.lower() == skill.lower()), None
             )
             if not matched_skill:
-                logger.warning(f"User {interaction.user.id} sent unknown skill: '{skill}'")
+                logger.warning(
+                    f"User {interaction.user.id} sent unknown skill: '{skill}'"
+                )
                 await interaction.response.send_message(
                     Strings.CHAR_SKILL_UNKNOWN.format(skill=skill), ephemeral=True
                 )
                 return
 
             prof_enum = SkillProficiencyStatus(status)
-            char_skill = db.query(CharacterSkill).filter_by(
-                character_id=char.id, skill_name=matched_skill
-            ).first()
+            char_skill = (
+                db.query(CharacterSkill)
+                .filter_by(character_id=char.id, skill_name=matched_skill)
+                .first()
+            )
 
             if not char_skill:
                 char_skill = CharacterSkill(
-                    character_id=char.id, skill_name=matched_skill, proficiency=prof_enum
+                    character_id=char.id,
+                    skill_name=matched_skill,
+                    proficiency=prof_enum,
                 )
                 db.add(char_skill)
             else:
@@ -679,7 +758,9 @@ def register_character_commands(bot: commands.Bot) -> None:
     # /character ac
     # ------------------------------------------------------------------
 
-    @character_group.command(name="ac", description="Set your active character's Armor Class")
+    @character_group.command(
+        name="ac", description="Set your active character's Armor Class"
+    )
     @app_commands.describe(ac="Armor Class value (1-30)")
     async def character_ac(interaction: discord.Interaction, ac: int) -> None:
         logger.debug(
@@ -687,7 +768,9 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"with ac: {ac}"
         )
         if not (1 <= ac <= 30):
-            await interaction.response.send_message(Strings.CHAR_AC_LIMIT, ephemeral=True)
+            await interaction.response.send_message(
+                Strings.CHAR_AC_LIMIT, ephemeral=True
+            )
             return
         db = SessionLocal()
         try:
@@ -804,13 +887,18 @@ def register_character_commands(bot: commands.Bot) -> None:
             own_chars = db.query(Character).filter_by(user=user, server=server).all()
             for character in own_chars:
                 if current.lower() in character.name.lower():
-                    choices.append(app_commands.Choice(name=character.name, value=character.name))
+                    choices.append(
+                        app_commands.Choice(name=character.name, value=character.name)
+                    )
                     seen_names.add(character.name)
 
             party = get_active_party(db, user, server)
             if party:
                 for character in party.characters:
-                    if character.name not in seen_names and current.lower() in character.name.lower():
+                    if (
+                        character.name not in seen_names
+                        and current.lower() in character.name.lower()
+                    ):
                         choices.append(
                             app_commands.Choice(
                                 name=f"{character.name} (party)",
@@ -840,7 +928,9 @@ def register_character_commands(bot: commands.Bot) -> None:
             user, server = resolve_user_server(db, interaction)
 
             if not user or not server:
-                await interaction.response.send_message(Strings.CHAR_LIST_NONE, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHAR_LIST_NONE, ephemeral=True
+                )
                 return
 
             chars = db.query(Character).filter_by(user=user, server=server).all()
@@ -848,12 +938,18 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"Character list for user {interaction.user.id}: found {len(chars)} character(s)"
             )
             if not chars:
-                await interaction.response.send_message(Strings.CHAR_LIST_NONE, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHAR_LIST_NONE, ephemeral=True
+                )
                 return
 
             embed = discord.Embed(
-                title=Strings.CHAR_LIST_TITLE.format(user_name=interaction.user.display_name),
-                description=Strings.CHAR_LIST_DESC.format(server_name=interaction.guild.name),
+                title=Strings.CHAR_LIST_TITLE.format(
+                    user_name=interaction.user.display_name
+                ),
+                description=Strings.CHAR_LIST_DESC.format(
+                    server_name=interaction.guild.name
+                ),
                 color=discord.Color.blue(),
             )
 
@@ -861,7 +957,9 @@ def register_character_commands(bot: commands.Bot) -> None:
                 status = " (Active)" if char.is_active else ""
                 sorted_cls = sorted(char.class_levels, key=lambda cl: cl.id)
                 if sorted_cls:
-                    class_summary = " / ".join(f"{cl.class_name} {cl.level}" for cl in sorted_cls)
+                    class_summary = " / ".join(
+                        f"{cl.class_name} {cl.level}" for cl in sorted_cls
+                    )
                 else:
                     class_summary = "No class"
                 embed.add_field(
@@ -895,7 +993,11 @@ def register_character_commands(bot: commands.Bot) -> None:
         try:
             user, server = resolve_user_server(db, interaction)
 
-            char = db.query(Character).filter_by(user=user, server=server, name=name).first()
+            char = (
+                db.query(Character)
+                .filter_by(user=user, server=server, name=name)
+                .first()
+            )
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -906,13 +1008,17 @@ def register_character_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            db.query(Character).filter_by(user=user, server=server).update({"is_active": False})
+            db.query(Character).filter_by(user=user, server=server).update(
+                {"is_active": False}
+            )
             char.is_active = True
             db.commit()
             logger.info(
                 f"/character switch completed for user {interaction.user.id}: switched to '{name}'"
             )
-            await interaction.response.send_message(Strings.CHAR_SWITCH_SUCCESS.format(name=name))
+            await interaction.response.send_message(
+                Strings.CHAR_SWITCH_SUCCESS.format(name=name)
+            )
         finally:
             db.close()
 
@@ -954,10 +1060,16 @@ def register_character_commands(bot: commands.Bot) -> None:
             user, server = resolve_user_server(db, interaction)
 
             if not user or not server:
-                await interaction.response.send_message(Strings.CHAR_LIST_NONE, ephemeral=True)
+                await interaction.response.send_message(
+                    Strings.CHAR_LIST_NONE, ephemeral=True
+                )
                 return
 
-            char = db.query(Character).filter_by(user=user, server=server, name=name).first()
+            char = (
+                db.query(Character)
+                .filter_by(user=user, server=server, name=name)
+                .first()
+            )
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
                 f"{'found: ' + char.name if char else 'not found'}"
@@ -987,7 +1099,9 @@ def register_character_commands(bot: commands.Bot) -> None:
             logger.debug(
                 f"/character delete showing confirmation for user {interaction.user.id}: '{name}'"
             )
-            await interaction.response.send_message(confirm_msg, view=view, ephemeral=True)
+            await interaction.response.send_message(
+                confirm_msg, view=view, ephemeral=True
+            )
         finally:
             db.close()
 
@@ -1015,7 +1129,8 @@ def register_character_commands(bot: commands.Bot) -> None:
     # ------------------------------------------------------------------
 
     @character_group.command(
-        name="class_add", description="Add or update a class level on your active character"
+        name="class_add",
+        description="Add or update a class level on your active character",
     )
     @app_commands.describe(
         character_class="The class to add or update",
@@ -1023,7 +1138,8 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
     @app_commands.choices(
         character_class=[
-            app_commands.Choice(name=cls.value, value=cls.value) for cls in CharacterClass
+            app_commands.Choice(name=cls.value, value=cls.value)
+            for cls in CharacterClass
         ]
     )
     async def character_class_add(
@@ -1034,7 +1150,9 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"with class: {character_class}, level: {level}"
         )
         if level < 1 or level > 20:
-            await interaction.response.send_message(Strings.CHAR_LEVEL_LIMIT, ephemeral=True)
+            await interaction.response.send_message(
+                Strings.CHAR_LEVEL_LIMIT, ephemeral=True
+            )
             return
         db = SessionLocal()
         try:
@@ -1052,9 +1170,11 @@ def register_character_commands(bot: commands.Bot) -> None:
                 return
 
             cls_enum = CharacterClass(character_class)
-            existing_cl = db.query(ClassLevel).filter_by(
-                character_id=char.id, class_name=cls_enum.value
-            ).first()
+            existing_cl = (
+                db.query(ClassLevel)
+                .filter_by(character_id=char.id, class_name=cls_enum.value)
+                .first()
+            )
 
             other_levels = sum(
                 cl.level for cl in char.class_levels if cl.class_name != cls_enum.value
@@ -1077,7 +1197,11 @@ def register_character_commands(bot: commands.Bot) -> None:
                 existing_cl.level = level
                 msg = Strings.CHAR_CLASS_UPDATED
             else:
-                db.add(ClassLevel(character_id=char.id, class_name=cls_enum.value, level=level))
+                db.add(
+                    ClassLevel(
+                        character_id=char.id, class_name=cls_enum.value, level=level
+                    )
+                )
                 msg = Strings.CHAR_CLASS_ADDED
 
             db.flush()
@@ -1119,7 +1243,8 @@ def register_character_commands(bot: commands.Bot) -> None:
     @app_commands.describe(character_class="The class to remove")
     @app_commands.choices(
         character_class=[
-            app_commands.Choice(name=cls.value, value=cls.value) for cls in CharacterClass
+            app_commands.Choice(name=cls.value, value=cls.value)
+            for cls in CharacterClass
         ]
     )
     async def character_class_remove(
@@ -1145,9 +1270,11 @@ def register_character_commands(bot: commands.Bot) -> None:
                 return
 
             cls_enum = CharacterClass(character_class)
-            cl = db.query(ClassLevel).filter_by(
-                character_id=char.id, class_name=cls_enum.value
-            ).first()
+            cl = (
+                db.query(ClassLevel)
+                .filter_by(character_id=char.id, class_name=cls_enum.value)
+                .first()
+            )
             if not cl:
                 await interaction.response.send_message(
                     Strings.CHAR_CLASS_NOT_FOUND.format(
@@ -1185,4 +1312,3 @@ def register_character_commands(bot: commands.Bot) -> None:
             db.close()
 
     bot.tree.add_command(character_group)
-

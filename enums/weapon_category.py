@@ -1,4 +1,5 @@
 """Enum representing the two weapon categories in D&D 5e 2024."""
+
 from enum import Enum
 
 

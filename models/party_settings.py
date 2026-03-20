@@ -1,4 +1,5 @@
 """PartySettings model — per-party configuration table."""
+
 from sqlalchemy import Boolean, ForeignKey, Integer
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship

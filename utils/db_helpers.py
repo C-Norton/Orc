@@ -30,7 +30,9 @@ def resolve_user_server(
     return user, server
 
 
-def get_active_party(db, user: Optional[User], server: Optional[Server]) -> Optional[Party]:
+def get_active_party(
+    db, user: Optional[User], server: Optional[Server]
+) -> Optional[Party]:
     """Return the user's active party on this server, or None.
 
     Returns ``None`` immediately if either ``user`` or ``server`` is ``None``,
@@ -74,7 +76,5 @@ def get_active_character(
     if not user or not server:
         return None
     return (
-        db.query(Character)
-        .filter_by(user=user, server=server, is_active=True)
-        .first()
+        db.query(Character).filter_by(user=user, server=server, is_active=True).first()
     )

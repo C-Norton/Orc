@@ -16,7 +16,9 @@ class EncounterTurn(Base):
     __tablename__ = "encounter_turns"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    encounter_id: Mapped[int] = mapped_column(Integer, ForeignKey("encounters.id"), nullable=False)
+    encounter_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("encounters.id"), nullable=False
+    )
 
     # Exactly one of these will be non-NULL
     character_id: Mapped[Optional[int]] = mapped_column(

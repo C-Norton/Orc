@@ -1,4 +1,5 @@
 """Unit tests for utils.crit_logic.apply_crit_damage."""
+
 import pytest
 
 from enums.crit_rule import CritRule
@@ -8,6 +9,7 @@ from utils.crit_logic import apply_crit_damage
 # ---------------------------------------------------------------------------
 # DOUBLE_DICE
 # ---------------------------------------------------------------------------
+
 
 def test_double_dice_doubles_die_count(mocker):
     """DOUBLE_DICE: 1d8 becomes 2d8 (two dice are rolled)."""
@@ -56,6 +58,7 @@ def test_double_dice_negative_modifier(mocker):
 # DOUBLE_DAMAGE
 # ---------------------------------------------------------------------------
 
+
 def test_double_damage_doubles_total(mocker):
     """DOUBLE_DAMAGE: the full final total is doubled."""
     mocker.patch("dice_roller.random.randint", return_value=5)
@@ -72,6 +75,7 @@ def test_double_damage_grants_no_inspiration(mocker):
 # ---------------------------------------------------------------------------
 # MAX_DAMAGE
 # ---------------------------------------------------------------------------
+
 
 def test_max_damage_returns_max_value():
     """MAX_DAMAGE: every die shows its max face value."""
@@ -97,6 +101,7 @@ def test_max_damage_grants_no_inspiration():
 # PERKINS
 # ---------------------------------------------------------------------------
 
+
 def test_perkins_grants_inspiration(mocker):
     """PERKINS: grants_inspiration is True."""
     mocker.patch("dice_roller.random.randint", return_value=4)
@@ -115,6 +120,7 @@ def test_perkins_is_normal_roll(mocker):
 # ---------------------------------------------------------------------------
 # NONE
 # ---------------------------------------------------------------------------
+
 
 def test_none_is_normal_roll(mocker):
     """NONE: no crit modification at all."""

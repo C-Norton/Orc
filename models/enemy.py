@@ -12,7 +12,9 @@ class Enemy(Base):
     __tablename__ = "enemies"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    encounter_id: Mapped[int] = mapped_column(Integer, ForeignKey("encounters.id"), nullable=False)
+    encounter_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("encounters.id"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     type_name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     initiative_modifier: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -24,5 +26,8 @@ class Enemy(Base):
 
     encounter: Mapped["Encounter"] = relationship("Encounter", back_populates="enemies")
     turn: Mapped[Optional["EncounterTurn"]] = relationship(
-        "EncounterTurn", back_populates="enemy", uselist=False, cascade="all, delete-orphan"
+        "EncounterTurn",
+        back_populates="enemy",
+        uselist=False,
+        cascade="all, delete-orphan",
     )

@@ -9,17 +9,21 @@ from utils.hp_logic import set_max_hp, apply_damage, apply_healing, apply_temp_h
 # get_stat_modifier
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("score,expected", [
-    (1,  -5),
-    (8,  -1),
-    (9,  -1),
-    (10,  0),
-    (11,  0),
-    (12,  1),
-    (13,  1),
-    (20,  5),
-    (30, 10),
-])
+
+@pytest.mark.parametrize(
+    "score,expected",
+    [
+        (1, -5),
+        (8, -1),
+        (9, -1),
+        (10, 0),
+        (11, 0),
+        (12, 1),
+        (13, 1),
+        (20, 5),
+        (30, 10),
+    ],
+)
 def test_get_stat_modifier(score, expected):
     assert get_stat_modifier(score) == expected
 
@@ -32,18 +36,22 @@ def test_get_stat_modifier_none_returns_zero():
 # get_proficiency_bonus
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("level,expected", [
-    (1,  2),
-    (4,  2),
-    (5,  3),
-    (8,  3),
-    (9,  4),
-    (12, 4),
-    (13, 5),
-    (16, 5),
-    (17, 6),
-    (20, 6),
-])
+
+@pytest.mark.parametrize(
+    "level,expected",
+    [
+        (1, 2),
+        (4, 2),
+        (5, 3),
+        (8, 3),
+        (9, 4),
+        (12, 4),
+        (13, 5),
+        (16, 5),
+        (17, 6),
+        (20, 6),
+    ],
+)
 def test_get_proficiency_bonus(level, expected):
     assert get_proficiency_bonus(level) == expected
 
@@ -51,6 +59,7 @@ def test_get_proficiency_bonus(level, expected):
 # ---------------------------------------------------------------------------
 # perform_roll  (sample_character: level 5, STR 16/+3, DEX 14/+2, WIS 12/+1)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_perform_roll_raw_dice(mocker, sample_character, db_session):
@@ -77,7 +86,9 @@ async def test_perform_roll_stat_abbreviation(mocker, sample_character, db_sessi
 
 
 @pytest.mark.asyncio
-async def test_perform_roll_saving_throw_not_proficient(mocker, sample_character, db_session):
+async def test_perform_roll_saving_throw_not_proficient(
+    mocker, sample_character, db_session
+):
     # WIS 12 → +1; not proficient in WIS save; d20=10 → total 11
     mocker.patch("utils.dnd_logic.random.randint", return_value=10)
     result = await perform_roll(sample_character, "wisdom save", db_session)
@@ -86,7 +97,9 @@ async def test_perform_roll_saving_throw_not_proficient(mocker, sample_character
 
 
 @pytest.mark.asyncio
-async def test_perform_roll_saving_throw_proficient(mocker, sample_character, db_session):
+async def test_perform_roll_saving_throw_proficient(
+    mocker, sample_character, db_session
+):
     # STR 16 → +3; proficient (level 5 → prof +3); d20=10 → total 16
     mocker.patch("utils.dnd_logic.random.randint", return_value=10)
     result = await perform_roll(sample_character, "strength save", db_session)
@@ -134,7 +147,9 @@ async def test_perform_roll_skill_expertise(mocker, sample_character, db_session
 
 
 @pytest.mark.asyncio
-async def test_perform_roll_initiative_uses_dex_when_no_bonus(mocker, sample_character, db_session):
+async def test_perform_roll_initiative_uses_dex_when_no_bonus(
+    mocker, sample_character, db_session
+):
     # No initiative_bonus set → uses DEX mod +2; d20=10 → 12
     sample_character.initiative_bonus = None
     db_session.commit()
@@ -145,7 +160,9 @@ async def test_perform_roll_initiative_uses_dex_when_no_bonus(mocker, sample_cha
 
 
 @pytest.mark.asyncio
-async def test_perform_roll_initiative_uses_override_bonus(mocker, sample_character, db_session):
+async def test_perform_roll_initiative_uses_override_bonus(
+    mocker, sample_character, db_session
+):
     # initiative_bonus=5 overrides dex mod; d20=10 → 15
     sample_character.initiative_bonus = 5
     db_session.commit()
@@ -155,7 +172,9 @@ async def test_perform_roll_initiative_uses_override_bonus(mocker, sample_charac
 
 
 @pytest.mark.asyncio
-async def test_perform_roll_invalid_notation_returns_error(sample_character, db_session):
+async def test_perform_roll_invalid_notation_returns_error(
+    sample_character, db_session
+):
     result = await perform_roll(sample_character, "notadice", db_session)
     assert "Error" in result
 
@@ -165,24 +184,37 @@ async def test_perform_roll_invalid_skill_returns_error(sample_character, db_ses
     result = await perform_roll(sample_character, "notaskill", db_session)
     assert "Error" in result
 
-@pytest.mark.parametrize("current,temp,damage,exp_current,exp_temp", [
-    (30, 0,  10, 20, 0),   # plain damage
-    (30, 5,  3,  30, 2),   # damage absorbed by temp HP
-    (30, 5,  8,  27, 0),   # damage exceeds temp HP, bleeds into current
-    (5,  0,  10, -5,  0),  # Going below zero so that we can do the instant death on massive damage rule.
-    (30, 0,  0,  30, 0),   # zero damage is a no-op
-])
+
+@pytest.mark.parametrize(
+    "current,temp,damage,exp_current,exp_temp",
+    [
+        (30, 0, 10, 20, 0),  # plain damage
+        (30, 5, 3, 30, 2),  # damage absorbed by temp HP
+        (30, 5, 8, 27, 0),  # damage exceeds temp HP, bleeds into current
+        (
+            5,
+            0,
+            10,
+            -5,
+            0,
+        ),  # Going below zero so that we can do the instant death on massive damage rule.
+        (30, 0, 0, 30, 0),  # zero damage is a no-op
+    ],
+)
 def test_apply_damage(current, temp, damage, exp_current, exp_temp):
     new_current, new_temp = apply_damage(current, temp, damage)
     assert new_current == exp_current
     assert new_temp == exp_temp
 
 
-@pytest.mark.parametrize("current,max_hp,heal,expected", [
-    (20, 30, 5,  25),  # normal heal
-    (20, 30, 20, 30),  # heal capped at max
-    (0,  30, 30, 30),  # full heal from 0
-])
+@pytest.mark.parametrize(
+    "current,max_hp,heal,expected",
+    [
+        (20, 30, 5, 25),  # normal heal
+        (20, 30, 20, 30),  # heal capped at max
+        (0, 30, 30, 30),  # full heal from 0
+    ],
+)
 def test_apply_healing(current, max_hp, heal, expected):
     assert apply_healing(current, max_hp, heal) == expected
 
@@ -196,6 +228,7 @@ def test_apply_temp_hp_replaces_lower():
 def test_apply_temp_hp_cannot_be_negative():
     assert apply_temp_hp(current_temp=0, new_temp=-1) == 0
     assert apply_temp_hp(current_temp=5, new_temp=-1) == 5
+
 
 def test_set_max_hp():
     assert set_max_hp(10) == 10

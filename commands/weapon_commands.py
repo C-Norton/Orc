@@ -8,6 +8,7 @@ Workflow::
 Session storage is an in-memory dict keyed by ``(user_id, guild_id)`` with a
 5-minute TTL.  Results are lost on bot restart; users simply re-run the search.
 """
+
 from __future__ import annotations
 
 import json
@@ -78,7 +79,9 @@ def register_weapon_commands(bot: commands.Bot) -> None:
     @weapon_group.command(
         name="search", description="Search for weapons in the 2024 SRD"
     )
-    @app_commands.describe(query="Weapon name to search for (e.g., longsword, shortbow)")
+    @app_commands.describe(
+        query="Weapon name to search for (e.g., longsword, shortbow)"
+    )
     async def weapon_search(interaction: discord.Interaction, query: str) -> None:
         """Search Open5e for weapons and show results for the active character.
 
@@ -202,14 +205,16 @@ def register_weapon_commands(bot: commands.Bot) -> None:
                 character, properties, range_normal_float
             )
 
-            existing_attack = db.query(Attack).filter_by(
-                character_id=character.id, name=weapon_name
-            ).first()
+            existing_attack = (
+                db.query(Attack)
+                .filter_by(character_id=character.id, name=weapon_name)
+                .first()
+            )
 
             if not existing_attack:
-                attack_count = db.query(Attack).filter_by(
-                    character_id=character.id
-                ).count()
+                attack_count = (
+                    db.query(Attack).filter_by(character_id=character.id).count()
+                )
                 if attack_count >= MAX_ATTACKS_PER_CHARACTER:
                     await interaction.response.send_message(
                         Strings.ERROR_LIMIT_ATTACKS.format(

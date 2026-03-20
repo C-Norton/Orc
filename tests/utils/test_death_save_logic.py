@@ -3,12 +3,17 @@
 These tests use SimpleNamespace to stand in for Character objects so no
 database session is needed.
 """
+
 from types import SimpleNamespace
 
 import pytest
 
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
-from utils.death_save_logic import DeathSaveResult, character_is_dying, process_death_save
+from utils.death_save_logic import (
+    DeathSaveResult,
+    character_is_dying,
+    process_death_save,
+)
 
 REGAIN_HP = DeathSaveNat20Mode.REGAIN_HP
 DOUBLE_SUCCESS = DeathSaveNat20Mode.DOUBLE_SUCCESS

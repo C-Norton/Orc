@@ -8,6 +8,7 @@ Rules (5e 2024):
 - 3 successes = stabilize (reset counters, stay at 0 HP).
 - 3 failures = slain.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -26,9 +27,9 @@ class DeathSaveResult:
     roll: int
     is_success: bool
     is_failure: bool
-    is_stabilized: bool    # 3 successes reached — character is stable
-    is_slain: bool         # 3 failures reached — character dies
-    is_nat20_heal: bool    # nat20 + REGAIN_HP mode → HP restored to 1
+    is_stabilized: bool  # 3 successes reached — character is stable
+    is_slain: bool  # 3 failures reached — character dies
+    is_nat20_heal: bool  # nat20 + REGAIN_HP mode → HP restored to 1
     successes_after: int
     failures_after: int
 

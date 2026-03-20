@@ -34,7 +34,16 @@ BUG-MFI-1  ``dice_roller._roll_dice_group`` does not validate ``sides >= 1``
 
 import pytest
 
-from models import Attack, Character, ClassLevel, Party, Encounter, Enemy, EncounterTurn, user_server_association
+from models import (
+    Attack,
+    Character,
+    ClassLevel,
+    Party,
+    Encounter,
+    Enemy,
+    EncounterTurn,
+    user_server_association,
+)
 from enums.encounter_status import EncounterStatus
 from sqlalchemy import insert
 from tests.conftest import make_interaction
@@ -64,7 +73,7 @@ _NULL_BYTE = "name\x00truncated"
 _RTL_OVERRIDE = "\u202ereversed"
 _ZERO_WIDTH = "invis\u200bible"
 _NEWLINE = "name\nwith newline"
-_VERY_LONG = "A" * 2001   # exceeds Discord's 2000-char message cap
+_VERY_LONG = "A" * 2001  # exceeds Discord's 2000-char message cap
 _NAME_AT_LIMIT = "A" * 100  # exactly at the 100-char character name limit
 _NAME_OVER_LIMIT = "A" * 101  # one over the 100-char limit
 _EMOJI_NAME = "⚔️🛡️🐉 Dragon Slayer"
@@ -84,7 +93,9 @@ async def test_character_create_name_at_limit_accepted(
     cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name=_NAME_AT_LIMIT, character_class="Fighter", level=1)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_character_create_name_over_limit_rejected(
@@ -235,7 +246,9 @@ async def test_character_create_level_1_accepted(
     cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="Min Level", character_class="Fighter", level=1)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_character_create_level_20_accepted(
@@ -246,7 +259,9 @@ async def test_character_create_level_20_accepted(
     cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="Max Level", character_class="Fighter", level=20)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ===========================================================================
@@ -254,17 +269,30 @@ async def test_character_create_level_20_accepted(
 # ===========================================================================
 
 
-@pytest.mark.parametrize("stat", [
-    "strength", "dexterity", "constitution",
-    "intelligence", "wisdom", "charisma",
-])
-async def test_character_stats_score_zero_rejected(mocker, char_bot, sample_character, stat):
+@pytest.mark.parametrize(
+    "stat",
+    [
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ],
+)
+async def test_character_stats_score_zero_rejected(
+    mocker, char_bot, sample_character, stat
+):
     """Any ability score of 0 (below the minimum of 1) must be rejected."""
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "stats")
     kwargs = {
-        "strength": 10, "dexterity": 10, "constitution": 10,
-        "intelligence": 10, "wisdom": 10, "charisma": 10,
+        "strength": 10,
+        "dexterity": 10,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 10,
+        "charisma": 10,
         "initiative_bonus": 0,
     }
     kwargs[stat] = 0
@@ -272,20 +300,36 @@ async def test_character_stats_score_zero_rejected(mocker, char_bot, sample_char
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.CHAR_STAT_LIMIT.format(stat_name=stat.capitalize()) in msg or "score must be between" in msg
+    assert (
+        Strings.CHAR_STAT_LIMIT.format(stat_name=stat.capitalize()) in msg
+        or "score must be between" in msg
+    )
 
 
-@pytest.mark.parametrize("stat", [
-    "strength", "dexterity", "constitution",
-    "intelligence", "wisdom", "charisma",
-])
-async def test_character_stats_score_31_rejected(mocker, char_bot, sample_character, stat):
+@pytest.mark.parametrize(
+    "stat",
+    [
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ],
+)
+async def test_character_stats_score_31_rejected(
+    mocker, char_bot, sample_character, stat
+):
     """Any ability score of 31 (above the maximum of 30) must be rejected."""
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "stats")
     kwargs = {
-        "strength": 10, "dexterity": 10, "constitution": 10,
-        "intelligence": 10, "wisdom": 10, "charisma": 10,
+        "strength": 10,
+        "dexterity": 10,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 10,
+        "charisma": 10,
         "initiative_bonus": 0,
     }
     kwargs[stat] = 31
@@ -293,33 +337,52 @@ async def test_character_stats_score_31_rejected(mocker, char_bot, sample_charac
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert "score must be between" in msg or Strings.CHAR_STAT_LIMIT.format(stat_name=stat.capitalize()) in msg
+    assert (
+        "score must be between" in msg
+        or Strings.CHAR_STAT_LIMIT.format(stat_name=stat.capitalize()) in msg
+    )
 
 
-async def test_character_stats_minimum_values_accepted(mocker, char_bot, sample_character):
+async def test_character_stats_minimum_values_accepted(
+    mocker, char_bot, sample_character
+):
     """All ability scores of 1 (the minimum) must be accepted."""
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "stats")
     await cb(
         interaction,
-        strength=1, dexterity=1, constitution=1,
-        intelligence=1, wisdom=1, charisma=1,
+        strength=1,
+        dexterity=1,
+        constitution=1,
+        intelligence=1,
+        wisdom=1,
+        charisma=1,
         initiative_bonus=0,
     )
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
-async def test_character_stats_maximum_values_accepted(mocker, char_bot, sample_character):
+async def test_character_stats_maximum_values_accepted(
+    mocker, char_bot, sample_character
+):
     """All ability scores of 30 (the maximum) must be accepted."""
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "stats")
     await cb(
         interaction,
-        strength=30, dexterity=30, constitution=30,
-        intelligence=30, wisdom=30, charisma=30,
+        strength=30,
+        dexterity=30,
+        constitution=30,
+        intelligence=30,
+        wisdom=30,
+        charisma=30,
         initiative_bonus=0,
     )
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_character_stats_first_time_partial_update_rejected(
@@ -332,7 +395,9 @@ async def test_character_stats_first_time_partial_update_rejected(
     # Provide only 3 stats
     await cb(
         interaction,
-        strength=10, dexterity=10, constitution=10,
+        strength=10,
+        dexterity=10,
+        constitution=10,
         initiative_bonus=0,
     )
 
@@ -350,11 +415,17 @@ async def test_character_stats_initiative_bonus_negative_accepted(
     cb = get_callback(char_bot, "character", "stats")
     await cb(
         interaction,
-        strength=10, dexterity=10, constitution=10,
-        intelligence=10, wisdom=10, charisma=10,
+        strength=10,
+        dexterity=10,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
         initiative_bonus=-10,
     )
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ===========================================================================
@@ -398,7 +469,9 @@ async def test_character_ac_1_accepted(mocker, char_bot, sample_character):
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=1)
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_character_ac_30_accepted(mocker, char_bot, sample_character):
@@ -406,7 +479,9 @@ async def test_character_ac_30_accepted(mocker, char_bot, sample_character):
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=30)
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ===========================================================================
@@ -452,9 +527,12 @@ async def test_character_class_add_exceeding_total_level_20_rejected(
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.CHAR_CLASS_TOTAL_LEVEL_EXCEEDED.format(
-        level=16, char_class="Wizard", char_name="Aldric", current_total=5
-    ) in msg
+    assert (
+        Strings.CHAR_CLASS_TOTAL_LEVEL_EXCEEDED.format(
+            level=16, char_class="Wizard", char_name="Aldric", current_total=5
+        )
+        in msg
+    )
 
 
 async def test_character_class_add_exact_total_20_accepted(
@@ -465,7 +543,9 @@ async def test_character_class_add_exact_total_20_accepted(
     cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Wizard", level=15)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ===========================================================================
@@ -500,7 +580,9 @@ async def test_hp_set_max_one_accepted(mocker, health_bot, sample_character):
     interaction = make_interaction(mocker)
     cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=1)
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_hp_set_max_very_large_value_does_not_crash(
@@ -513,7 +595,9 @@ async def test_hp_set_max_very_large_value_does_not_crash(
     await cb(interaction, max_hp=2_000_000_000)
 
     assert interaction.response.send_message.called
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ===========================================================================
@@ -644,7 +728,9 @@ async def test_hp_damage_exact_dice_limit_accepted(
     cb = get_callback(health_bot, "hp", "damage")
     await cb(interaction, amount="100d1000")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_hp_damage_zero_dice_is_harmless(
@@ -770,7 +856,9 @@ async def test_hp_heal_named_modifier_rejected(
 # ===========================================================================
 
 
-async def test_hp_temp_zero_is_accepted(mocker, health_bot, sample_character, db_session):
+async def test_hp_temp_zero_is_accepted(
+    mocker, health_bot, sample_character, db_session
+):
     """Zero temporary HP is accepted (replaces any existing temp HP of 0)."""
     sample_character.max_hp = 20
     sample_character.current_hp = 20
@@ -830,7 +918,9 @@ async def test_roll_too_many_sides_rejected(mocker, roll_bot, sample_character):
     assert Strings.ERROR_DICE_LIMIT in msg
 
 
-async def test_roll_zero_sided_die_returns_ephemeral(mocker, roll_bot, sample_character):
+async def test_roll_zero_sided_die_returns_ephemeral(
+    mocker, roll_bot, sample_character
+):
     """'1d0' must not raise an unhandled exception — it must return an
     ephemeral error."""
     interaction = make_interaction(mocker)
@@ -840,7 +930,9 @@ async def test_roll_zero_sided_die_returns_ephemeral(mocker, roll_bot, sample_ch
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-async def test_roll_totally_invalid_notation_rejected(mocker, roll_bot, sample_character):
+async def test_roll_totally_invalid_notation_rejected(
+    mocker, roll_bot, sample_character
+):
     """Gibberish notation must be handled gracefully.
 
     When a character is active, perform_roll returns an error string as a
@@ -907,7 +999,9 @@ async def test_roll_exact_dice_limit_accepted(mocker, roll_bot):
     cb = get_callback(roll_bot, "roll")
     await cb(interaction, notation="100d1000")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 # ===========================================================================
@@ -1001,7 +1095,10 @@ async def test_encounter_enemy_hp_invalid_string_rejected(
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert "Invalid HP" in msg or Strings.ENCOUNTER_INVALID_HP.format(value="notvalid") in msg
+    assert (
+        "Invalid HP" in msg
+        or Strings.ENCOUNTER_INVALID_HP.format(value="notvalid") in msg
+    )
 
 
 @pytest.mark.xfail(
@@ -1059,7 +1156,11 @@ async def test_encounter_enemy_hp_sql_injection_rejected(
 
 
 async def test_encounter_enemy_sql_injection_name_stored_safely(
-    mocker, encounter_bot, sample_active_party, sample_pending_encounter, session_factory
+    mocker,
+    encounter_bot,
+    sample_active_party,
+    sample_pending_encounter,
+    session_factory,
 ):
     """SQL-injection in an enemy name must be stored verbatim, not interpreted."""
     interaction = make_interaction(mocker)
@@ -1087,9 +1188,12 @@ async def test_encounter_damage_position_zero_rejected(
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.ENCOUNTER_DAMAGE_INVALID_POSITION.format(
-        position=0, count=len(sample_active_encounter.turns)
-    ) in msg
+    assert (
+        Strings.ENCOUNTER_DAMAGE_INVALID_POSITION.format(
+            position=0, count=len(sample_active_encounter.turns)
+        )
+        in msg
+    )
 
 
 async def test_encounter_damage_position_out_of_range_rejected(
@@ -1259,12 +1363,14 @@ async def test_attack_add_at_character_attack_limit_rejected(
     """Adding an attack when the character already has MAX_ATTACKS_PER_CHARACTER
     attacks must be rejected."""
     for i in range(MAX_ATTACKS_PER_CHARACTER):
-        db_session.add(Attack(
-            character_id=sample_character.id,
-            name=f"Attack{i}",
-            hit_modifier=5,
-            damage_formula="1d8",
-        ))
+        db_session.add(
+            Attack(
+                character_id=sample_character.id,
+                name=f"Attack{i}",
+                hit_modifier=5,
+                damage_formula="1d8",
+            )
+        )
     db_session.commit()
 
     interaction = make_interaction(mocker)
@@ -1273,9 +1379,12 @@ async def test_attack_add_at_character_attack_limit_rejected(
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.ERROR_LIMIT_ATTACKS.format(
-        char_name=sample_character.name, limit=MAX_ATTACKS_PER_CHARACTER
-    ) in msg
+    assert (
+        Strings.ERROR_LIMIT_ATTACKS.format(
+            char_name=sample_character.name, limit=MAX_ATTACKS_PER_CHARACTER
+        )
+        in msg
+    )
 
 
 async def test_party_create_at_server_party_limit_rejected(
@@ -1288,6 +1397,7 @@ async def test_party_create_at_server_party_limit_rejected(
     per-user GM limit (20) before the server limit (60) is reached.
     """
     from models import User as _User
+
     filler = _User(discord_id="777777")
     db_session.add(filler)
     db_session.flush()
@@ -1302,7 +1412,9 @@ async def test_party_create_at_server_party_limit_rejected(
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.ERROR_LIMIT_PARTIES_SERVER.format(limit=MAX_PARTIES_PER_SERVER) in msg
+    assert (
+        Strings.ERROR_LIMIT_PARTIES_SERVER.format(limit=MAX_PARTIES_PER_SERVER) in msg
+    )
 
 
 async def test_party_create_at_gm_party_limit_rejected(
@@ -1330,14 +1442,16 @@ async def test_encounter_enemy_at_limit_rejected(
     """Adding an enemy when the encounter already has MAX_ENEMIES_PER_ENCOUNTER
     enemies must be rejected."""
     for i in range(MAX_ENEMIES_PER_ENCOUNTER):
-        db_session.add(Enemy(
-            encounter_id=sample_pending_encounter.id,
-            name=f"Enemy{i}",
-            type_name="Goblin",
-            initiative_modifier=0,
-            max_hp=5,
-            current_hp=5,
-        ))
+        db_session.add(
+            Enemy(
+                encounter_id=sample_pending_encounter.id,
+                name=f"Enemy{i}",
+                type_name="Goblin",
+                initiative_modifier=0,
+                max_hp=5,
+                current_hp=5,
+            )
+        )
     db_session.commit()
 
     interaction = make_interaction(mocker)
@@ -1379,4 +1493,6 @@ async def test_party_character_add_at_member_limit_rejected(
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.ERROR_LIMIT_PARTY_MEMBERS.format(limit=MAX_CHARACTERS_PER_PARTY) in msg
+    assert (
+        Strings.ERROR_LIMIT_PARTY_MEMBERS.format(limit=MAX_CHARACTERS_PER_PARTY) in msg
+    )

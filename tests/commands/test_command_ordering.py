@@ -75,7 +75,9 @@ async def test_hp_temp_before_max_hp_set_is_accepted(
 
     db_session.refresh(sample_character)
     assert sample_character.temp_hp == 5
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_hp_status_before_set_max_shows_sentinel_values(
@@ -90,7 +92,9 @@ async def test_hp_status_before_set_max_shows_sentinel_values(
     await cb(interaction)
 
     assert interaction.response.send_message.call_args is not None
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
     msg = interaction.response.send_message.call_args.args[0]
     assert "-1" in msg
 
@@ -165,7 +169,11 @@ async def test_hp_damage_then_heal_then_damage_to_zero(
     sample_character.current_hp = 10
     db_session.commit()
 
-    i2, i3, i4 = make_interaction(mocker), make_interaction(mocker), make_interaction(mocker)
+    i2, i3, i4 = (
+        make_interaction(mocker),
+        make_interaction(mocker),
+        make_interaction(mocker),
+    )
     cb_dmg = get_callback(health_bot, "hp", "damage")
     cb_heal = get_callback(health_bot, "hp", "heal")
 
@@ -226,7 +234,9 @@ async def test_attack_roll_after_switching_to_character_without_attacks(
     cb_roll = get_callback(attack_bot, "attack", "roll")
     await cb_roll(roll_interaction, attack_name="Longsword")
 
-    assert roll_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        roll_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    )
     msg = roll_interaction.response.send_message.call_args.args[0]
     assert "not found" in msg.lower() or "longsword" in msg.lower()
 
@@ -248,7 +258,10 @@ async def test_attack_add_then_roll_then_roll_after_attack_replaced(
     roll_interaction = make_interaction(mocker)
     cb_roll = get_callback(attack_bot, "attack", "roll")
     await cb_roll(roll_interaction, attack_name="Dagger")
-    assert roll_interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        roll_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is not True
+    )
 
     # Upsert with new formula
     upsert_interaction = make_interaction(mocker)
@@ -261,7 +274,10 @@ async def test_attack_add_then_roll_then_roll_after_attack_replaced(
     # Roll again — still works
     roll_interaction2 = make_interaction(mocker)
     await cb_roll(roll_interaction2, attack_name="Dagger")
-    assert roll_interaction2.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        roll_interaction2.response.send_message.call_args.kwargs.get("ephemeral")
+        is not True
+    )
 
 
 # ===========================================================================
@@ -290,7 +306,9 @@ async def test_party_roll_after_active_party_deleted_returns_error(
     cb = get_callback(party_bot, "party", "roll")
     await cb(roll_interaction, notation="1d20")
 
-    assert roll_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        roll_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    )
     msg = roll_interaction.response.send_message.call_args.args[0]
     assert "party" in msg.lower()
 
@@ -341,8 +359,12 @@ async def test_setting_new_active_party_replaces_previous(
         user=sample_active_party.gms[0],
         server=sample_active_party.server,
         is_active=False,
-        strength=10, dexterity=12, constitution=10,
-        intelligence=10, wisdom=10, charisma=10,
+        strength=10,
+        dexterity=12,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
     )
     db_session.add(second_char)
     db_session.flush()
@@ -368,7 +390,9 @@ async def test_setting_new_active_party_replaces_previous(
     cb_roll = get_callback(party_bot, "party", "roll")
     await cb_roll(roll_interaction, notation="1d20")
 
-    msg = roll_interaction.response.is_called or roll_interaction.followup.send.call_args
+    msg = (
+        roll_interaction.response.is_called or roll_interaction.followup.send.call_args
+    )
     assert msg is not None
 
 
@@ -421,11 +445,15 @@ async def test_party_character_add_then_remove_then_readd(
     # Remove (shows confirmation — press confirm)
     remove_interaction = make_interaction(mocker)
     cb_remove = get_callback(party_bot, "party", "character_remove")
-    await cb_remove(remove_interaction, party_name=sample_party.name, character_name="Aldric")
+    await cb_remove(
+        remove_interaction, party_name=sample_party.name, character_name="Aldric"
+    )
 
     view = remove_interaction.response.send_message.call_args.kwargs.get("view")
     btn_interaction = make_interaction(mocker)
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Remove")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Remove"
+    )
     await confirm_btn.callback(btn_interaction)
 
     db_session.refresh(sample_party)
@@ -433,7 +461,9 @@ async def test_party_character_add_then_remove_then_readd(
 
     # Re-add
     readd_interaction = make_interaction(mocker)
-    await cb_add(readd_interaction, party_name=sample_party.name, character_name="Aldric")
+    await cb_add(
+        readd_interaction, party_name=sample_party.name, character_name="Aldric"
+    )
 
     db_session.refresh(sample_party)
     assert any(c.name == "Aldric" for c in sample_party.characters)
@@ -457,8 +487,13 @@ async def test_party_character_remove_when_not_in_party_returns_error(
 
 
 async def test_full_encounter_lifecycle_create_enemy_start_next_end(
-    encounter_bot, sample_active_party, sample_character, db_session,
-    interaction, session_factory, mocker
+    encounter_bot,
+    sample_active_party,
+    sample_character,
+    db_session,
+    interaction,
+    session_factory,
+    mocker,
 ):
     """Full sequential encounter lifecycle:
     create → add enemy → start → next (advance) → next (wrap round) → end.
@@ -472,10 +507,14 @@ async def test_full_encounter_lifecycle_create_enemy_start_next_end(
     await cb_create(interaction, name="Dungeon Run")
 
     verify = session_factory()
-    enc = verify.query(Encounter).filter_by(
-        party_id=sample_active_party.id,
-        status=EncounterStatus.PENDING,
-    ).first()
+    enc = (
+        verify.query(Encounter)
+        .filter_by(
+            party_id=sample_active_party.id,
+            status=EncounterStatus.PENDING,
+        )
+        .first()
+    )
     assert enc is not None, "encounter not created"
     enc_id = enc.id
     verify.close()
@@ -533,14 +572,21 @@ async def test_full_encounter_lifecycle_create_enemy_start_next_end(
     dead_interaction = make_interaction(mocker)
     await cb_next(dead_interaction)
 
-    assert dead_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        dead_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    )
     msg = dead_interaction.response.send_message.call_args.args[0]
     assert "encounter" in msg.lower()
 
 
 async def test_second_encounter_after_first_ends(
-    encounter_bot, sample_active_party, sample_character, db_session,
-    interaction, session_factory, mocker
+    encounter_bot,
+    sample_active_party,
+    sample_character,
+    db_session,
+    interaction,
+    session_factory,
+    mocker,
 ):
     """After ending encounter A, the party can create and start encounter B.
 
@@ -576,18 +622,26 @@ async def test_second_encounter_after_first_ends(
     assert "already" not in create_msg.lower()
 
     verify = session_factory()
-    enc_b = verify.query(Encounter).filter_by(
-        party_id=sample_active_party.id,
-        status=EncounterStatus.PENDING,
-    ).first()
+    enc_b = (
+        verify.query(Encounter)
+        .filter_by(
+            party_id=sample_active_party.id,
+            status=EncounterStatus.PENDING,
+        )
+        .first()
+    )
     assert enc_b is not None
     assert enc_b.name == "Encounter B"
     verify.close()
 
 
 async def test_encounter_enemy_after_encounter_ended_returns_no_pending(
-    encounter_bot, sample_active_party, sample_character, db_session,
-    interaction, mocker
+    encounter_bot,
+    sample_active_party,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """``/encounter enemy`` after the encounter has been ended must return an
     error (no PENDING encounter), not add enemies to the completed one.
@@ -620,8 +674,12 @@ async def test_encounter_enemy_after_encounter_ended_returns_no_pending(
 
 
 async def test_encounter_start_after_encounter_ended_no_pending_returns_error(
-    encounter_bot, sample_active_party, sample_character, db_session,
-    interaction, mocker
+    encounter_bot,
+    sample_active_party,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """``/encounter start`` after the encounter has been ended must fail with
     'no pending encounter', not crash.
@@ -708,8 +766,12 @@ async def test_encounter_view_and_next_after_all_enemies_defeated_auto_end(
 
 
 async def test_encounter_end_then_next_then_create_next_all_correct(
-    encounter_bot, sample_active_party, sample_character, db_session,
-    interaction, mocker
+    encounter_bot,
+    sample_active_party,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """Sequence: start encounter → end → try next (error) → create new encounter
     → ``/encounter enemy`` succeeds on the new one.
@@ -898,7 +960,9 @@ async def test_roll_pure_dice_does_not_require_character(
     await cb(interaction, notation="1d20")
 
     # Public response (not ephemeral)
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
 
 async def test_roll_skill_without_character_returns_not_found(
@@ -976,7 +1040,12 @@ async def test_inspiration_grant_without_active_party_rejected(
 
 
 async def test_inspiration_grant_as_non_gm_rejected(
-    inspiration_bot, sample_active_party, sample_character, db_session, interaction, mocker
+    inspiration_bot,
+    sample_active_party,
+    sample_character,
+    db_session,
+    interaction,
+    mocker,
 ):
     """A party member who is NOT a GM must be rejected when trying to grant
     inspiration.
@@ -1004,7 +1073,10 @@ async def test_inspiration_grant_as_non_gm_rejected(
     cb = get_callback(inspiration_bot, "inspiration", "grant")
     await cb(non_gm_interaction, partymember="Aldric")
 
-    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
     msg = non_gm_interaction.response.send_message.call_args.args[0]
     assert "gm" in msg.lower() or "only" in msg.lower()
 
@@ -1062,12 +1134,14 @@ async def test_attack_targeted_without_encounter_returns_error(
     ephemeral error, not crash.  The attack itself is valid; only the target
     lookup fails.
     """
-    db_session.add(Attack(
-        character_id=sample_character.id,
-        name="Crossbow",
-        hit_modifier=5,
-        damage_formula="1d8+3",
-    ))
+    db_session.add(
+        Attack(
+            character_id=sample_character.id,
+            name="Crossbow",
+            hit_modifier=5,
+            damage_formula="1d8+3",
+        )
+    )
     db_session.commit()
 
     cb = get_callback(attack_bot, "attack", "roll")
@@ -1129,8 +1203,12 @@ async def test_party_roll_after_switching_active_party_uses_new_party(
         user=sample_character.user,
         server=sample_character.server,
         is_active=False,
-        strength=10, dexterity=12, constitution=10,
-        intelligence=10, wisdom=10, charisma=10,
+        strength=10,
+        dexterity=12,
+        constitution=10,
+        intelligence=10,
+        wisdom=10,
+        charisma=10,
     )
     db_session.add(char_b)
     db_session.flush()
@@ -1179,6 +1257,6 @@ async def test_all_character_dependent_hp_commands_without_any_character(
         fresh_i = make_interaction(mocker)
         cb = get_callback(health_bot, "hp", subcommand)
         await cb(fresh_i, **kwargs)
-        assert fresh_i.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-            f"/hp {subcommand} did not return ephemeral=True without a character"
-        )
+        assert (
+            fresh_i.response.send_message.call_args.kwargs.get("ephemeral") is True
+        ), f"/hp {subcommand} did not return ephemeral=True without a character"

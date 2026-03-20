@@ -12,14 +12,16 @@ if TYPE_CHECKING:
 class User(Base):
     """A Discord user registered with the bot."""
 
-    __tablename__ = 'users'
+    __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     discord_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
 
     servers: Mapped[list["Server"]] = relationship(
         "Server", secondary=user_server_association, back_populates="users"
     )
-    characters: Mapped[list["Character"]] = relationship("Character", back_populates="user")
+    characters: Mapped[list["Character"]] = relationship(
+        "Character", back_populates="user"
+    )
     gm_parties: Mapped[list["Party"]] = relationship(
         "Party", secondary=party_gm_association, back_populates="gms"
     )

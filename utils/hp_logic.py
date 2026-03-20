@@ -1,5 +1,6 @@
 from utils.strings import Strings
 
+
 def apply_damage(current_hp: int, temp_hp: int, damage: int) -> tuple[int, int]:
     if temp_hp > 0:
         temp_hp -= damage
@@ -36,6 +37,7 @@ def parse_amount(amount) -> int:
     except ValueError:
         pass
     from dice_roller import parse_expression_tokens, evaluate_expression
+
     tokens = parse_expression_tokens(s)
-    result = evaluate_expression(tokens)   # raises ValueError if named tokens found
+    result = evaluate_expression(tokens)  # raises ValueError if named tokens found
     return result.total

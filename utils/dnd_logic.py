@@ -32,7 +32,9 @@ def get_stat_modifier(score: Optional[int]) -> int:
     return (score - 10) // 2
 
 
-def resolve_named_modifier(name: str, char: "Character", db: "Session") -> tuple[int, str]:
+def resolve_named_modifier(
+    name: str, char: "Character", db: "Session"
+) -> tuple[int, str]:
     """
     Resolve a named modifier token against a character.
     Returns (int_value, display_label).
@@ -47,8 +49,17 @@ def resolve_named_modifier(name: str, char: "Character", db: "Session") -> tuple
         stat_name = SKILL_TO_STAT[skill_name]
         stat_mod = get_stat_modifier(getattr(char, stat_name))
         from models import CharacterSkill
-        char_skill = db.query(CharacterSkill).filter_by(character_id=char.id, skill_name=skill_name).first()
-        prof_status = char_skill.proficiency if char_skill else SkillProficiencyStatus.NOT_PROFICIENT
+
+        char_skill = (
+            db.query(CharacterSkill)
+            .filter_by(character_id=char.id, skill_name=skill_name)
+            .first()
+        )
+        prof_status = (
+            char_skill.proficiency
+            if char_skill
+            else SkillProficiencyStatus.NOT_PROFICIENT
+        )
         mod = stat_mod
         if prof_status == SkillProficiencyStatus.PROFICIENT:
             mod += prof_bonus
@@ -59,9 +70,11 @@ def resolve_named_modifier(name: str, char: "Character", db: "Session") -> tuple
         return mod, f"{skill_name}({mod:+d})"
 
     # Initiative
-    if clean in ('initiative', 'init'):
+    if clean in ("initiative", "init"):
         dex_mod = get_stat_modifier(char.dexterity)
-        init_bonus = char.initiative_bonus if char.initiative_bonus is not None else dex_mod
+        init_bonus = (
+            char.initiative_bonus if char.initiative_bonus is not None else dex_mod
+        )
         return init_bonus, f"Initiative({init_bonus:+d})"
 
     # Stat modifier (full name or abbreviation)
@@ -70,7 +83,9 @@ def resolve_named_modifier(name: str, char: "Character", db: "Session") -> tuple
         mod = get_stat_modifier(getattr(char, stat_name))
         return mod, f"{stat_name.title()}({mod:+d})"
 
-    raise ValueError(f"Unknown named modifier: '{name}'. Use a skill, stat, or 'initiative'.")
+    raise ValueError(
+        f"Unknown named modifier: '{name}'. Use a skill, stat, or 'initiative'."
+    )
 
 
 def _roll_d20_with_advantage(advantage: Optional[str]) -> tuple[int, Optional[int]]:
@@ -78,10 +93,10 @@ def _roll_d20_with_advantage(advantage: Optional[str]) -> tuple[int, Optional[in
     Roll a d20, optionally with advantage or disadvantage.
     Returns (kept_roll, discarded_roll_or_None).
     """
-    if advantage in ('advantage', 'disadvantage'):
+    if advantage in ("advantage", "disadvantage"):
         r1 = random.randint(1, 20)
         r2 = random.randint(1, 20)
-        if advantage == 'advantage':
+        if advantage == "advantage":
             kept, discarded = max(r1, r2), min(r1, r2)
         else:
             kept, discarded = min(r1, r2), max(r1, r2)
@@ -89,10 +104,12 @@ def _roll_d20_with_advantage(advantage: Optional[str]) -> tuple[int, Optional[in
     return random.randint(1, 20), None
 
 
-def _format_d20_roll(kept: int, discarded: Optional[int], advantage: Optional[str]) -> str:
+def _format_d20_roll(
+    kept: int, discarded: Optional[int], advantage: Optional[str]
+) -> str:
     if discarded is None:
         return f"d20({kept})"
-    sym = "↑" if advantage == 'advantage' else "↓"
+    sym = "↑" if advantage == "advantage" else "↓"
     return f"d20[{kept}{sym},{discarded}]"
 
 
@@ -111,7 +128,9 @@ async def perform_roll(
     2. Complex expressions containing named modifiers (e.g. '2d8+perception').
     3. Pure dice/number expressions (e.g. '2d6+3').
     """
-    logger.debug(f"perform_roll: char={char.name} notation={notation!r} advantage={advantage}")
+    logger.debug(
+        f"perform_roll: char={char.name} notation={notation!r} advantage={advantage}"
+    )
     clean = notation.lower().strip()
 
     # ------------------------------------------------------------------
@@ -140,8 +159,17 @@ async def perform_roll(
             stat_score = getattr(char, stat_name)
             stat_mod = get_stat_modifier(stat_score)
             from models import CharacterSkill
-            char_skill = db.query(CharacterSkill).filter_by(character_id=char.id, skill_name=skill).first()
-            prof_status = char_skill.proficiency if char_skill else SkillProficiencyStatus.NOT_PROFICIENT
+
+            char_skill = (
+                db.query(CharacterSkill)
+                .filter_by(character_id=char.id, skill_name=skill)
+                .first()
+            )
+            prof_status = (
+                char_skill.proficiency
+                if char_skill
+                else SkillProficiencyStatus.NOT_PROFICIENT
+            )
             skill_mod = stat_mod
             if prof_status == SkillProficiencyStatus.PROFICIENT:
                 skill_mod += prof_bonus
@@ -152,8 +180,11 @@ async def perform_roll(
             total = d20_roll + skill_mod
             label = f"{skill} ({stat_name.title()})"
             return Strings.ROLL_RESULT_CHAR.format(
-                char_name=char.name, label=label,
-                d20_roll=d20_str, modifier=skill_mod, total=total,
+                char_name=char.name,
+                label=label,
+                d20_roll=d20_str,
+                modifier=skill_mod,
+                total=total,
             )
 
         elif is_save:
@@ -164,17 +195,25 @@ async def perform_roll(
             save_mod = stat_mod + (prof_bonus if is_proficient else 0)
             total = d20_roll + save_mod
             return Strings.ROLL_RESULT_CHAR.format(
-                char_name=char.name, label=f"{stat_name.title()} Save",
-                d20_roll=d20_str, modifier=save_mod, total=total,
+                char_name=char.name,
+                label=f"{stat_name.title()} Save",
+                d20_roll=d20_str,
+                modifier=save_mod,
+                total=total,
             )
 
         elif is_initiative:
             dex_mod = get_stat_modifier(char.dexterity)
-            init_bonus = char.initiative_bonus if char.initiative_bonus is not None else dex_mod
+            init_bonus = (
+                char.initiative_bonus if char.initiative_bonus is not None else dex_mod
+            )
             total = d20_roll + init_bonus
             return Strings.ROLL_RESULT_CHAR.format(
-                char_name=char.name, label="Initiative",
-                d20_roll=d20_str, modifier=init_bonus, total=total,
+                char_name=char.name,
+                label="Initiative",
+                d20_roll=d20_str,
+                modifier=init_bonus,
+                total=total,
             )
 
         else:  # matched_stat
@@ -183,8 +222,11 @@ async def perform_roll(
             stat_mod = get_stat_modifier(stat_score)
             total = d20_roll + stat_mod
             return Strings.ROLL_RESULT_CHAR.format(
-                char_name=char.name, label=f"{stat_name.title()} Check",
-                d20_roll=d20_str, modifier=stat_mod, total=total,
+                char_name=char.name,
+                label=f"{stat_name.title()} Check",
+                d20_roll=d20_str,
+                modifier=stat_mod,
+                total=total,
             )
 
     # ------------------------------------------------------------------
@@ -195,7 +237,9 @@ async def perform_roll(
         resolver = None
         if has_named_tokens(tokens):
             resolver = lambda name: resolve_named_modifier(name, char, db)
-        result = evaluate_expression(tokens, named_resolver=resolver, advantage=advantage)
+        result = evaluate_expression(
+            tokens, named_resolver=resolver, advantage=advantage
+        )
         return Strings.ROLL_RESULT_CHAR_EXPR.format(
             char_name=char.name,
             notation=notation,

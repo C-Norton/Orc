@@ -3,7 +3,16 @@ import discord
 from discord.ext import commands
 from sqlalchemy import insert
 
-from models import User, Server, Character, Party, Encounter, Enemy, EncounterTurn, user_server_association
+from models import (
+    User,
+    Server,
+    Character,
+    Party,
+    Encounter,
+    Enemy,
+    EncounterTurn,
+    user_server_association,
+)
 from enums.encounter_status import EncounterStatus
 from tests.conftest import make_interaction  # re-export for convenience
 
@@ -11,6 +20,7 @@ from tests.conftest import make_interaction  # re-export for convenience
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_bot():
     intents = discord.Intents.none()
@@ -40,19 +50,23 @@ def get_callback(bot, *path):
 # Each fixture patches SessionLocal in the target module for the whole test.
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def health_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.health_commands.SessionLocal", new=session_factory)
     from commands.health_commands import register_health_commands
+
     register_health_commands(bot)
     yield bot
+
 
 @pytest.fixture
 def char_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.character_commands.SessionLocal", new=session_factory)
     from commands.character_commands import register_character_commands
+
     register_character_commands(bot)
     yield bot
 
@@ -62,6 +76,7 @@ def attack_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.attack_commands.SessionLocal", new=session_factory)
     from commands.attack_commands import register_attack_commands
+
     register_attack_commands(bot)
     yield bot
 
@@ -71,6 +86,7 @@ def roll_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.roll_commands.SessionLocal", new=session_factory)
     from commands.roll_commands import register_roll_commands
+
     register_roll_commands(bot)
     yield bot
 
@@ -80,6 +96,7 @@ def party_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.party_commands.SessionLocal", new=session_factory)
     from commands.party_commands import register_party_commands
+
     register_party_commands(bot)
     yield bot
 
@@ -89,6 +106,7 @@ def encounter_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.encounter_commands.SessionLocal", new=session_factory)
     from commands.encounter_commands import register_encounter_commands
+
     register_encounter_commands(bot)
     yield bot
 
@@ -97,6 +115,7 @@ def encounter_bot(session_factory, mocker):
 def meta_bot():
     bot = make_bot()
     from commands.meta_commands import register_meta_commands
+
     register_meta_commands(bot)
     yield bot
 
@@ -106,6 +125,7 @@ def inspiration_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.inspiration_commands.SessionLocal", new=session_factory)
     from commands.inspiration_commands import register_inspiration_commands
+
     register_inspiration_commands(bot)
     yield bot
 
@@ -115,6 +135,7 @@ def weapon_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.weapon_commands.SessionLocal", new=session_factory)
     from commands.weapon_commands import register_weapon_commands
+
     register_weapon_commands(bot)
     yield bot
 
@@ -122,6 +143,7 @@ def weapon_bot(session_factory, mocker):
 # ---------------------------------------------------------------------------
 # Party-specific seed fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_party(db_session, sample_user, sample_server):
@@ -149,6 +171,7 @@ def sample_active_party(db_session, sample_party, sample_user, sample_server):
 # ---------------------------------------------------------------------------
 # Encounter seed fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_pending_encounter(db_session, sample_active_party):
@@ -181,7 +204,9 @@ def sample_enemy(db_session, sample_pending_encounter):
 
 
 @pytest.fixture
-def sample_active_encounter(db_session, sample_pending_encounter, sample_enemy, sample_character):
+def sample_active_encounter(
+    db_session, sample_pending_encounter, sample_enemy, sample_character
+):
     """Fully started encounter: Aldric (position 0, roll 15) vs Goblin (position 1, roll 10).
     message_id/channel_id match the defaults in make_interaction."""
     sample_pending_encounter.party.characters.append(sample_character)

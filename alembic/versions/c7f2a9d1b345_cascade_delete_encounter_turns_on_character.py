@@ -7,13 +7,14 @@ Create Date: 2026-03-16 00:00:00.000000
 SQLite cannot ALTER a foreign key constraint in-place, so we use Alembic's
 batch mode which rebuilds the table under the hood.
 """
+
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
 
-revision: str = 'c7f2a9d1b345'
-down_revision: Union[str, Sequence[str], None] = 'b5fa2a3ab209'
+revision: str = "c7f2a9d1b345"
+down_revision: Union[str, Sequence[str], None] = "b5fa2a3ab209"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

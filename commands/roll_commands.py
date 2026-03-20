@@ -139,18 +139,90 @@ async def _handle_death_save(
 
 def register_roll_commands(bot: commands.Bot) -> None:
 
-    @bot.tree.command(name="roll", description="Roll dice, a skill check, a save, or a complex expression.")
+    @bot.tree.command(name="gmroll", description="Roll dice privately to the GM(s).")
     @app_commands.describe(
         notation=(
-            "Dice, skill, stat, save, or a complex expression "
-            "(e.g. 'perception', '2d8+perception', '1d20+5', '2d8-initiative+8+2d6')"
+            "Dice, skill, stat, or save(e.g. 'perception', 'str save', '1d20+5')"
         ),
         advantage="Roll with advantage or disadvantage",
     )
-    @app_commands.choices(advantage=[
-        app_commands.Choice(name="Advantage", value="advantage"),
-        app_commands.Choice(name="Disadvantage", value="disadvantage"),
-    ])
+    @app_commands.choices(
+        advantage=[
+            app_commands.Choice(name="Advantage", value="advantage"),
+            app_commands.Choice(name="Disadvantage", value="disadvantage"),
+        ]
+    )
+    async def gmroll(
+        interaction: discord.Interaction, notation: str, advantage: str = None
+    ) -> None:
+        logger.debug(
+            f"Command /gmroll called by {interaction.user} (ID: {interaction.user.id}) "
+            f"in guild {interaction.guild_id} — notation={notation!r} advantage={advantage}"
+        )
+        db = SessionLocal()
+        try:
+            if _needs_character(notation):
+                user, server = resolve_user_server(db, interaction)
+                char = get_active_character(db, user, server)
+                logger.debug(
+                    f"Character lookup: {'found: ' + char.name if char else 'not found'}"
+                )
+                if not char:
+                    await interaction.response.send_message(
+                        Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                    )
+                    return
+
+                if notation.lower().strip() == _DEATH_SAVE_NOTATION:
+                    await _handle_death_save(interaction, char, db)
+                    return
+
+                response = await perform_roll(char, notation, db, advantage=advantage)
+                await interaction.response.send_message(response)
+                logger.info(
+                    f"/roll (character) completed for user {interaction.user.id}"
+                )
+
+            else:
+                # Pure dice / number expression — no character needed
+                tokens = parse_expression_tokens(notation)
+                result = evaluate_expression(tokens, advantage=advantage)
+                response = Strings.ROLL_RESULT_DICE_EXPR.format(
+                    notation=notation,
+                    breakdown=result.breakdown(),
+                    total=result.total,
+                )
+                await interaction.response.send_message(response)
+                logger.info(f"/roll (dice) completed for user {interaction.user.id}")
+
+        except ValueError as e:
+            logger.warning(f"ValueError in /roll (notation={notation!r}): {e}")
+            await interaction.response.send_message(f"❌ Error: {e}", ephemeral=True)
+        except Exception as e:
+            logger.error(
+                f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True
+            )
+            await interaction.response.send_message(
+                Strings.SERVER_ERROR, ephemeral=True
+            )
+        finally:
+            db.close()
+    @bot.tree.command(
+        name="roll",
+        description="Roll dice, a skill check, a save, or a complex expression.",
+    )
+    @app_commands.describe(
+        notation=(
+            "Dice, skill, stat, or save(e.g. 'perception', 'str save', '1d20+5')"
+        ),
+        advantage="Roll with advantage or disadvantage",
+    )
+    @app_commands.choices(
+        advantage=[
+            app_commands.Choice(name="Advantage", value="advantage"),
+            app_commands.Choice(name="Disadvantage", value="disadvantage"),
+        ]
+    )
     async def roll(
         interaction: discord.Interaction,
         notation: str,
@@ -169,7 +241,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     f"Character lookup: {'found: ' + char.name if char else 'not found'}"
                 )
                 if not char:
-                    await interaction.response.send_message(Strings.CHARACTER_NOT_FOUND, ephemeral=True)
+                    await interaction.response.send_message(
+                        Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                    )
                     return
 
                 if notation.lower().strip() == _DEATH_SAVE_NOTATION:
@@ -178,7 +252,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
 
                 response = await perform_roll(char, notation, db, advantage=advantage)
                 await interaction.response.send_message(response)
-                logger.info(f"/roll (character) completed for user {interaction.user.id}")
+                logger.info(
+                    f"/roll (character) completed for user {interaction.user.id}"
+                )
 
             else:
                 # Pure dice / number expression — no character needed
@@ -196,8 +272,12 @@ def register_roll_commands(bot: commands.Bot) -> None:
             logger.warning(f"ValueError in /roll (notation={notation!r}): {e}")
             await interaction.response.send_message(f"❌ Error: {e}", ephemeral=True)
         except Exception as e:
-            logger.error(f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True)
-            await interaction.response.send_message(Strings.SERVER_ERROR, ephemeral=True)
+            logger.error(
+                f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True
+            )
+            await interaction.response.send_message(
+                Strings.SERVER_ERROR, ephemeral=True
+            )
         finally:
             db.close()
 
@@ -209,7 +289,14 @@ def register_roll_commands(bot: commands.Bot) -> None:
         skills = sorted(SKILL_TO_STAT.keys())
         suggestions.extend(skills)
         suggestions.append("Initiative")
-        stats = ["Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"]
+        stats = [
+            "Strength",
+            "Dexterity",
+            "Constitution",
+            "Intelligence",
+            "Wisdom",
+            "Charisma",
+        ]
         suggestions.extend(stats)
         suggestions.extend(["Str", "Dex", "Con", "Int", "Wis", "Cha"])
         for stat in stats:
@@ -230,7 +317,10 @@ def register_roll_commands(bot: commands.Bot) -> None:
 
         filtered = [
             app_commands.Choice(name=s, value=s)
-            for s in suggestions if current.lower() in s.lower()
+            for s in suggestions
+            if current.lower() in s.lower()
         ]
-        filtered.sort(key=lambda c: (not c.name.lower().startswith(current.lower()), c.name))
+        filtered.sort(
+            key=lambda c: (not c.name.lower().startswith(current.lower()), c.name)
+        )
         return filtered[:25]

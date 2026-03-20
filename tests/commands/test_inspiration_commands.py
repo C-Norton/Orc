@@ -1,4 +1,5 @@
 """Integration tests for /inspiration commands and Perkins crit auto-grant."""
+
 import pytest
 from sqlalchemy import insert
 
@@ -18,6 +19,7 @@ def inspiration_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.inspiration_commands.SessionLocal", new=session_factory)
     from commands.inspiration_commands import register_inspiration_commands
+
     register_inspiration_commands(bot)
     yield bot
 
@@ -27,6 +29,7 @@ def attack_bot_patched(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.attack_commands.SessionLocal", new=session_factory)
     from commands.attack_commands import register_attack_commands
+
     register_attack_commands(bot)
     yield bot
 
@@ -145,10 +148,16 @@ async def test_status_reports_no_inspiration(
 
 
 async def test_gm_can_grant_to_party_member(
-    mocker, inspiration_bot, sample_character, db_session, sample_active_party, interaction
+    mocker,
+    inspiration_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A GM can grant inspiration to another party member by name."""
     from models import Character, ClassLevel
+
     target = Character(
         name="Gandalf",
         user=sample_character.user,
@@ -169,10 +178,16 @@ async def test_gm_can_grant_to_party_member(
 
 
 async def test_non_gm_cannot_grant_to_party_member(
-    mocker, inspiration_bot, sample_character, db_session, sample_active_party, interaction
+    mocker,
+    inspiration_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A non-GM gets an error when trying to target another party member."""
     from models import Character, ClassLevel, User
+
     other_user = User(discord_id="999")
     db_session.add(other_user)
     db_session.flush()
@@ -195,6 +210,7 @@ async def test_non_gm_cannot_grant_to_party_member(
     db_session.add(non_gm_user)
     db_session.flush()
     from sqlalchemy import insert as sa_insert
+
     db_session.execute(
         sa_insert(user_server_association).values(
             user_id=non_gm_user.id,
@@ -207,7 +223,10 @@ async def test_non_gm_cannot_grant_to_party_member(
     cb = get_callback(inspiration_bot, "inspiration", "grant")
     await cb(non_gm_interaction, partymember="Legolas")
 
-    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
     msg = non_gm_interaction.response.send_message.call_args.args[0]
     assert "GM" in msg
 
@@ -218,11 +237,16 @@ async def test_non_gm_cannot_grant_to_party_member(
 
 
 async def test_perkins_crit_sets_inspiration_on_character(
-    mocker, attack_bot_patched, sample_character, db_session,
-    sample_active_party, interaction
+    mocker,
+    attack_bot_patched,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A nat-20 with Perkins rule active persists inspiration=True on character."""
     from models import Attack
+
     attack = Attack(
         character_id=sample_character.id,
         name="Shortsword",
@@ -256,11 +280,16 @@ async def test_perkins_crit_sets_inspiration_on_character(
 
 
 async def test_non_perkins_crit_does_not_grant_inspiration(
-    mocker, attack_bot_patched, sample_character, db_session,
-    sample_active_party, interaction
+    mocker,
+    attack_bot_patched,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A nat-20 with DOUBLE_DICE rule does NOT set inspiration."""
     from models import Attack
+
     attack = Attack(
         character_id=sample_character.id,
         name="Longsword",
@@ -315,11 +344,16 @@ async def test_grant_then_spend_then_grant_again(
 
 
 async def test_perkins_crit_already_inspired_no_error(
-    mocker, attack_bot_patched, sample_character, db_session,
-    sample_active_party, interaction
+    mocker,
+    attack_bot_patched,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """Perkins crit fires when character already has inspiration — succeeds, stays True."""
     from models import Attack
+
     attack = Attack(
         character_id=sample_character.id,
         name="Dagger",
@@ -339,7 +373,9 @@ async def test_perkins_crit_already_inspired_no_error(
     mocker.patch("commands.attack_commands.random.randint", return_value=20)
     mocker.patch(
         "commands.attack_commands.apply_crit_damage",
-        return_value=mocker.Mock(rolls=[3], modifier=2, total=5, grants_inspiration=True),
+        return_value=mocker.Mock(
+            rolls=[3], modifier=2, total=5, grants_inspiration=True
+        ),
     )
 
     cb = get_callback(attack_bot_patched, "attack", "roll")
@@ -355,7 +391,12 @@ async def test_perkins_crit_already_inspired_no_error(
 
 
 async def test_gm_can_remove_from_party_member(
-    mocker, inspiration_bot, sample_character, db_session, sample_active_party, interaction
+    mocker,
+    inspiration_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A GM can call /inspiration remove partymember=<name> to clear a target's inspiration."""
     from models import Character, ClassLevel
@@ -391,7 +432,12 @@ async def test_gm_can_remove_from_party_member(
 
 
 async def test_non_gm_cannot_grant_inspiration_to_other_players_character(
-    mocker, inspiration_bot, sample_character, db_session, sample_active_party, interaction
+    mocker,
+    inspiration_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A non-GM party member cannot grant inspiration to a character owned by another player."""
     from models import Character, ClassLevel, User
@@ -409,7 +455,9 @@ async def test_non_gm_cannot_grant_inspiration_to_other_players_character(
     )
     db_session.add(player_a_char)
     db_session.flush()
-    db_session.add(ClassLevel(character_id=player_a_char.id, class_name="Bard", level=1))
+    db_session.add(
+        ClassLevel(character_id=player_a_char.id, class_name="Bard", level=1)
+    )
 
     # Player B (non-GM): owns PlayerB_Char in the party
     player_b_user = User(discord_id="4442")
@@ -424,7 +472,9 @@ async def test_non_gm_cannot_grant_inspiration_to_other_players_character(
     )
     db_session.add(player_b_char)
     db_session.flush()
-    db_session.add(ClassLevel(character_id=player_b_char.id, class_name="Druid", level=1))
+    db_session.add(
+        ClassLevel(character_id=player_b_char.id, class_name="Druid", level=1)
+    )
 
     sample_active_party.characters.extend([player_a_char, player_b_char])
     db_session.execute(
@@ -441,7 +491,10 @@ async def test_non_gm_cannot_grant_inspiration_to_other_players_character(
     cb = get_callback(inspiration_bot, "inspiration", "grant")
     await cb(player_a_interaction, partymember="Zara")
 
-    assert player_a_interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        player_a_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is True
+    )
     msg = player_a_interaction.response.send_message.call_args.args[0]
     assert "GM" in msg
     db_session.refresh(player_b_char)
@@ -449,7 +502,12 @@ async def test_non_gm_cannot_grant_inspiration_to_other_players_character(
 
 
 async def test_non_gm_can_grant_inspiration_to_own_inactive_character(
-    mocker, inspiration_bot, sample_character, db_session, sample_active_party, interaction
+    mocker,
+    inspiration_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A non-GM player can grant inspiration to their own inactive character by name."""
     from models import Character, ClassLevel, User
@@ -475,8 +533,12 @@ async def test_non_gm_can_grant_inspiration_to_own_inactive_character(
     )
     db_session.add_all([active_char, inactive_char])
     db_session.flush()
-    db_session.add(ClassLevel(character_id=active_char.id, class_name="Fighter", level=1))
-    db_session.add(ClassLevel(character_id=inactive_char.id, class_name="Paladin", level=1))
+    db_session.add(
+        ClassLevel(character_id=active_char.id, class_name="Fighter", level=1)
+    )
+    db_session.add(
+        ClassLevel(character_id=inactive_char.id, class_name="Paladin", level=1)
+    )
     sample_active_party.characters.append(inactive_char)
     db_session.execute(
         sa_insert(user_server_association).values(
@@ -493,11 +555,19 @@ async def test_non_gm_can_grant_inspiration_to_own_inactive_character(
 
     db_session.refresh(inactive_char)
     assert inactive_char.inspiration is True
-    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is not True
+    )
 
 
 async def test_non_gm_can_remove_inspiration_from_own_inactive_character(
-    mocker, inspiration_bot, sample_character, db_session, sample_active_party, interaction
+    mocker,
+    inspiration_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """A non-GM player can remove inspiration from their own inactive character by name."""
     from models import Character, ClassLevel, User
@@ -523,7 +593,9 @@ async def test_non_gm_can_remove_inspiration_from_own_inactive_character(
     db_session.add_all([active_char, inactive_char])
     db_session.flush()
     db_session.add(ClassLevel(character_id=active_char.id, class_name="Rogue", level=1))
-    db_session.add(ClassLevel(character_id=inactive_char.id, class_name="Cleric", level=1))
+    db_session.add(
+        ClassLevel(character_id=inactive_char.id, class_name="Cleric", level=1)
+    )
     sample_active_party.characters.append(inactive_char)
     db_session.execute(
         sa_insert(user_server_association).values(
@@ -540,11 +612,19 @@ async def test_non_gm_can_remove_inspiration_from_own_inactive_character(
 
     db_session.refresh(inactive_char)
     assert inactive_char.inspiration is False
-    assert non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        non_gm_interaction.response.send_message.call_args.kwargs.get("ephemeral")
+        is not True
+    )
 
 
 async def test_status_for_party_member_no_gm_required(
-    mocker, inspiration_bot, sample_character, db_session, sample_active_party, interaction
+    mocker,
+    inspiration_bot,
+    sample_character,
+    db_session,
+    sample_active_party,
+    interaction,
 ):
     """Any party member can check another member's inspiration status (no GM gate)."""
     from models import Character, ClassLevel, User

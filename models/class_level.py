@@ -26,7 +26,9 @@ class ClassLevel(Base):
     class_name: Mapped[str] = mapped_column(String(50), nullable=False)
     level: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    character: Mapped["Character"] = relationship("Character", back_populates="class_levels")
+    character: Mapped["Character"] = relationship(
+        "Character", back_populates="class_levels"
+    )
 
     __table_args__ = (
         UniqueConstraint("character_id", "class_name", name="_character_class_uc"),

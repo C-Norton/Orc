@@ -9,6 +9,7 @@ Workflow::
     /inspiration remove [partymember] — remove Inspiration (self or GM for others)
     /inspiration status [partymember] — check Inspiration status
 """
+
 from __future__ import annotations
 
 from typing import List, Optional
@@ -177,9 +178,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         name="status",
         description="Check whether yourself or a party member has Inspiration",
     )
-    @app_commands.describe(
-        partymember="Party member to check (defaults to yourself)"
-    )
+    @app_commands.describe(partymember="Party member to check (defaults to yourself)")
     async def inspiration_status(
         interaction: discord.Interaction,
         partymember: Optional[str] = None,
@@ -210,7 +209,9 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
                         Strings.ERROR_NO_ACTIVE_PARTY, ephemeral=True
                     )
                     return
-                char = next((c for c in party.characters if c.name == partymember), None)
+                char = next(
+                    (c for c in party.characters if c.name == partymember), None
+                )
                 if not char:
                     await interaction.response.send_message(
                         Strings.ERROR_PARTY_MEMBER_NOT_FOUND.format(name=partymember),
@@ -246,7 +247,9 @@ async def _party_member_autocomplete(
     db = SessionLocal()
     try:
         user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-        server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+        server = (
+            db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+        )
         if not user or not server:
             return []
         stmt = select(user_server_association.c.active_party_id).where(

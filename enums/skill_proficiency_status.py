@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class SkillProficiencyStatus(Enum):
     NOT_PROFICIENT = "not_proficient"
     PROFICIENT = "proficient"

@@ -4,6 +4,7 @@ Supports the ``/weapon search`` and ``/weapon add`` workflow.  Data is pulled
 from the Open5e v2 API and attack hit modifiers are computed from character
 stats following 5e 2024 rules.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -190,7 +191,9 @@ def format_weapon_result_line(index: int, weapon: dict) -> str:
         if property_name != "Versatile":
             display_properties.append(property_name)
 
-    properties_suffix = f" | {', '.join(display_properties)}" if display_properties else ""
+    properties_suffix = (
+        f" | {', '.join(display_properties)}" if display_properties else ""
+    )
 
     return (
         f"{index}. **{name}** — {weapon_category} | "

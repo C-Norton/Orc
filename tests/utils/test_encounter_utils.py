@@ -3,6 +3,7 @@
 These tests create minimal in-memory database objects to exercise the pure
 utility functions without going through Discord command handlers.
 """
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -97,6 +98,7 @@ def _add_char_turn(db, encounter, roll, position):
     db.add(user)
     db.flush()
     from models import Character, ClassLevel
+
     char = Character(
         name=f"Hero{position}",
         user=user,
@@ -160,9 +162,7 @@ def test_remove_enemy_turn_last_in_list(db, minimal_encounter):
     db.commit()
 
     remaining = (
-        db.query(EncounterTurn)
-        .filter_by(encounter_id=minimal_encounter.id)
-        .all()
+        db.query(EncounterTurn).filter_by(encounter_id=minimal_encounter.id).all()
     )
     assert len(remaining) == 1
     assert remaining[0].order_position == 0
@@ -181,9 +181,7 @@ def test_remove_enemy_turn_only_turn(db, minimal_encounter):
     db.commit()
 
     remaining = (
-        db.query(EncounterTurn)
-        .filter_by(encounter_id=minimal_encounter.id)
-        .all()
+        db.query(EncounterTurn).filter_by(encounter_id=minimal_encounter.id).all()
     )
     assert remaining == []
     assert minimal_encounter.current_turn_index == 0

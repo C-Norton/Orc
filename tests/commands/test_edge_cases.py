@@ -42,8 +42,15 @@ import discord
 from sqlalchemy import insert
 
 from models import (
-    User, Server, Character, Party, Encounter, Enemy, EncounterTurn,
-    ClassLevel, user_server_association,
+    User,
+    Server,
+    Character,
+    Party,
+    Encounter,
+    Enemy,
+    EncounterTurn,
+    ClassLevel,
+    user_server_association,
 )
 from enums.encounter_status import EncounterStatus
 from tests.conftest import make_interaction
@@ -53,6 +60,7 @@ from tests.commands.conftest import get_callback
 # ---------------------------------------------------------------------------
 # Helpers / shared fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def second_user(db_session, sample_server):
@@ -110,9 +118,7 @@ def second_active_encounter(db_session, sample_server, second_user, second_chara
     db_session.add(enc)
     db_session.flush()
 
-    spider = Enemy(
-        encounter_id=enc.id, name="Spider", initiative_modifier=0, max_hp=5
-    )
+    spider = Enemy(encounter_id=enc.id, name="Spider", initiative_modifier=0, max_hp=5)
     db_session.add(spider)
     db_session.flush()
 
@@ -142,8 +148,15 @@ def second_active_encounter(db_session, sample_server, second_user, second_chara
 # 1a. /character delete while encounter is PENDING (no turns yet)
 # ---------------------------------------------------------------------------
 
+
 async def test_delete_character_allowed_when_encounter_pending(
-    mocker, char_bot, sample_character, sample_pending_encounter, db_session, interaction, session_factory
+    mocker,
+    char_bot,
+    sample_character,
+    sample_pending_encounter,
+    db_session,
+    interaction,
+    session_factory,
 ):
     """Character can be deleted while there is only a PENDING encounter.
 
@@ -165,7 +178,9 @@ async def test_delete_character_allowed_when_encounter_pending(
 
     # Confirm deletion
     view = interaction.response.send_message.call_args.kwargs.get("view")
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Delete")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Delete"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -176,8 +191,13 @@ async def test_delete_character_allowed_when_encounter_pending(
 
 
 async def test_start_encounter_after_only_character_deleted(
-    mocker, encounter_bot, sample_pending_encounter, sample_enemy,
-    sample_character, db_session, interaction
+    mocker,
+    encounter_bot,
+    sample_pending_encounter,
+    sample_enemy,
+    sample_character,
+    db_session,
+    interaction,
 ):
     """If the only party character is deleted before /encounter start, the start
     command should reject with an ephemeral 'party has no members' error."""
@@ -200,6 +220,7 @@ async def test_start_encounter_after_only_character_deleted(
 # 1b. /character delete while encounter is ACTIVE (should be blocked)
 # ---------------------------------------------------------------------------
 
+
 async def test_delete_character_blocked_during_active_encounter(
     char_bot, sample_active_encounter, sample_character, interaction
 ):
@@ -214,6 +235,7 @@ async def test_delete_character_blocked_during_active_encounter(
 # ---------------------------------------------------------------------------
 # FIX-1: /party character_remove shows confirmation when in active encounter
 # ---------------------------------------------------------------------------
+
 
 async def test_character_remove_during_active_encounter_sends_confirmation(
     party_bot, sample_active_encounter, interaction
@@ -238,7 +260,13 @@ async def test_character_remove_during_active_encounter_sends_confirmation(
 
 
 async def test_character_remove_shows_confirmation_when_no_active_encounter(
-    mocker, party_bot, sample_party, sample_character, db_session, interaction, session_factory
+    mocker,
+    party_bot,
+    sample_party,
+    sample_character,
+    db_session,
+    interaction,
+    session_factory,
 ):
     """Without an active encounter the command shows a plain confirmation prompt.
     After confirming, the character is removed from the party."""
@@ -246,7 +274,9 @@ async def test_character_remove_shows_confirmation_when_no_active_encounter(
     db_session.commit()
 
     cb = get_callback(party_bot, "party", "character_remove")
-    await cb(interaction, party_name=sample_party.name, character_name=sample_character.name)
+    await cb(
+        interaction, party_name=sample_party.name, character_name=sample_character.name
+    )
 
     # Confirmation is always shown (ephemeral)
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -257,7 +287,9 @@ async def test_character_remove_shows_confirmation_when_no_active_encounter(
     assert "encounter" not in msg.lower()
 
     # Press confirm
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Remove")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Remove"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -281,7 +313,9 @@ async def test_character_remove_confirmation_confirmed_deletes_turn_and_removes(
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
     button_interaction = make_interaction(mocker, user_id=111)
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Remove")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Remove"
+    )
     await confirm_btn.callback(button_interaction)
 
     verify = session_factory()
@@ -307,7 +341,9 @@ async def test_character_remove_confirmation_cancelled_no_changes(
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
     button_interaction = make_interaction(mocker, user_id=111)
-    cancel_btn = next(item for item in view.children if getattr(item, "label", "") == "Cancel")
+    cancel_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Cancel"
+    )
     await cancel_btn.callback(button_interaction)
 
     verify = session_factory()
@@ -336,7 +372,9 @@ async def test_character_remove_confirmed_adjusts_turn_index_when_earlier_remove
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
     button_interaction = make_interaction(mocker, user_id=111)
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Remove")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Remove"
+    )
     await confirm_btn.callback(button_interaction)
 
     verify = session_factory()
@@ -349,6 +387,7 @@ async def test_character_remove_confirmed_adjusts_turn_index_when_earlier_remove
 # ---------------------------------------------------------------------------
 # BUG-2: /party delete has no guard for open encounters
 # ---------------------------------------------------------------------------
+
 
 async def test_party_delete_with_pending_encounter_auto_completes(
     mocker, party_bot, sample_pending_encounter, interaction, session_factory
@@ -368,7 +407,9 @@ async def test_party_delete_with_pending_encounter_auto_completes(
     assert "Test Dungeon" in msg or "encounter" in msg.lower()
 
     view = interaction.response.send_message.call_args.kwargs.get("view")
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Delete")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Delete"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -394,7 +435,9 @@ async def test_party_delete_with_active_encounter_auto_completes(
     # Confirmation shows encounter warning
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     view = interaction.response.send_message.call_args.kwargs.get("view")
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Delete")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Delete"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -414,7 +457,9 @@ async def test_party_delete_without_encounter_still_works(
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     view = interaction.response.send_message.call_args.kwargs.get("view")
-    confirm_btn = next(item for item in view.children if getattr(item, "label", "") == "Delete")
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Delete"
+    )
     btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
     btn_interaction.response = mocker.AsyncMock()
     await confirm_btn.callback(btn_interaction)
@@ -432,9 +477,14 @@ async def test_party_delete_without_encounter_still_works(
 # FIX-3: /encounter next and /encounter view scoped to the user's active party
 # ---------------------------------------------------------------------------
 
+
 async def test_next_turn_scoped_to_users_party_when_multiple_active(
-    mocker, encounter_bot, sample_active_encounter, second_active_encounter,
-    db_session, session_factory
+    mocker,
+    encounter_bot,
+    sample_active_encounter,
+    second_active_encounter,
+    db_session,
+    session_factory,
 ):
     """FIX-3a: The GM of Party 2 can advance their own encounter even when
     Party 1 also has an active encounter on the same server.
@@ -445,6 +495,7 @@ async def test_next_turn_scoped_to_users_party_when_multiple_active(
     # Set user 444 as the active-party owner for "Team Two" so the query can
     # resolve their active party.
     from sqlalchemy import insert as sa_insert
+
     second_party = second_active_encounter.party
     second_user = second_party.gms[0]
     server = second_active_encounter.server
@@ -470,11 +521,11 @@ async def test_next_turn_scoped_to_users_party_when_multiple_active(
 
 
 async def test_view_encounter_scoped_to_users_party_when_multiple_active(
-    mocker, encounter_bot, sample_active_encounter, second_active_encounter,
-    db_session
+    mocker, encounter_bot, sample_active_encounter, second_active_encounter, db_session
 ):
     """FIX-3b: /encounter view returns the correct encounter for each party's GM."""
     from sqlalchemy import insert as sa_insert
+
     second_party = second_active_encounter.party
     second_user = second_party.gms[0]
     server = second_active_encounter.server
@@ -500,9 +551,16 @@ async def test_view_encounter_scoped_to_users_party_when_multiple_active(
 # 3.  Character-state edge cases
 # ===========================================================================
 
+
 async def test_start_encounter_with_null_stats_character(
-    mocker, encounter_bot, sample_pending_encounter, sample_enemy,
-    sample_character_no_stats, db_session, interaction, session_factory
+    mocker,
+    encounter_bot,
+    sample_pending_encounter,
+    sample_enemy,
+    sample_character_no_stats,
+    db_session,
+    interaction,
+    session_factory,
 ):
     """A character whose stats are all NULL (never set up) can still participate
     in combat.  roll_initiative_for_character handles None dexterity safely by
@@ -523,8 +581,13 @@ async def test_start_encounter_with_null_stats_character(
 
 
 async def test_switch_active_character_does_not_change_encounter_turn(
-    char_bot, encounter_bot, sample_active_encounter, sample_character,
-    db_session, interaction, session_factory
+    char_bot,
+    encounter_bot,
+    sample_active_encounter,
+    sample_character,
+    db_session,
+    interaction,
+    session_factory,
 ):
     """Switching a player's active character mid-encounter does not change
     whose turn it is in the initiative order.  EncounterTurn rows reference
@@ -551,7 +614,9 @@ async def test_switch_active_character_does_not_change_encounter_turn(
     await cb_switch(interaction, name="Backup")
 
     # The switch itself should succeed
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
 
     # Aldric still owns turn index 0 in the encounter
     verify = session_factory()
@@ -578,16 +643,24 @@ async def test_party_roll_after_member_removed(
 
     msg = interaction.response.send_message.call_args.args[0]
     # Party is now empty → should report empty party
-    assert "empty" in msg.lower() or interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        "empty" in msg.lower()
+        or interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    )
 
 
 # ===========================================================================
 # 4.  HP / health edge cases
 # ===========================================================================
 
+
 async def test_damage_during_active_encounter_does_not_end_encounter(
-    health_bot, sample_active_encounter, sample_character, db_session,
-    interaction, session_factory
+    health_bot,
+    sample_active_encounter,
+    sample_character,
+    db_session,
+    interaction,
+    session_factory,
 ):
     """Applying lethal damage during an encounter brings HP to 0 and shows
     the death message, but does NOT automatically end the encounter.

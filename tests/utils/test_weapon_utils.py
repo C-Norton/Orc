@@ -3,6 +3,7 @@
 These tests use SimpleNamespace to stand in for Character objects so no
 database session is needed.
 """
+
 from types import SimpleNamespace
 
 import pytest

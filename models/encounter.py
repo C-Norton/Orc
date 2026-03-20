@@ -16,8 +16,12 @@ class Encounter(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    party_id: Mapped[int] = mapped_column(Integer, ForeignKey("parties.id"), nullable=False)
-    server_id: Mapped[int] = mapped_column(Integer, ForeignKey("servers.id"), nullable=False)
+    party_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("parties.id"), nullable=False
+    )
+    server_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("servers.id"), nullable=False
+    )
     status: Mapped[EncounterStatus] = mapped_column(
         SAEnum(EncounterStatus), nullable=False, default=EncounterStatus.PENDING
     )
