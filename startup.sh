@@ -12,6 +12,7 @@ exec > >(tee /var/log/orc-startup.log) 2>&1
 
 echo "=== orc-bot startup: $(date) ==="  # CHANGE: renamed
 
+
 # ─────────────────────────────────────────────
 # 1. System updates
 # ─────────────────────────────────────────────
