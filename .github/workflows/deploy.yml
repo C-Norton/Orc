@@ -83,7 +83,7 @@ jobs:
               /opt/orc/.venv/bin/pip install --quiet -r /opt/orc/requirements.txt
 
               echo '--- Running database migrations ---'
-              sudo -n sudo /usr/local/bin/orc-migrate
+              sudo -n /usr/local/bin/orc-migrate
 
               echo '--- Restarting bot service ---'
               sudo -n systemctl restart orc-bot.service
