@@ -10,7 +10,6 @@ set -euo pipefail
 # systemd's journal captures stdout/stderr from the service unit anyway.
 exec > >(tee /var/log/orc-startup.log) 2>&1
 
-
 echo "=== orc-bot startup: $(date) ==="  # CHANGE: renamed
 
 # ─────────────────────────────────────────────
