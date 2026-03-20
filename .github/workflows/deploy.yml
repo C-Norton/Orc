@@ -68,6 +68,7 @@ jobs:
             --command="
               set -euo pipefail
 
+
               echo '--- Pulling latest code ---'
                             git config --global --add safe.directory /opt/orc
               # Clone the repo if this is the first deploy, otherwise pull.
