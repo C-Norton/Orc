@@ -143,7 +143,7 @@ DEPLOY_SA_UNIQUE_ID=$(curl -sf \
 DEPLOY_SA_USER="sa_${DEPLOY_SA_UNIQUE_ID}"
 
 if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
-    echo "${DEPLOY_SA_USER} ALL=(ALL) NOPASSWD: /bin/systemctl restart orc-bot.service, /bin/systemctl is-active orc-bot.service" \
+    echo "$DEPLOY_SA_UNIQUE_ID ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart orc-bot.service, /usr/bin/systemctl is-active orc-bot.service" \
         > /etc/sudoers.d/orc-bot-deploy
     chmod 440 /etc/sudoers.d/orc-bot-deploy
     echo "Sudoers rule written for ${DEPLOY_SA_USER}."

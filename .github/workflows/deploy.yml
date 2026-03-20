@@ -83,13 +83,13 @@ jobs:
               /opt/orc/.venv/bin/pip install --quiet -r /opt/orc/requirements.txt
 
               echo '--- Running database migrations ---'
-              sudo /usr/local/bin/orc-migrate
+              sudo -n sudo /usr/local/bin/orc-migrate
 
               echo '--- Restarting bot service ---'
-              sudo systemctl restart orc-bot.service
+              sudo -n systemctl restart orc-bot.service
 
               echo '--- Verifying service started ---'
               sleep 3
-              sudo systemctl is-active orc-bot.service
+              sudo -n systemctl is-active orc-bot.service
               echo 'Deploy complete.'
             "
