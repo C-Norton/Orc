@@ -145,34 +145,43 @@ fi
 # The repo itself is deployed here by GitHub Actions on each push to master.
 # On first boot we create the directory and venv; Actions handles git clone/pull.
 
-# Fetch the deploy SA unique ID first — used for chown, sudoers, and venv setup below.
-# The unique ID is passed in via instance metadata by Terraform — no API call needed.
+# Fetch the deploy SA unique ID once — used for chown, sudoers, and venv setup below.
 DEPLOY_SA_UNIQUE_ID=$(curl -sf \
     "http://metadata.google.internal/computeMetadata/v1/instance/attributes/deploy-sa-unique-id" \
     -H "Metadata-Flavor: Google" || echo "unknown")
 
 DEPLOY_SA_USER="sa_${DEPLOY_SA_UNIQUE_ID}"
+if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
+      usermod -aG docker "${DEPLOY_SA_USER}"
+  fi
 
 mkdir -p /opt/orc
 # Own the directory as the deploy SA user so GitHub Actions can write to it.
 # If the unique ID isn't available yet, fall back to root temporarily.
 if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
-    chown -R "sa_${DEPLOY_SA_UNIQUE_ID}:sa_${DEPLOY_SA_UNIQUE_ID}" /opt/orc
+    chown -R "${DEPLOY_SA_USER}:${DEPLOY_SA_USER}" /opt/orc
 else
     chown -R root:root /opt/orc
 fi
 chmod 755 /opt/orc
 
-# Grant the deploy service account passwordless sudo for service restart only.
-# The unique ID is passed in via instance metadata by Terraform — no API call needed.
-DEPLOY_SA_UNIQUE_ID=$(curl -sf \
-    "http://metadata.google.internal/computeMetadata/v1/instance/attributes/deploy-sa-unique-id" \
-    -H "Metadata-Flavor: Google" || echo "unknown")
+# Create a root-owned migration wrapper so the deploy SA can run alembic without
+# being able to read /etc/orc-bot.env directly.  DATABASE_URL is extracted with
+# grep/cut rather than sourcing the file — this avoids bash interpreting special
+# characters in the password (?, @, spaces, etc.) as globs or command separators.
+cat > /usr/local/bin/orc-migrate <<'MIGRATE'
+#!/bin/bash
+set -euo pipefail
+DATABASE_URL=$(grep -m1 '^DATABASE_URL=' /etc/orc-bot.env | cut -d= -f2-)
+export DATABASE_URL
+exec /opt/orc/.venv/bin/alembic -c /opt/orc/alembic.ini upgrade head
+MIGRATE
+chmod 755 /usr/local/bin/orc-migrate
+echo "Migration wrapper written to /usr/local/bin/orc-migrate."
 
-DEPLOY_SA_USER="sa_${DEPLOY_SA_UNIQUE_ID}"
-
+# Grant the deploy SA passwordless sudo for service management and migrations.
 if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
-    echo "${DEPLOY_SA_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart orc-bot.service, /usr/bin/systemctl is-active orc-bot.service" \
+    echo "${DEPLOY_SA_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart orc-bot.service, /usr/bin/systemctl is-active orc-bot.service, /usr/local/bin/orc-migrate" \
         > /etc/sudoers.d/orc-bot-deploy
     chmod 440 /etc/sudoers.d/orc-bot-deploy
     echo "Sudoers rule written for ${DEPLOY_SA_USER}."

@@ -1,4 +1,4 @@
-name: Test and Deploy
+name: Test, Build, and Deploy
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   # ─────────────────────────────────────────────
-  # Run the full test suite
+  # Run the full test suite.
   # Runs on every push and every PR targeting master.
   # ─────────────────────────────────────────────
   test:
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"   # Latest stable 3.x
+          python-version: "3.x"
           cache: "pip"
 
       - name: Install dependencies
@@ -34,18 +34,53 @@ jobs:
         run: python -m pytest tests/ -v
 
   # ─────────────────────────────────────────────
-  # Deploy to the GCP VM via IAP SSH
-  # Only runs on pushes to master (not PRs), and only if tests pass.
+  # Build the Docker image and push to GHCR.
+  # Only runs on pushes to master after tests pass.
   # ─────────────────────────────────────────────
-  deploy:
-    name: deploy
+  build:
+    name: build
     runs-on: ubuntu-latest
-    needs: test                        # Hard dependency — deploy only if test passes
+    needs: test
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
     permissions:
       contents: read
-      id-token: write                  # Required for WIF token exchange
+      packages: write      # Required to push to GHCR
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          # Tag with the exact commit SHA for traceability, and :latest for the deploy step.
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+
+  # ─────────────────────────────────────────────
+  # Deploy to the GCP VM via IAP SSH.
+  # Only runs on pushes to master after build passes.
+  # ─────────────────────────────────────────────
+  deploy:
+    name: deploy
+    runs-on: ubuntu-latest
+    needs: [test, build]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      id-token: write      # Required for WIF token exchange
 
     steps:
       - name: Authenticate to GCP via Workload Identity Federation
@@ -57,40 +92,44 @@ jobs:
       - name: Set up gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
         with:
-          install_components: "beta"   # Needed for IAP tunnel SSH
+          install_components: "beta"
 
       - name: Deploy to VM via IAP SSH
+        # Single-quoted --command avoids local shell expansion of special characters
+        # while still allowing ${{ }} substitutions (those are replaced by Actions
+        # before any shell sees the string).
         run: |
           gcloud compute ssh ${{ secrets.VM_NAME }} \
             --zone=${{ secrets.VM_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --tunnel-through-iap \
-            --command="
+            --command='
               set -euo pipefail
 
+              IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
 
-              echo '--- Pulling latest code ---'
-                            git config --global --add safe.directory /opt/orc
-              # Clone the repo if this is the first deploy, otherwise pull.
-              if [ ! -d /opt/orc/.git ]; then
-                git clone https://github.com/C-Norton/Orc.git /opt/orc
-              else
-                git -C /opt/orc fetch origin master
-                git -C /opt/orc reset --hard origin/master
-              fi
+              echo "--- Pulling image ${IMAGE} ---"
+              docker pull "${IMAGE}"
 
-              echo '--- Installing dependencies ---'
-              /opt/orc/.venv/bin/pip install --quiet -r /opt/orc/requirements.txt
+              echo "--- Running database migrations ---"
+              docker run --rm --env-file /etc/orc-bot.env "${IMAGE}" \
+                alembic upgrade head
 
-              echo '--- Running database migrations ---'
-              sudo -n /usr/local/bin/orc-migrate
-              echo '--- Restarting bot service ---'
-              sudo -n systemctl restart orc-bot.service
+              echo "--- Replacing bot container ---"
+              docker stop orc-bot || true
+              docker rm   orc-bot || true
+              docker run -d \
+                --name orc-bot \
+                --restart unless-stopped \
+                --env-file /etc/orc-bot.env \
+                "${IMAGE}"
 
-              echo '--- Verifying service started ---'
+              echo "--- Verifying container is running ---"
               for attempt in 1 2 3 4 5 6 7 8 9 10; do
-                sudo -n systemctl is-active orc-bot.service && break || sleep 3
+                docker ps --filter name=orc-bot --filter status=running \
+                  --format ok | grep -q ok && break || sleep 3
               done
-              sudo -n systemctl is-active orc-bot.service
-              echo 'Deploy complete.'
-            "
+              docker ps --filter name=orc-bot --filter status=running \
+                --format ok | grep -q ok
+              echo "Deploy complete."
+            '

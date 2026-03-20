@@ -1,0 +1,42 @@
+# Local development only.
+# Production runs against Cloud SQL (private IP) via DATABASE_URL in /etc/orc-bot.env.
+# Do not use this file on the GCP VM.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: orc_bot
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: orc_bot
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orc_bot"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build: .
+    # .env supplies DISCORD_API_TOKEN etc.; DATABASE_URL is overridden here to
+    # point at the local postgres container instead of Cloud SQL.
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://orc_bot:devpassword@db:5432/orc_bot
+    entrypoint: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  bot:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://orc_bot:devpassword@db:5432/orc_bot
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    restart: unless-stopped
