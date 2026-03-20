@@ -83,12 +83,17 @@ jobs:
               /opt/orc/.venv/bin/pip install --quiet -r /opt/orc/requirements.txt
 
               echo '--- Running database migrations ---'
-              cd /opt/orc && set -a && source /etc/orc-bot.env && set +a && /opt/orc/.venv/bin/alembic upgrade head
+              sudo -n /usr/local/bin/orc-migrate
               echo '--- Restarting bot service ---'
               sudo -n systemctl restart orc-bot.service
 
               echo '--- Verifying service started ---'
-              sleep 3
+              for i in $(seq 1 10); do
+                STATUS=$(sudo -n systemctl is-active orc-bot.service || true)
+                echo "  attempt $i: $STATUS"
+                [ "$STATUS" = "active" ] && break
+                sleep 3
+              done
               sudo -n systemctl is-active orc-bot.service
               echo 'Deploy complete.'
             "

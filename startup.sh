@@ -145,6 +145,14 @@ fi
 # The repo itself is deployed here by GitHub Actions on each push to master.
 # On first boot we create the directory and venv; Actions handles git clone/pull.
 
+# Fetch the deploy SA unique ID first — used for chown, sudoers, and venv setup below.
+# The unique ID is passed in via instance metadata by Terraform — no API call needed.
+DEPLOY_SA_UNIQUE_ID=$(curl -sf \
+    "http://metadata.google.internal/computeMetadata/v1/instance/attributes/deploy-sa-unique-id" \
+    -H "Metadata-Flavor: Google" || echo "unknown")
+
+DEPLOY_SA_USER="sa_${DEPLOY_SA_UNIQUE_ID}"
+
 mkdir -p /opt/orc
 # Own the directory as the deploy SA user so GitHub Actions can write to it.
 # If the unique ID isn't available yet, fall back to root temporarily.
