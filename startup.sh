@@ -135,17 +135,21 @@ chown -R root:root /opt/orc
 chmod 755 /opt/orc
 
 # Grant the deploy service account passwordless sudo for service restart only.
-# The deploy SA's OS Login username is derived from its email by GCP.
-DEPLOY_SA_USER="sa_$(gcloud iam service-accounts describe orc-bot-deploy-sa@${PROJECT_ID}.iam.gserviceaccount.com \
-    --format='value(uniqueId)' 2>/dev/null || echo 'unknown')"
-if [ "$DEPLOY_SA_USER" != "sa_unknown" ]; then
+# The unique ID is passed in via instance metadata by Terraform — no API call needed.
+DEPLOY_SA_UNIQUE_ID=$(curl -sf \
+    "http://metadata.google.internal/computeMetadata/v1/instance/attributes/deploy-sa-unique-id" \
+    -H "Metadata-Flavor: Google" || echo "unknown")
+
+DEPLOY_SA_USER="sa_${DEPLOY_SA_UNIQUE_ID}"
+
+if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
     echo "${DEPLOY_SA_USER} ALL=(ALL) NOPASSWD: /bin/systemctl restart orc-bot.service, /bin/systemctl is-active orc-bot.service" \
         > /etc/sudoers.d/orc-bot-deploy
     chmod 440 /etc/sudoers.d/orc-bot-deploy
     echo "Sudoers rule written for ${DEPLOY_SA_USER}."
 else
-    echo "WARNING: Could not resolve deploy SA unique ID — sudoers rule not written."
-    echo "Run: sudo bash /root/orc-fix-sudoers.sh after deploy SA is provisioned."
+    echo "WARNING: Could not read deploy SA unique ID from metadata — sudoers rule not written."
+    echo "Run terraform apply to ensure the metadata attribute is set, then re-run startup.sh."
 fi
 
 # Create the venv if it doesn't exist yet.
