@@ -83,8 +83,7 @@ jobs:
               /opt/orc/.venv/bin/pip install --quiet -r /opt/orc/requirements.txt
 
               echo '--- Running database migrations ---'
-              cd /opt/orc && DATABASE_URL=$(grep DATABASE_URL /etc/orc-bot.env | cut -d= -f2-) /opt/orc/.venv/bin/alembic upgrade head
-
+              cd /opt/orc && set -a && source /etc/orc-bot.env && set +a && /opt/orc/.venv/bin/alembic upgrade head
               echo '--- Restarting bot service ---'
               sudo -n systemctl restart orc-bot.service
 
