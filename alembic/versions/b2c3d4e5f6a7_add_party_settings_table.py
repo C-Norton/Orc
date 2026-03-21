@@ -41,7 +41,8 @@ def upgrade() -> None:
             "enemy_ac_public",
             sa.Boolean(),
             nullable=False,
-            server_default="0",
+            # sa.false() renders as 0 on SQLite and false on PostgreSQL.
+            server_default=sa.false(),
         ),
     )
 
@@ -49,4 +50,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Drop party_settings table and the enemyinitiativemode enum type."""
     op.drop_table("party_settings")
-    op.execute("DROP TYPE IF EXISTS enemyinitiativemode")
+    # DROP TYPE is PostgreSQL-specific; SQLite has no native enum types.
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS enemyinitiativemode")

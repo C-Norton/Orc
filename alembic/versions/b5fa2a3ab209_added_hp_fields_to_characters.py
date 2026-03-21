@@ -49,12 +49,22 @@ def upgrade() -> None:
             )
         )
 
+    # On PostgreSQL the FK retains the explicit name from ccdde42289b4.
+    # On SQLite, batch_alter_table rebuilds the table and applies the naming
+    # convention, so the constraint was already renamed to ACTIVE_PARTY_FK_NAME.
+    bind = op.get_bind()
+    existing_fk_name = (
+        "fk_user_server_active_party"
+        if bind.dialect.name == "postgresql"
+        else ACTIVE_PARTY_FK_NAME
+    )
+
     with op.batch_alter_table(
         "user_server",
         schema=None,
         naming_convention=USER_SERVER_NAMING_CONVENTION,
     ) as batch_op:
-        batch_op.drop_constraint(ACTIVE_PARTY_FK_NAME, type_="foreignkey")
+        batch_op.drop_constraint(existing_fk_name, type_="foreignkey")
         batch_op.create_foreign_key(
             ACTIVE_PARTY_FK_NAME,
             "parties",
@@ -73,7 +83,7 @@ def downgrade() -> None:
     ) as batch_op:
         batch_op.drop_constraint(ACTIVE_PARTY_FK_NAME, type_="foreignkey")
         batch_op.create_foreign_key(
-            ACTIVE_PARTY_FK_NAME,
+            "fk_user_server_active_party",
             "parties",
             ["active_party_id"],
             ["id"],

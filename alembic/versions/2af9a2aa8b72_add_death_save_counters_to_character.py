@@ -48,6 +48,10 @@ def downgrade() -> None:
     """Downgrade schema."""
     with op.batch_alter_table("party_settings", schema=None) as batch_op:
         batch_op.drop_column("death_save_nat20_mode")
+    # DROP TYPE is PostgreSQL-specific; SQLite has no native enum types.
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        op.execute("DROP TYPE IF EXISTS deathsavenat20mode")
 
     with op.batch_alter_table("characters", schema=None) as batch_op:
         batch_op.drop_column("death_save_failures")
