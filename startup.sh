@@ -193,11 +193,13 @@ IMAGE="$1"
 echo "--- Pulling image ${IMAGE} ---"
 docker pull "${IMAGE}"
 echo "--- Running database migrations ---"
-docker run --rm --env-file /etc/orc-bot.env "${IMAGE}" alembic upgrade head
+# --network host gives the container the VM's network namespace so it can reach
+# Cloud SQL's VPC private IP the same way a direct process on the VM would.
+docker run --rm --env-file /etc/orc-bot.env --network host "${IMAGE}" alembic upgrade head
 echo "--- Replacing bot container ---"
 docker stop orc-bot || true
 docker rm   orc-bot || true
-docker run -d --name orc-bot --restart unless-stopped --env-file /etc/orc-bot.env "${IMAGE}"
+docker run -d --name orc-bot --restart unless-stopped --env-file /etc/orc-bot.env --network host "${IMAGE}"
 DEPLOY
 chmod 755 /usr/local/bin/orc-deploy
 echo "Deploy wrapper written to /usr/local/bin/orc-deploy."
