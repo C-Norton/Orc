@@ -33,6 +33,24 @@ def resolve_user_server(
     return user, server
 
 
+def get_or_create_user(db, discord_id: str) -> User:
+    """Return the User row for the given Discord ID, creating it if absent.
+
+    Args:
+        db: An active SQLAlchemy session.
+        discord_id: The Discord snowflake ID as a string.
+
+    Returns:
+        The existing or newly-created ``User``.
+    """
+    user = db.query(User).filter_by(discord_id=discord_id).first()
+    if user is None:
+        user = User(discord_id=discord_id)
+        db.add(user)
+        db.flush()
+    return user
+
+
 def get_or_create_user_server(
     db, interaction: discord.Interaction
 ) -> tuple[User, Server]:

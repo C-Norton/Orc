@@ -429,17 +429,38 @@ async def test_add_gm_not_gm(mocker, party_bot, sample_party, db_session):
     )
 
 
-async def test_add_gm_target_not_registered(
-    mocker, party_bot, sample_party, interaction
+async def test_add_gm_auto_registers_unregistered_user(
+    mocker, party_bot, sample_party, interaction, session_factory
 ):
-    """Adding a user who has never used the bot is rejected."""
+    """Adding a Discord user who has never used the bot auto-registers them and
+    succeeds — no User row is required to pre-exist."""
     mock_member = mocker.Mock()
     mock_member.id = 9999
 
     cb = get_callback(party_bot, "party", "gm_add")
     await cb(interaction, party_name="The Fellowship", new_gm=mock_member)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+    )
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "9999" in msg
+
+
+async def test_add_gm_creates_user_row_for_unregistered_discord_user(
+    mocker, party_bot, sample_party, interaction, session_factory
+):
+    """When the target Discord user has no User row, gm_add creates one."""
+    mock_member = mocker.Mock()
+    mock_member.id = 7777
+
+    cb = get_callback(party_bot, "party", "gm_add")
+    await cb(interaction, party_name="The Fellowship", new_gm=mock_member)
+
+    verify = session_factory()
+    user = verify.query(User).filter_by(discord_id="7777").first()
+    assert user is not None
+    verify.close()
 
 
 async def test_add_gm_already_gm(

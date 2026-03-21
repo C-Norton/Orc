@@ -396,9 +396,6 @@ class Strings:
     ERROR_GM_ALREADY = "<@{discord_id}> is already a GM of '**{party_name}**'."
     ERROR_GM_NOT_IN_PARTY = "<@{discord_id}> is not a GM of '**{party_name}**'."
     ERROR_GM_LAST = "Cannot remove the last GM from a party."
-    ERROR_GM_TARGET_NOT_REGISTERED = (
-        "That user has no account in this bot. They need to use a command first."
-    )
     ERROR_GM_ONLY_ADD_GM = "Only a GM of this party can add other GMs."
     ERROR_GM_ONLY_REMOVE_GM = "Only a GM of this party can remove GMs."
 

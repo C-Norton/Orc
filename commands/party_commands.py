@@ -20,7 +20,7 @@ from enums.crit_rule import CritRule
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
-from utils.db_helpers import get_active_party, get_or_create_user_server
+from utils.db_helpers import get_active_party, get_or_create_user, get_or_create_user_server
 from utils.dnd_logic import perform_roll
 from utils.limits import (
     MAX_GM_PARTIES_PER_USER,
@@ -1128,12 +1128,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            target = db.query(User).filter_by(discord_id=str(new_gm.id)).first()
-            if not target:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_TARGET_NOT_REGISTERED, ephemeral=True
-                )
-                return
+            target = get_or_create_user(db, str(new_gm.id))
 
             if target in party.gms:
                 await interaction.response.send_message(
