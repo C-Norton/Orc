@@ -1,0 +1,21 @@
+# Version control / IDE
+.git
+.github
+.idea
+.venv
+.venv2
+
+# Dev artefacts
+*.db
+*.log
+__pycache__
+*.pyc
+*.pyo
+
+# Secrets — never bake these into an image
+.env
+
+# Tests and tooling — not needed at runtime
+tests/
+terraform/
+startup.sh
