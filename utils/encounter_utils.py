@@ -191,8 +191,8 @@ async def notify_gms_hp_update(
 
     The embed title shows the encounter name and the footer identifies the
     party, so GMs can immediately tell which encounter the update relates to.
-    Failures (Forbidden, HTTPException, NotFound) are logged and silently
-    skipped so that a DM failure never blocks the command response.
+    All DM failures are caught, logged, and silently skipped so a failure
+    for one GM never blocks others or the command response.
 
     Args:
         party: The Party whose GMs should be notified.
@@ -208,9 +208,20 @@ async def notify_gms_hp_update(
     embed.set_footer(
         text=Strings.ENCOUNTER_GM_DM_EMBED_FOOTER.format(party_name=party.name)
     )
+    logger.debug(
+        f"notify_gms_hp_update: notifying {len(party.gms)} GM(s) "
+        f"for encounter '{encounter.name}' (party '{party.name}')"
+    )
     for gm in party.gms:
         try:
             gm_discord_user = await client.fetch_user(int(gm.discord_id))
             await gm_discord_user.send(embed=embed)
-        except (discord.Forbidden, discord.HTTPException, discord.NotFound) as exc:
-            logger.warning(f"Could not DM GM {gm.discord_id}: {exc}")
+            logger.debug(
+                f"HP-update DM sent to GM {gm.discord_id} "
+                f"(encounter '{encounter.name}', party '{party.name}')"
+            )
+        except Exception as exc:
+            logger.warning(
+                f"Could not DM GM {gm.discord_id} for encounter '{encounter.name}': "
+                f"{type(exc).__name__}: {exc}"
+            )

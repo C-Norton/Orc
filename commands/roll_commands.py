@@ -57,22 +57,37 @@ async def _notify_gmroll_gms(
 
     Each party-GM pairing generates one DM regardless of whether the same user
     is a GM in multiple parties — the GM sees every party context separately.
-    DM failures (Forbidden, HTTPException) are logged and silently ignored so
-    they never block the player's response.
+    All DM failures are caught, logged, and silently ignored so they never block
+    the player's response or prevent other GMs from receiving their notification.
 
     Args:
         client: The Discord client used to fetch users.
         char: The active character whose party memberships determine recipients.
         gm_message: The text to send to each GM.
     """
+    party_count = len(char.parties)
+    logger.info(
+        f"_notify_gmroll_gms: character '{char.name}' belongs to "
+        f"{party_count} {'party' if party_count == 1 else 'parties'}"
+    )
     for party in char.parties:
+        gm_ids = [gm.discord_id for gm in party.gms]
+        logger.info(
+            f"_notify_gmroll_gms: party '{party.name}' has "
+            f"{len(gm_ids)} GM(s): {gm_ids or '(none)'}"
+        )
         for gm in party.gms:
             try:
                 discord_user = await client.fetch_user(int(gm.discord_id))
                 await discord_user.send(gm_message)
-            except (discord.Forbidden, discord.HTTPException) as exc:
+                logger.debug(
+                    f"/gmroll DM sent to GM {gm.discord_id} "
+                    f"(party '{party.name}', char '{char.name}')"
+                )
+            except Exception as exc:
                 logger.warning(
-                    f"Could not DM GM {gm.discord_id} for /gmroll: {exc}"
+                    f"Could not DM GM {gm.discord_id} for /gmroll "
+                    f"(party '{party.name}'): {type(exc).__name__}: {exc}"
                 )
 
 
@@ -226,7 +241,15 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 try:
                     user, server = get_or_create_user_server(db, interaction)
                     char = get_active_character(db, user, server)
-                except Exception:
+                    logger.info(
+                        f"/gmroll pure-dice character lookup for user {interaction.user.id}: "
+                        f"{'found: ' + char.name if char else 'not found — no GM notifications will be sent'}"
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        f"/gmroll pure-dice character lookup failed "
+                        f"({type(exc).__name__}: {exc}) — no GM notifications will be sent"
+                    )
                     char = None
 
             # Player always gets an ephemeral response.
@@ -234,7 +257,17 @@ def register_roll_commands(bot: commands.Bot) -> None:
             logger.info(f"/gmroll completed for user {interaction.user.id}")
 
             # DM every GM across all parties the character belongs to.
-            if char and char.parties:
+            if not char:
+                logger.info(
+                    f"/gmroll: no active character for user {interaction.user.id} "
+                    f"— skipping GM notifications"
+                )
+            elif not char.parties:
+                logger.info(
+                    f"/gmroll: character '{char.name}' has no party memberships "
+                    f"— skipping GM notifications"
+                )
+            else:
                 gm_message = Strings.GMROLL_GM_MESSAGE.format(
                     char_name=char.name,
                     notation=notation,

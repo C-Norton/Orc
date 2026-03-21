@@ -28,6 +28,8 @@ Test organisation
 8.  Validation errors
 """
 
+import asyncio
+
 import discord
 import pytest
 from sqlalchemy import insert
@@ -642,6 +644,94 @@ async def test_gmroll_first_gm_dm_fails_second_gm_still_notified(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     # Second GM received their DM despite first failing
     mock_gm_2.send.assert_called_once()
+
+
+async def test_gmroll_network_error_in_fetch_user_does_not_abort_remaining_gms(
+    roll_bot, sample_character, party_with_two_gms, db_session, interaction, mocker
+):
+    """A non-discord exception (e.g. asyncio.TimeoutError) from fetch_user for
+    the first GM must not prevent the second GM from receiving their DM.
+
+    Currently fails because only discord.Forbidden / discord.HTTPException are
+    caught in _notify_gmroll_gms, so asyncio.TimeoutError propagates out of the
+    loop and aborts all remaining notifications.
+    """
+
+    async def _fetch_user(user_id: int):
+        if user_id == 555:
+            raise asyncio.TimeoutError()
+        mock = _make_gm_mock(mocker)
+        return mock
+
+    interaction.client.fetch_user = _fetch_user
+    mock_gm_2 = _make_gm_mock(mocker)
+
+    async def _fetch_user_tracking(user_id: int):
+        if user_id == 555:
+            raise asyncio.TimeoutError()
+        return mock_gm_2
+
+    interaction.client.fetch_user = _fetch_user_tracking
+    mocker.patch("dice_roller.random.randint", return_value=10)
+
+    cb = get_callback(roll_bot, "gmroll")
+    await cb(interaction, notation="1d20")
+
+    # Second GM still receives their DM
+    mock_gm_2.send.assert_called_once()
+
+
+async def test_gmroll_network_error_does_not_corrupt_player_ephemeral(
+    roll_bot, sample_character, party_with_gm, db_session, interaction, mocker
+):
+    """A network-level exception during DM delivery must not cause a SERVER_ERROR
+    message to replace the player's roll result.  The player should only ever see
+    one ephemeral message — their roll result.
+    """
+
+    async def _fetch_raises(_user_id: int):
+        raise asyncio.TimeoutError()
+
+    interaction.client.fetch_user = _fetch_raises
+    mocker.patch("dice_roller.random.randint", return_value=10)
+
+    cb = get_callback(roll_bot, "gmroll")
+    await cb(interaction, notation="1d20")
+
+    # Only one send_message call — the roll result, not a SERVER_ERROR
+    assert interaction.response.send_message.call_count == 1
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "10" in msg
+
+
+async def test_gmroll_roller_who_is_gm_receives_dm(
+    roll_bot, sample_character, sample_server, sample_user, db_session, interaction, mocker
+):
+    """When the rolling user is also a GM of the party their character belongs to,
+    they receive a DM just like any other GM.
+    """
+    # Make sample_user (the roller, discord_id="111") the GM of a party
+    # that contains sample_character
+    from models import Party
+
+    party = Party(name="Self-GM Party", gms=[sample_user], server=sample_server)
+    db_session.add(party)
+    db_session.commit()
+    party.characters.append(sample_character)
+    db_session.commit()
+
+    mock_self = _make_gm_mock(mocker)
+    _setup_client_fetch(mocker, interaction, {111: mock_self})
+    mocker.patch("dice_roller.random.randint", return_value=12)
+
+    cb = get_callback(roll_bot, "gmroll")
+    await cb(interaction, notation="1d20")
+
+    # Player gets ephemeral
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    # Roller (who is also GM) receives the GM DM
+    mock_self.send.assert_called_once()
 
 
 # ===========================================================================

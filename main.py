@@ -64,8 +64,13 @@ class DnDBot(commands.Bot):
                         f"\u26a0\ufe0f Rate limit alert: {interaction.user} (`{interaction.user.id}`) "
                         f"in guild `{interaction.guild_id}` exceeded 8 commands in 10s."
                     )
+                    logger.debug(
+                        f"Rate limit DM sent to owner for user {interaction.user.id}"
+                    )
                 except Exception as e:
-                    logger.error(f"Failed to send rate limit DM to owner: {e}")
+                    logger.error(
+                        f"Failed to send rate limit DM to owner: {type(e).__name__}: {e}"
+                    )
 
     async def on_ready(self) -> None:
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
