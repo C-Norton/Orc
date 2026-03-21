@@ -18,20 +18,27 @@ down_revision: Union[str, Sequence[str], None] = "0ab11be76904"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+_CRIT_RULE_VALUES = ("double_dice", "perkins", "double_damage", "max_damage", "none")
+
 
 def upgrade() -> None:
     """Upgrade schema."""
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        # ALTER TABLE ADD COLUMN requires the type to already exist on PostgreSQL.
+        # CREATE TABLE handles this automatically, but ADD COLUMN does not.
+        values = ", ".join(f"'{v}'" for v in _CRIT_RULE_VALUES)
+        op.execute(f"CREATE TYPE critrule AS ENUM ({values})")
+
     with op.batch_alter_table("party_settings", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
                 "crit_rule",
                 sa.Enum(
-                    "double_dice",
-                    "perkins",
-                    "double_damage",
-                    "max_damage",
-                    "none",
+                    *_CRIT_RULE_VALUES,
                     name="critrule",
+                    # Type already created above for PostgreSQL; SQLite uses CHECK.
+                    create_type=False,
                 ),
                 nullable=False,
                 server_default="double_dice",

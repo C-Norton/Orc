@@ -18,6 +18,8 @@ down_revision: Union[str, Sequence[str], None] = "60f187b137fd"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+_DEATH_SAVE_NAT20_VALUES = ("regain_hp", "double_success")
+
 
 def upgrade() -> None:
     """Upgrade schema."""
@@ -33,11 +35,23 @@ def upgrade() -> None:
             )
         )
 
+    bind = op.get_bind()
+    if bind.dialect.name == "postgresql":
+        # ALTER TABLE ADD COLUMN requires the type to already exist on PostgreSQL.
+        # CREATE TABLE handles this automatically, but ADD COLUMN does not.
+        values = ", ".join(f"'{v}'" for v in _DEATH_SAVE_NAT20_VALUES)
+        op.execute(f"CREATE TYPE deathsavenat20mode AS ENUM ({values})")
+
     with op.batch_alter_table("party_settings", schema=None) as batch_op:
         batch_op.add_column(
             sa.Column(
                 "death_save_nat20_mode",
-                sa.Enum("regain_hp", "double_success", name="deathsavenat20mode"),
+                sa.Enum(
+                    *_DEATH_SAVE_NAT20_VALUES,
+                    name="deathsavenat20mode",
+                    # Type already created above for PostgreSQL; SQLite uses CHECK.
+                    create_type=False,
+                ),
                 nullable=False,
                 server_default="regain_hp",
             )
