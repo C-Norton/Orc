@@ -32,7 +32,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             "status",
-            sa.Enum(EncounterStatus),
+            sa.Enum(EncounterStatus, values_callable=lambda obj: [e.value for e in obj]),
             nullable=False,
             server_default=EncounterStatus.PENDING.value,
         ),

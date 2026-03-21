@@ -23,7 +23,9 @@ class Encounter(Base):
         Integer, ForeignKey("servers.id"), nullable=False
     )
     status: Mapped[EncounterStatus] = mapped_column(
-        SAEnum(EncounterStatus), nullable=False, default=EncounterStatus.PENDING
+        SAEnum(EncounterStatus, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=EncounterStatus.PENDING,
     )
     current_turn_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     round_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
