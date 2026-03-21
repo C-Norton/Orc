@@ -21,16 +21,22 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Handle constraints and ensure is_active is NOT NULL
-    # is_active column already exists from a failed attempt
-    op.execute("UPDATE characters SET is_active = 1 WHERE is_active IS NULL")
+    with op.batch_alter_table("characters", schema=None) as batch_op:
+        # Add is_active as nullable first so we can backfill before constraining.
+        batch_op.add_column(sa.Column("is_active", sa.Boolean(), nullable=True))
+
+    # Use a SQLAlchemy expression so the boolean literal is rendered correctly
+    # for both SQLite (stores as 0/1) and PostgreSQL (uses true/false).
+    characters = sa.table("characters", sa.column("is_active", sa.Boolean()))
+    op.execute(
+        characters.update()
+        .where(characters.c.is_active.is_(None))
+        .values(is_active=True)
+    )
 
     with op.batch_alter_table("characters", schema=None) as batch_op:
         batch_op.alter_column("is_active", nullable=False)
-        # Drop the old constraint
-        # Need to be careful with names as Alembic uses naming conventions
         batch_op.drop_constraint("_user_server_uc", type_="unique")
-        # Add the new constraint
         batch_op.create_unique_constraint(
             "_user_server_name_uc", ["user_id", "server_id", "name"]
         )
