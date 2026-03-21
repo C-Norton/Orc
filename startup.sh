@@ -169,10 +169,10 @@ else
 fi
 chmod 755 /opt/orc
 
-# Create a root-owned migration wrapper so the deploy SA can run alembic without
-# being able to read /etc/orc-bot.env directly.  DATABASE_URL is extracted with
-# grep/cut rather than sourcing the file — this avoids bash interpreting special
-# characters in the password (?, @, spaces, etc.) as globs or command separators.
+# orc-migrate: root-owned wrapper for alembic migrations.
+# DATABASE_URL is extracted with grep/cut rather than sourcing the env file —
+# this avoids bash interpreting special characters in the password as globs or
+# command separators.
 cat > /usr/local/bin/orc-migrate <<'MIGRATE'
 #!/bin/bash
 set -euo pipefail
@@ -183,9 +183,28 @@ MIGRATE
 chmod 755 /usr/local/bin/orc-migrate
 echo "Migration wrapper written to /usr/local/bin/orc-migrate."
 
-# Grant the deploy SA passwordless sudo for service management and migrations.
+# orc-deploy: root-owned wrapper for the full Docker deployment cycle.
+# Runs as root so it can pass /etc/orc-bot.env (600 root) to docker --env-file
+# without needing to relax permissions on the secrets file.
+cat > /usr/local/bin/orc-deploy <<'DEPLOY'
+#!/bin/bash
+set -euo pipefail
+IMAGE="$1"
+echo "--- Pulling image ${IMAGE} ---"
+docker pull "${IMAGE}"
+echo "--- Running database migrations ---"
+docker run --rm --env-file /etc/orc-bot.env "${IMAGE}" alembic upgrade head
+echo "--- Replacing bot container ---"
+docker stop orc-bot || true
+docker rm   orc-bot || true
+docker run -d --name orc-bot --restart unless-stopped --env-file /etc/orc-bot.env "${IMAGE}"
+DEPLOY
+chmod 755 /usr/local/bin/orc-deploy
+echo "Deploy wrapper written to /usr/local/bin/orc-deploy."
+
+# Grant the deploy SA passwordless sudo for service management, migrations, and deployment.
 if [ "$DEPLOY_SA_UNIQUE_ID" != "unknown" ]; then
-    echo "${DEPLOY_SA_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart orc-bot.service, /usr/bin/systemctl is-active orc-bot.service, /usr/local/bin/orc-migrate" \
+    echo "${DEPLOY_SA_USER} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart orc-bot.service, /usr/bin/systemctl is-active orc-bot.service, /usr/local/bin/orc-migrate, /usr/local/bin/orc-deploy" \
         > /etc/sudoers.d/orc-bot-deploy
     chmod 440 /etc/sudoers.d/orc-bot-deploy
     echo "Sudoers rule written for ${DEPLOY_SA_USER}."
