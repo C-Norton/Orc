@@ -18,7 +18,7 @@ from enums.encounter_status import EncounterStatus
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from utils.class_data import apply_class_save_profs, calculate_max_hp
 from utils.constants import SKILL_TO_STAT
-from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
+from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
 from utils.dnd_logic import get_proficiency_bonus, get_stat_modifier
 from utils.limits import MAX_CHARACTERS_PER_USER
 from utils.logging_config import get_logger
@@ -530,7 +530,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
@@ -641,7 +641,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
@@ -697,7 +697,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
@@ -774,7 +774,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             return
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
@@ -826,7 +826,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
 
             if name is None:
                 char = get_active_character(db, user, server)
@@ -877,7 +877,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         """Suggest own characters first, then active party members' characters."""
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -925,7 +925,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
 
             if not user or not server:
                 await interaction.response.send_message(
@@ -991,7 +991,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
 
             char = (
                 db.query(Character)
@@ -1029,7 +1029,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         """Suggest character names owned by this user on this server."""
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -1057,7 +1057,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
 
             if not user or not server:
                 await interaction.response.send_message(
@@ -1111,7 +1111,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     ) -> List[app_commands.Choice[str]]:
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -1156,7 +1156,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             return
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
@@ -1256,7 +1256,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "

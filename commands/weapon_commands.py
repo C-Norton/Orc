@@ -20,7 +20,7 @@ from discord.ext import commands
 
 from database import SessionLocal
 from models import Attack, Character
-from utils.db_helpers import get_active_character, resolve_user_server
+from utils.db_helpers import get_active_character, get_or_create_user_server
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
@@ -96,7 +96,7 @@ def register_weapon_commands(bot: commands.Bot) -> None:
         await interaction.response.defer(ephemeral=True)
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             character = get_active_character(db, user, server)
             if not character:
                 await interaction.followup.send(
@@ -163,7 +163,7 @@ def register_weapon_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             character = get_active_character(db, user, server)
             if not character:
                 await interaction.response.send_message(

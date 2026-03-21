@@ -17,16 +17,60 @@ def resolve_user_server(
 ) -> tuple[Optional[User], Optional[Server]]:
     """Look up the User and Server rows for a Discord interaction.
 
+    Returns ``None`` for either value if the row does not exist yet.
+    Prefer ``get_or_create_user_server`` in command handlers so that rows are
+    created automatically on first use.
+
     Args:
         db: An active SQLAlchemy session.
         interaction: The Discord interaction being handled.
 
     Returns:
-        A ``(user, server)`` pair; either value may be ``None`` if the row
-        does not exist yet.
+        A ``(user, server)`` pair; either value may be ``None``.
     """
     user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
     server = db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
+    return user, server
+
+
+def get_or_create_user_server(
+    db, interaction: discord.Interaction
+) -> tuple[User, Server]:
+    """Return the User and Server rows for a Discord interaction, creating them
+    if they do not exist yet.
+
+    This is the preferred helper for command handlers.  It guarantees that both
+    rows exist after the call so commands never need to handle a ``None`` user
+    or server on first use.  The user-server association row is also created so
+    that ``get_active_party`` works immediately.
+
+    Args:
+        db: An active SQLAlchemy session.
+        interaction: The Discord interaction being handled.
+
+    Returns:
+        A ``(user, server)`` pair; both are always non-``None``.
+    """
+    discord_user_id = str(interaction.user.id)
+    discord_guild_id = str(interaction.guild_id)
+
+    user = db.query(User).filter_by(discord_id=discord_user_id).first()
+    if user is None:
+        user = User(discord_id=discord_user_id)
+        db.add(user)
+        db.flush()
+
+    server = db.query(Server).filter_by(discord_id=discord_guild_id).first()
+    if server is None:
+        guild_name = getattr(interaction.guild, "name", discord_guild_id)
+        server = Server(discord_id=discord_guild_id, name=guild_name)
+        db.add(server)
+        db.flush()
+
+    if server not in user.servers:
+        user.servers.append(server)
+        db.flush()
+
     return user, server
 
 

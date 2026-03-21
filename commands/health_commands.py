@@ -4,7 +4,7 @@ from discord.ext import commands
 
 from database import SessionLocal
 from models import Character, User, Server, Party
-from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
+from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
 from utils.death_save_logic import character_is_dying
 from utils.hp_logic import apply_damage, apply_healing, apply_temp_hp, parse_amount
 from utils.logging_config import get_logger
@@ -33,7 +33,7 @@ def register_health_commands(bot: commands.Bot) -> None:
             return
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             if not char:
                 await interaction.response.send_message(
@@ -64,7 +64,7 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp damage called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
 
             if partymember:
                 party = get_active_party(db, user, server)
@@ -165,7 +165,7 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp heal called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
 
             if partymember:
                 party = get_active_party(db, user, server)
@@ -240,7 +240,7 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp temp called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             if not char:
                 await interaction.response.send_message(
@@ -266,7 +266,7 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp party_temp called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
             if not party:
                 await interaction.response.send_message(
@@ -297,7 +297,7 @@ def register_health_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /hp status called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             if not char:
                 await interaction.response.send_message(

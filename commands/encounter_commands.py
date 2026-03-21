@@ -17,7 +17,7 @@ from models import (
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from enums.enemy_placement_mode import EnemyPlacementMode
-from utils.db_helpers import get_active_party, resolve_user_server
+from utils.db_helpers import get_active_party, get_or_create_user_server
 from utils.death_save_logic import character_is_dying
 from utils.dnd_logic import roll_initiative_for_character, get_stat_modifier
 from utils.encounter_utils import (
@@ -215,7 +215,7 @@ async def _require_active_encounter(
         ``(user, party, encounter)`` on success, or ``(None, None, None)`` if
         any step fails (after sending the appropriate error response).
     """
-    user, server = resolve_user_server(db, interaction)
+    user, server = get_or_create_user_server(db, interaction)
     party = get_active_party(db, user, server)
     if not party:
         await interaction.response.send_message(no_party_msg, ephemeral=True)
@@ -517,7 +517,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter create called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
             if not party:
@@ -588,7 +588,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter enemy called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
             if not party:
@@ -725,7 +725,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         logger.debug(f"Command /encounter start called by {interaction.user.id}")
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
             if not party:

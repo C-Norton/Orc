@@ -18,7 +18,7 @@ from enums.encounter_status import EncounterStatus
 from dice_roller import roll_dice
 from enums.crit_rule import CritRule
 from utils.crit_logic import apply_crit_damage
-from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
+from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
 from utils.encounter_utils import (
     check_and_auto_end_encounter,
     notify_gms_hp_update,
@@ -54,7 +54,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
@@ -127,7 +127,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "
@@ -374,7 +374,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
         """Suggest attacks belonging to the user's active character."""
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
 
             if not char or not char.attacks:
@@ -395,7 +395,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
         """Suggest enemy names from the active encounter's initiative order."""
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
             if not party:
                 return []
@@ -434,7 +434,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
                 f"Character lookup for user {interaction.user.id}: "

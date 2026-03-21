@@ -21,7 +21,7 @@ from sqlalchemy import select
 
 from database import SessionLocal
 from models import Character, Party, Server, User, user_server_association
-from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
+from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
@@ -85,7 +85,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
             char, error = _resolve_target(db, user, server, party, partymember)
@@ -141,7 +141,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
             char, error = _resolve_target(db, user, server, party, partymember)
@@ -193,7 +193,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
-            user, server = resolve_user_server(db, interaction)
+            user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
             if partymember is None:

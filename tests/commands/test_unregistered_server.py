@@ -1,39 +1,33 @@
 """
-Edge case tests for commands invoked in a server that is not registered in the
-``servers`` table.
+Edge case tests for commands invoked by a brand-new user on a brand-new server.
 
-When the bot is added to a new Discord server the ``Server`` row is created
-only when a user first calls ``/character create``.  Until that happens, every
-other command must fail gracefully with an ephemeral error rather than crashing.
+Commands use ``get_or_create_user_server``, which auto-registers both the User
+and Server rows on first use.  Commands that require an active character or party
+return ephemeral errors when none exist, but they never crash due to a missing
+server or user row.
 
 Sections
 --------
-1. Helper unit tests     — ``resolve_user_server`` / ``get_active_*`` with None server
-2. /character commands   — ``create`` auto-registers; all others reject gracefully
-3. /hp commands          — all reject gracefully
-4. /roll commands        — raw-dice succeeds; named rolls reject gracefully
-5. /attack commands      — all reject gracefully
-6. /party commands       — create rejects; view/active/delete may crash (documented bugs)
-7. /encounter commands   — all reject gracefully
-8. /inspiration commands — all reject gracefully
-
-Known defects
--------------
-BUG-URS-1  ``/party active <name>`` accesses ``server.id`` before checking for
-           ``None``, raising ``AttributeError`` on an unregistered server.
-BUG-URS-2  ``/party active`` (view mode, no name given) accesses ``server.id``
-           before a ``None`` check.
-BUG-URS-3  ``/party view <name>`` accesses ``server.id`` without a ``None`` check.
-BUG-URS-4  ``/party delete <name>`` accesses ``server.id`` without a ``None`` check.
-BUG-URS-5  ``/party character_add`` accesses ``server.id`` without a ``None`` check.
-BUG-URS-6  ``/party character_remove`` accesses ``server.id`` without a ``None`` check.
+1. Helper unit tests     — ``resolve_user_server`` / ``get_active_*`` with None inputs
+2. /character commands   — ``create`` succeeds; all others fail gracefully (no character)
+3. /hp commands          — all fail gracefully (no character)
+4. /roll commands        — raw-dice succeeds; named rolls fail gracefully (no character)
+5. /attack commands      — all fail gracefully (no character)
+6. /party commands       — create succeeds; commands requiring a party fail gracefully
+7. /encounter commands   — all fail gracefully (no party/character)
+8. /inspiration commands — all fail gracefully (no character)
 """
 
 import pytest
 
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
-from utils.db_helpers import get_active_character, get_active_party, resolve_user_server
+from utils.db_helpers import (
+    get_active_character,
+    get_active_party,
+    get_or_create_user_server,
+    resolve_user_server,
+)
 from utils.strings import Strings
 
 
@@ -115,6 +109,78 @@ def test_get_active_party_returns_none_when_both_none(db_session):
     """``get_active_party`` returns ``None`` when both arguments are ``None``."""
     result = get_active_party(db_session, None, None)
     assert result is None
+
+
+# ---------------------------------------------------------------------------
+# get_or_create_user_server
+# ---------------------------------------------------------------------------
+
+
+def test_get_or_create_creates_user_and_server_on_first_call(db_session, mocker):
+    """Both User and Server rows are created when neither exists yet."""
+    interaction = make_interaction(mocker, user_id=8001, guild_id=8002)
+    user, server = get_or_create_user_server(db_session, interaction)
+    assert user is not None
+    assert user.discord_id == "8001"
+    assert server is not None
+    assert server.discord_id == "8002"
+
+
+def test_get_or_create_returns_existing_rows_on_second_call(db_session, mocker):
+    """A second call with the same IDs returns the existing rows, not duplicates."""
+    interaction = make_interaction(mocker, user_id=8001, guild_id=8002)
+    user1, server1 = get_or_create_user_server(db_session, interaction)
+    user2, server2 = get_or_create_user_server(db_session, interaction)
+    assert user1.id == user2.id
+    assert server1.id == server2.id
+
+
+def test_get_or_create_never_returns_none(db_session, mocker):
+    """Neither return value is ever None, even for a brand-new user and server."""
+    interaction = make_interaction(mocker, user_id=9999, guild_id=9998)
+    user, server = get_or_create_user_server(db_session, interaction)
+    assert user is not None
+    assert server is not None
+
+
+def test_get_or_create_uses_guild_name_for_new_server(db_session, mocker):
+    """The Server row is created with the guild name from the interaction."""
+    interaction = make_interaction(mocker, guild_id=7001, guild_name="Brave New World")
+    _, server = get_or_create_user_server(db_session, interaction)
+    assert server.name == "Brave New World"
+
+
+def test_get_or_create_creates_user_server_association(db_session, mocker):
+    """The user-server association row is created so get_active_party works."""
+    interaction = make_interaction(mocker, user_id=6001, guild_id=6002)
+    user, server = get_or_create_user_server(db_session, interaction)
+    db_session.refresh(user)
+    assert server in user.servers
+
+
+def test_get_or_create_with_existing_user_new_server(db_session, sample_user, mocker):
+    """When the user already exists but the server is new, only the server is created."""
+    interaction = make_interaction(mocker, user_id=111, guild_id=5001)
+    user, server = get_or_create_user_server(db_session, interaction)
+    assert user.id == sample_user.id
+    assert server.discord_id == "5001"
+
+
+def test_get_or_create_with_new_user_existing_server(db_session, sample_server, mocker):
+    """When the server already exists but the user is new, only the user is created."""
+    interaction = make_interaction(mocker, user_id=4001, guild_id=222)
+    user, server = get_or_create_user_server(db_session, interaction)
+    assert user.discord_id == "4001"
+    assert server.id == sample_server.id
+
+
+def test_get_or_create_idempotent_association(db_session, sample_user, sample_server, mocker):
+    """Calling get_or_create twice does not create duplicate association rows."""
+    interaction = make_interaction(mocker, user_id=111, guild_id=222)
+    get_or_create_user_server(db_session, interaction)
+    get_or_create_user_server(db_session, interaction)
+    db_session.refresh(sample_user)
+    assert sample_user.servers.count(sample_server) == 1
 
 
 # ===========================================================================
@@ -564,17 +630,15 @@ async def test_attack_list_in_unregistered_server_returns_ephemeral(mocker, atta
 # ===========================================================================
 
 
-async def test_party_create_in_unregistered_server_returns_ephemeral(mocker, party_bot):
-    """``/party create`` returns an ephemeral 'user or server not initialized'
-    error when the server is unregistered.  Party creation requires both records
-    to exist."""
+async def test_party_create_in_unregistered_server_succeeds(mocker, party_bot):
+    """``/party create`` auto-registers the server and user on first use, so it
+    succeeds even on a brand-new server."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="Wanderers", characters_list="")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.ERROR_USER_SERVER_NOT_INIT in msg
+    assert "wanderers" in msg.lower()
 
 
 async def test_party_roll_in_unregistered_server_returns_ephemeral(mocker, party_bot):
@@ -603,18 +667,11 @@ async def test_party_roll_as_in_unregistered_server_returns_ephemeral(
     assert Strings.ERROR_PARTY_SET_ACTIVE_FIRST in msg
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG-URS-5: /party character_add accesses server.id before checking for "
-        "None, raising AttributeError on an unregistered server."
-    ),
-    strict=True,
-)
 async def test_party_character_add_in_unregistered_server_returns_ephemeral(
     mocker, party_bot
 ):
-    """``/party character_add`` should return an ephemeral error when the server is
-    unregistered, but currently crashes with AttributeError."""
+    """``/party character_add`` returns an ephemeral error on a brand-new server
+    (server auto-registers but no party named 'Wanderers' exists)."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "character_add")
     await cb(interaction, party_name="Wanderers", character_name="Aldric")
@@ -622,18 +679,11 @@ async def test_party_character_add_in_unregistered_server_returns_ephemeral(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG-URS-6: /party character_remove accesses server.id before checking for "
-        "None, raising AttributeError on an unregistered server."
-    ),
-    strict=True,
-)
 async def test_party_character_remove_in_unregistered_server_returns_ephemeral(
     mocker, party_bot
 ):
-    """``/party character_remove`` should return an ephemeral error when the server is
-    unregistered, but currently crashes with AttributeError."""
+    """``/party character_remove`` returns an ephemeral error on a brand-new server
+    (no party or character exists)."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "character_remove")
     await cb(interaction, party_name="Wanderers", character_name="Aldric")
@@ -641,18 +691,11 @@ async def test_party_character_remove_in_unregistered_server_returns_ephemeral(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG-URS-1: /party active <name> accesses server.id before checking for "
-        "None, raising AttributeError on an unregistered server."
-    ),
-    strict=True,
-)
 async def test_party_active_set_in_unregistered_server_returns_ephemeral(
     mocker, party_bot
 ):
-    """``/party active <name>`` should return an ephemeral error when the server
-    is unregistered, but currently crashes with AttributeError."""
+    """``/party active <name>`` returns an ephemeral error on a brand-new server
+    (server auto-registers but the named party does not exist)."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "active")
     await cb(interaction, party_name="Wanderers")
@@ -660,18 +703,11 @@ async def test_party_active_set_in_unregistered_server_returns_ephemeral(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG-URS-2: /party active (view) accesses server.id before checking for "
-        "None, raising AttributeError on an unregistered server."
-    ),
-    strict=True,
-)
 async def test_party_active_view_in_unregistered_server_returns_ephemeral(
     mocker, party_bot
 ):
-    """``/party active`` (no name — view mode) should return an ephemeral error
-    when the server is unregistered, but currently crashes with AttributeError."""
+    """``/party active`` (no name — view mode) returns an ephemeral 'no active
+    party' message on a brand-new server (auto-registers but no party is set)."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "active")
     await cb(interaction, party_name=None)
@@ -679,16 +715,9 @@ async def test_party_active_view_in_unregistered_server_returns_ephemeral(
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG-URS-3: /party view accesses server.id before checking for "
-        "None, raising AttributeError on an unregistered server."
-    ),
-    strict=True,
-)
 async def test_party_view_in_unregistered_server_returns_ephemeral(mocker, party_bot):
-    """``/party view`` should return an ephemeral error when the server is
-    unregistered, but currently crashes with AttributeError."""
+    """``/party view`` returns an ephemeral 'party not found' error when the
+    server is unregistered (the named party cannot exist)."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "view")
     await cb(interaction, party_name="Wanderers")
@@ -696,16 +725,9 @@ async def test_party_view_in_unregistered_server_returns_ephemeral(mocker, party
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG-URS-4: /party delete accesses server.id before checking for "
-        "None, raising AttributeError on an unregistered server."
-    ),
-    strict=True,
-)
 async def test_party_delete_in_unregistered_server_returns_ephemeral(mocker, party_bot):
-    """``/party delete`` should return an ephemeral error when the server is
-    unregistered, but currently crashes with AttributeError."""
+    """``/party delete`` returns an ephemeral error on a brand-new server
+    (server auto-registers but the named party does not exist)."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "delete")
     await cb(interaction, party_name="Wanderers")

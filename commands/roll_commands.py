@@ -12,7 +12,7 @@ from dice_roller import (
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from models import Character, PartySettings
 from utils.constants import SKILL_TO_STAT, STAT_NAMES
-from utils.db_helpers import get_active_character, resolve_user_server
+from utils.db_helpers import get_active_character, get_or_create_user_server
 from utils.death_save_logic import character_is_dying, process_death_save
 from utils.dnd_logic import perform_roll
 from utils.logging_config import get_logger
@@ -199,7 +199,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
             char = None
 
             if _needs_character(notation):
-                user, server = resolve_user_server(db, interaction)
+                user, server = get_or_create_user_server(db, interaction)
                 char = get_active_character(db, user, server)
                 logger.debug(
                     f"Character lookup: {'found: ' + char.name if char else 'not found'}"
@@ -224,7 +224,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 # Still attempt to resolve the active character so GMs can be
                 # notified even when the notation itself didn't need one.
                 try:
-                    user, server = resolve_user_server(db, interaction)
+                    user, server = get_or_create_user_server(db, interaction)
                     char = get_active_character(db, user, server)
                 except Exception:
                     char = None
@@ -283,7 +283,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             if _needs_character(notation):
-                user, server = resolve_user_server(db, interaction)
+                user, server = get_or_create_user_server(db, interaction)
                 char = get_active_character(db, user, server)
                 logger.debug(
                     f"Character lookup: {'found: ' + char.name if char else 'not found'}"
@@ -355,7 +355,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
         # Include "death save" only when the active character is at 0 HP
         death_save_db = SessionLocal()
         try:
-            user, server = resolve_user_server(death_save_db, interaction)
+            user, server = get_or_create_user_server(death_save_db, interaction)
             if user and server:
                 char = get_active_character(death_save_db, user, server)
                 if char and character_is_dying(char):

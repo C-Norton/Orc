@@ -79,7 +79,9 @@ class Strings:
     HELP_ROLLING_VALUE = (
         "**/roll <notation>**: Roll anything! Use skill names (e.g., `perception`), saves (e.g., `wis save`), or dice (e.g., `1d20+5`).\n"
         "**/roll death save**: Roll a death saving throw (autocomplete-only; only shown when your character is at 0 HP). "
-        "3 successes stabilizes; 3 failures slays. Nat 20 behaviour is configurable per party."
+        "3 successes stabilizes; 3 failures slays. Nat 20 behaviour is configurable per party.\n"
+        "**/gmroll <notation>**: Roll secretly — you see the result as an ephemeral message and every GM of your active character's parties "
+        "receives a DM with the full result. No public message is posted. Supports all the same notation as `/roll`."
     )
 
     HELP_HEALTH_NAME = "❤️ Health & HP"
