@@ -104,7 +104,11 @@ DISCORD_PUBLIC_KEY=${DISCORD_PUBLIC_KEY_VALUE}
 DISCORD_APP_ID=${DISCORD_APP_ID_VALUE}
 DATABASE_URL=postgresql+psycopg2://orc_bot:${DB_PASSWORD_VALUE}@${DB_PRIVATE_IP}:5432/orc_bot
 EOF
-chmod 600 "$ENV_FILE"
+# 600 would block the deploy SA from passing this file to docker run --env-file.
+# 640 + docker group lets deploy SA (docker group member) read it without making
+# it world-readable.
+chmod 640 "$ENV_FILE"
+chgrp docker "$ENV_FILE"
 echo "Secrets written to $ENV_FILE."
 
 # ─────────────────────────────────────────────
