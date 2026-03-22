@@ -16,8 +16,9 @@ from commands.health_commands import register_health_commands
 from commands.inspiration_commands import register_inspiration_commands
 from commands.admin_commands import record_start_time, register_admin_commands
 from commands.weapon_commands import register_weapon_commands
+from utils.db_helpers import purge_server_data
 from utils.dev_notifications import notify_background_error, notify_command_error, notify_startup, set_discord_client
-from utils.logging_config import setup_logging, get_logger
+from utils.logging_config import setup_logging, get_logger, set_guild_context
 from utils.rate_limiter import check_rate_limit
 
 # Load environment variables
@@ -45,9 +46,25 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 
+class GuildContextTree(discord.app_commands.CommandTree):
+    """CommandTree subclass that injects guild context into the logging system.
+
+    Overrides ``call`` so that every slash-command invocation automatically
+    sets the current guild's snowflake in the logging context variable.  This
+    means all log messages emitted during a command handler automatically
+    include the originating guild ID without any per-command boilerplate.
+    """
+
+    async def call(self, interaction: discord.Interaction) -> None:
+        """Set guild logging context then dispatch the interaction."""
+        if interaction.guild_id:
+            set_guild_context(str(interaction.guild_id))
+        await super().call(interaction)
+
+
 class DnDBot(commands.Bot):
     def __init__(self) -> None:
-        super().__init__(command_prefix="!", intents=intents)
+        super().__init__(command_prefix="!", intents=intents, tree_cls=GuildContextTree)
 
     async def setup_hook(self) -> None:
         """Called by the bot to perform asynchronous setup tasks."""
@@ -115,6 +132,7 @@ class DnDBot(commands.Bot):
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Update the database when the bot joins a new server."""
+        set_guild_context(str(guild.id))
         db = SessionLocal()
         try:
             server = db.query(Server).filter_by(discord_id=str(guild.id)).first()
@@ -127,6 +145,30 @@ class DnDBot(commands.Bot):
             logger.error(f"Error on guild join {guild.name}: {e}")
             await notify_background_error(
                 e, context=f"Error in on_guild_join for {guild.name} ({guild.id})"
+            )
+        finally:
+            db.close()
+
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
+        """Purge all server data when the bot is kicked or leaves a guild."""
+        db = SessionLocal()
+        try:
+            server = db.query(Server).filter_by(discord_id=str(guild.id)).first()
+            if server:
+                purge_server_data(db, server)
+                db.commit()
+                logger.info(
+                    f"Purged all data for removed guild: {guild.name} ({guild.id})"
+                )
+            else:
+                logger.info(
+                    f"Bot removed from guild {guild.name} ({guild.id}) — no DB record found"
+                )
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error purging data for guild {guild.name} ({guild.id}): {e}")
+            await notify_background_error(
+                e, context=f"Error in on_guild_remove for {guild.name} ({guild.id})"
             )
         finally:
             db.close()

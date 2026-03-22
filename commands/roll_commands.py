@@ -5,6 +5,7 @@ from typing import List, Optional
 from database import SessionLocal
 from dice_roller import (
     evaluate_expression,
+    get_named_tokens,
     has_named_tokens,
     parse_expression_tokens,
     roll_dice,
@@ -23,6 +24,12 @@ logger = get_logger(__name__)
 
 
 _DEATH_SAVE_NOTATION = "death save"
+
+_RECOGNIZED_NAMED_TOKENS: frozenset = frozenset(
+    {s.lower() for s in SKILL_TO_STAT}
+    | set(STAT_NAMES)
+    | {"initiative", "init"}
+)
 
 
 def _needs_character(notation: str) -> bool:
@@ -44,9 +51,11 @@ def _needs_character(notation: str) -> bool:
     if clean in STAT_NAMES:
         return True
 
-    # Complex expression: any named token requires a character
+    # Complex expression: only recognized named tokens require a character.
+    # Unrecognized tokens (e.g. "foobar") are invalid input, not missing-character.
     tokens = parse_expression_tokens(notation)
-    return has_named_tokens(tokens)
+    named = get_named_tokens(tokens)
+    return bool(named) and all(token in _RECOGNIZED_NAMED_TOKENS for token in named)
 
 
 async def _notify_gmroll_gms(

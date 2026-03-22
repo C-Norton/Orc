@@ -88,8 +88,11 @@ class Strings:
         "**/roll death save**: Roll a death saving throw (autocomplete-only; only shown when your character is at 0 HP). "
         "3 successes stabilizes; 3 failures slays. Nat 20 behaviour is configurable per party.\n"
         "**/gmroll <notation>**: Roll secretly — you see the result as a message viewable only by you in the channel and every GM of your active character's parties "
-        "receives a direct message with the full result. No public message is posted. Supports all the same notation as `/roll`."
+        "receives a direct message with the full result. No public message is posted. Supports all the same notation as `/roll`.\n"
+        "**/tip**: Get a random tip about ORC's features posted to the channel."
     )
+
+    TIP_COMMAND_RESPONSE = "💡 **Tip:** {tip}"
 
     HELP_HEALTH_NAME = "❤️ Health & HP"
     HELP_HEALTH_VALUE = (
@@ -178,15 +181,15 @@ class Strings:
         "Feel free to contribute, request features, or report issues on [GitHub](https://github.com/C-Norton/orc).\n"
         "As a measure of support, it would be appreciated if you checked out the Open Source Gaming and Roleplaying Environment (OGRE) "
         "[WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/) "
-        "and [Discord Server](https://discord.gg/2cBKmVTpHR)."
+        "and [Discord Server](https://discord.gg/2cBKmVTpHR), where you can also receive support for ORC and stay updated on new features and bug fixes."
     )
 
     GUILD_JOIN_WELCOME = (
         "Hi! I'm **ORC** (Open-Source Roleplaying Companion), a D&D 5e assistant bot.\n\n"
         "Use `/help` to see everything I can do — character sheets, dice rolls, party management, "
         "initiative tracking, and more!\n\n"
-        "Check out the [GitHub](https://github.com/C-Norton/orc) and the "
-        "[OGRE WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)."
+        "Check out the [GitHub](https://github.com/C-Norton/orc), the [ORC & OGRE Discord](https://discord.gg/2cBKmVTpHR)"
+        ", and the [OGRE WorldAnvil Wiki](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)."
     )
 
     # Health Commands
@@ -578,9 +581,10 @@ class Strings:
     DEATH_SAVE_NAT1_DOUBLE = "💀 **Natural 1!** Two failures recorded."
     # tips
     TIPS = [
-        "Got a feature suggestion? Join the Discord, or reach out on Github (https://github.com/c-norton/ORC)",
-        "Join the OGRE discord server for updates about ORC, including new features, bug fixes, and community feedback",
-        "Have a funny nat1 or nat20 line? Let the dev know to add it. Reachable on Discord(Wobbix) or Github (https://github.com/c-norton/ORC)",
+        "Love ORC? The best way to support us is a recommendation to others!",
+        "Got a feature suggestion? [Join the Discord](https://discord.gg/2cBKmVTpHR), or reach out on [Github](https://github.com/c-norton/ORC)",
+        "Join the [OGRE discord server](https://discord.gg/2cBKmVTpHR) for updates about ORC, including new features, bug fixes, and community feedback",
+        "Have a funny nat1 or nat20 line? Let the dev know to add it. Reachable on [Discord](https://discord.gg/2cBKmVTpHR) or [Github](https://github.com/c-norton/ORC)",
         "Use /help to view a list of all commands and features",
         "If you create a character, you can roll with skill names, along with other benefits",
         "You can secretly roll dice with /gmroll",

@@ -1,9 +1,43 @@
+import contextvars
 import logging
 import os
 import sys
 from logging.handlers import RotatingFileHandler
 
 import dotenv
+
+# ---------------------------------------------------------------------------
+# Guild logging context
+# ---------------------------------------------------------------------------
+
+_guild_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "guild_id", default=""
+)
+
+
+def set_guild_context(guild_id: str) -> None:
+    """Set the current guild ID for inclusion in log messages.
+
+    Call this at the start of any coroutine that processes a guild interaction
+    (slash commands, event handlers, etc.).  Because this uses a
+    ``contextvars.ContextVar``, the value is scoped to the current asyncio
+    task and never leaks to unrelated tasks.
+
+    Args:
+        guild_id: The Discord guild (server) snowflake as a string.
+    """
+    _guild_id_var.set(guild_id)
+
+
+class _GuildContextFilter(logging.Filter):
+    """Inject the current guild ID into every log record as ``guild_id``.
+
+    When no guild context is active the field is set to ``"-"``.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.guild_id = _guild_id_var.get() or "-"  # type: ignore[attr-defined]
+        return True
 
 
 class LogBufferHandler(logging.Handler):
@@ -38,12 +72,13 @@ class LogBufferHandler(logging.Handler):
 def setup_logging():
     dotenv.load_dotenv()
 
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - [guild:%(guild_id)s] - %(message)s"
     formatter = logging.Formatter(log_format)
 
     # Root logger captures everything; handlers filter by level independently.
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
+    root_logger.addFilter(_GuildContextFilter())
 
     # Console handler: always active. In Docker, stdout is captured by the
     # container runtime and shipped to Cloud Logging by the Ops Agent.

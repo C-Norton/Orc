@@ -7,9 +7,10 @@ that each command file does not need its own copy.
 from typing import Optional
 
 import discord
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from models import Character, Party, Server, User, user_server_association
+from models.base import party_character_association
 
 
 def resolve_user_server(
@@ -118,6 +119,61 @@ def get_active_party(
     if not result or result[0] is None:
         return None
     return db.get(Party, result[0])
+
+
+def purge_server_data(db, server: Server) -> None:
+    """Delete all records associated with a server.
+
+    Removes data in FK-constraint-safe order:
+
+    1. ``party_character`` association rows for the server's parties and characters
+    2. ``user_server`` association rows for the server
+    3. Characters (ORM cascade removes skills, attacks, class levels)
+    4. Parties (ORM cascade removes encounters, enemies, turns, settings;
+       DB-level ``ondelete=CASCADE`` on ``party_gm`` removes GM associations)
+    5. The Server record itself
+
+    The caller is responsible for committing the session.
+
+    Args:
+        db: An active SQLAlchemy session.
+        server: The Server row to purge.
+    """
+    server_character_ids = [
+        character.id
+        for character in db.query(Character).filter_by(server_id=server.id).all()
+    ]
+    server_party_ids = [
+        party.id
+        for party in db.query(Party).filter_by(server_id=server.id).all()
+    ]
+
+    if server_party_ids or server_character_ids:
+        predicate = party_character_association.c.party_id.in_(server_party_ids)
+        if server_character_ids:
+            predicate = predicate | party_character_association.c.character_id.in_(
+                server_character_ids
+            )
+        db.execute(delete(party_character_association).where(predicate))
+
+    db.execute(
+        delete(user_server_association).where(
+            user_server_association.c.server_id == server.id
+        )
+    )
+
+    # Expire all cached objects so ORM sees the state after raw SQL DELETEs.
+    db.expire_all()
+
+    for character in db.query(Character).filter_by(server_id=server.id).all():
+        db.delete(character)
+    db.flush()
+
+    for party in db.query(Party).filter_by(server_id=server.id).all():
+        db.delete(party)
+    db.flush()
+
+    db.delete(server)
 
 
 def get_active_character(

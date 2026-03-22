@@ -343,3 +343,47 @@ async def test_on_guild_join_forbidden_is_swallowed(mocker):
 
     # Must not raise
     await on_guild_join(mock_guild)
+
+
+# ---------------------------------------------------------------------------
+# /tip
+# ---------------------------------------------------------------------------
+
+
+async def test_tip_command_sends_message(meta_bot, interaction):
+    cb = get_callback(meta_bot, "tip")
+    await cb(interaction)
+    interaction.response.send_message.assert_called_once()
+
+
+async def test_tip_command_response_contains_tip_text(meta_bot, interaction, mocker):
+    mocker.patch("commands.meta_commands.random.choice", return_value="Use autocomplete!")
+    cb = get_callback(meta_bot, "tip")
+    await cb(interaction)
+    msg = interaction.response.send_message.call_args[0][0]
+    assert "Use autocomplete!" in msg
+
+
+async def test_tip_command_response_contains_prefix(meta_bot, interaction, mocker):
+    mocker.patch("commands.meta_commands.random.choice", return_value="Any tip")
+    cb = get_callback(meta_bot, "tip")
+    await cb(interaction)
+    msg = interaction.response.send_message.call_args[0][0]
+    assert "💡" in msg
+
+
+async def test_tip_command_chooses_from_tips_list(meta_bot, interaction, mocker):
+    mock_choice = mocker.patch("commands.meta_commands.random.choice")
+    mock_choice.return_value = "A tip"
+    cb = get_callback(meta_bot, "tip")
+    await cb(interaction)
+    mock_choice.assert_called_once_with(Strings.TIPS)
+
+
+async def test_tip_command_not_ephemeral(meta_bot, interaction, mocker):
+    """Tips are public — posted to the channel, not ephemeral."""
+    mocker.patch("commands.meta_commands.random.choice", return_value="tip")
+    cb = get_callback(meta_bot, "tip")
+    await cb(interaction)
+    kwargs = interaction.response.send_message.call_args.kwargs
+    assert not kwargs.get("ephemeral", False)

@@ -1,3 +1,5 @@
+import random
+
 import discord
 from discord.ext import commands
 from utils.dev_notifications import notify_background_error
@@ -180,6 +182,17 @@ async def on_guild_join(guild: discord.Guild) -> None:
 
 def register_meta_commands(bot: commands.Bot) -> None:
     """Register the /help command and guild join listener."""
+
+    @bot.tree.command(name="tip", description="Get a random tip about ORC's features")
+    async def tip_command(interaction: discord.Interaction) -> None:
+        """Post a random feature tip to the channel."""
+        logger.debug(
+            f"Command /tip called by {interaction.user} (ID: {interaction.user.id})"
+        )
+        await interaction.response.send_message(
+            Strings.TIP_COMMAND_RESPONSE.format(tip=random.choice(Strings.TIPS))
+        )
+        logger.info(f"/tip served to user {interaction.user.id}")
 
     @bot.tree.command(name="help", description="Show help for all bot commands")
     async def help_command(interaction: discord.Interaction) -> None:
