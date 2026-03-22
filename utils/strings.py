@@ -576,8 +576,12 @@ class Strings:
     )
     DEATH_SAVE_NAT20_DOUBLE = "🌟 **Natural 20!** Two successes recorded."
     DEATH_SAVE_NAT1_DOUBLE = "💀 **Natural 1!** Two failures recorded."
+    # tips
     TIPS = [
-        "Use /help to view a list of all commands and features"
+        "Got a feature suggestion? Join the Discord, or reach out on Github (https://github.com/c-norton/ORC)",
+        "Join the OGRE discord server for updates about ORC, including new features, bug fixes, and community feedback",
+        "Have a funny nat1 or nat20 line? Let the dev know to add it. Reachable on Discord(Wobbix) or Github (https://github.com/c-norton/ORC)",
+        "Use /help to view a list of all commands and features",
         "If you create a character, you can roll with skill names, along with other benefits",
         "You can secretly roll dice with /gmroll",
         "Try `/roll perception` instead of `/roll 1d20` — once your character has skills set up, ORC adds the right proficiency bonus automatically.",
@@ -625,7 +629,7 @@ class Strings:
     )
     DEATH_SAVE_COUNTER_DISPLAY = "(Dying: {successes}✓ {failures}✗)"
 
-        #tips
+
 
 
 

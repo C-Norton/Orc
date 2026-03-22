@@ -185,6 +185,7 @@ async def perform_roll(
                 d20_roll=d20_str,
                 modifier=skill_mod,
                 total=total,
+                tip=random.choice(Strings.TIPS),
             )
 
         elif is_save:
@@ -200,6 +201,7 @@ async def perform_roll(
                 d20_roll=d20_str,
                 modifier=save_mod,
                 total=total,
+                tip=random.choice(Strings.TIPS),
             )
 
         elif is_initiative:
@@ -214,6 +216,7 @@ async def perform_roll(
                 d20_roll=d20_str,
                 modifier=init_bonus,
                 total=total,
+                tip=random.choice(Strings.TIPS),
             )
 
         else:  # matched_stat
@@ -227,6 +230,7 @@ async def perform_roll(
                 d20_roll=d20_str,
                 modifier=stat_mod,
                 total=total,
+                tip=random.choice(Strings.TIPS),
             )
 
     # ------------------------------------------------------------------

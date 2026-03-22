@@ -14,6 +14,7 @@ from commands.party_commands import register_party_commands
 from commands.encounter_commands import register_encounter_commands
 from commands.health_commands import register_health_commands
 from commands.inspiration_commands import register_inspiration_commands
+from commands.admin_commands import record_start_time, register_admin_commands
 from commands.weapon_commands import register_weapon_commands
 from utils.dev_notifications import notify_background_error, notify_command_error, notify_startup, set_discord_client
 from utils.logging_config import setup_logging, get_logger
@@ -61,6 +62,7 @@ class DnDBot(commands.Bot):
         register_health_commands(self)
         register_inspiration_commands(self)
         register_weapon_commands(self)
+        register_admin_commands(self)
 
         @self.tree.error
         async def on_app_command_error(
@@ -108,6 +110,7 @@ class DnDBot(commands.Bot):
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
         logger.debug("Bot is ready and running")
         set_discord_client(self)
+        record_start_time()
         await notify_startup()
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
