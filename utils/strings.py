@@ -1,10 +1,17 @@
+import random
+
+
 class Strings:
-    # Common
+        # Common
     CHARACTER_NOT_FOUND = (
         "You don't have a character in this server. Use `/character create` first."
     )
     ACTIVE_CHARACTER_NOT_FOUND = "You don't have an active character."
     SERVER_ERROR = "❌ An unexpected error occurred."
+    DEVELOPER_NOTIFIED_ERROR = (
+        "ORC was unable to respond to your query. "
+        "This issue has been logged and forwarded to the developers."
+    )
 
     # Resource limits
     ERROR_LIMIT_CHARACTERS = "You have reached the maximum number of characters ({limit}) across all servers."
@@ -277,21 +284,21 @@ class Strings:
 
     # Roll Commands
     ROLL_RESULT_DICE = (
-        "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**"
+        "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**\n*Tip: {tip}*"
     )
     # {d20_roll} now accepts either "d20(15)" or "d20[15↑,9]" (advantage)
     ROLL_RESULT_CHAR = (
-        "**{char_name}**: {label} `{d20_roll} + {modifier}` = **{total}**"
+        "**{char_name}**: {label} `{d20_roll} + {modifier}` = **{total}**\n*Tip: {tip}*"
     )
     ROLL_RESULT_SIMPLE = (
-        "**{char_name}**: `{notation}` ({rolls}){modifier} = **{total}**"
+        "**{char_name}**: `{notation}` ({rolls}){modifier} = **{total}**\n*Tip: {tip}*"
     )
-    ROLL_RESULT_CHAR_EXPR = "**{char_name}**: `{notation}` → {breakdown} = **{total}**"
-    ROLL_RESULT_DICE_EXPR = "🎲 **{notation}**\n{breakdown}\n**Total: {total}**"
+    ROLL_RESULT_CHAR_EXPR = "**{char_name}**: `{notation}` → {breakdown} = **{total}**\n*Tip: {tip}*"
+    ROLL_RESULT_DICE_EXPR = "🎲 **{notation}**\n{breakdown}\n**Total: {total}**\n*Tip: {tip}*"
     ROLL_ERROR_CHAR = "**{char_name}**: ❌ Error: {error}"
 
-    GMROLL_GM_MESSAGE = "🎲 **{char_name}** secretly rolled **{notation}**:\n{result}"
-    GMROLL_PLAYER_MESSAGE = "**{char_name}**: `{notation}` → {breakdown} = **{total}**"
+    GMROLL_GM_MESSAGE = "🎲 **{char_name}** secretly rolled **{notation}**:\n{result}\n*Tip: {tip}*"
+    GMROLL_PLAYER_MESSAGE = "**{char_name}**: `{notation}` → {breakdown} = **{total}**\n*Tip: {tip}*"
 
     # Character Commands
     CHAR_CREATE_NAME_LIMIT = "Character name cannot exceed 100 characters."
@@ -569,6 +576,41 @@ class Strings:
     )
     DEATH_SAVE_NAT20_DOUBLE = "🌟 **Natural 20!** Two successes recorded."
     DEATH_SAVE_NAT1_DOUBLE = "💀 **Natural 1!** Two failures recorded."
+    TIPS = [
+        "Use /help to view a list of all commands and features"
+        "If you create a character, you can roll with skill names, along with other benefits",
+        "You can secretly roll dice with /gmroll",
+        "Try `/roll perception` instead of `/roll 1d20` — once your character has skills set up, ORC adds the right proficiency bonus automatically.",
+        "Set your skill proficiency to **Expertise** with `/character skill` and your rolls will include double proficiency. Jack of All Trades works too.",
+        "Use `/gmroll` to roll privately. Your result is visible only to you — and every GM of your parties gets it as a DM automatically.",
+        "Rolling with **advantage**? Both `/roll` and `/gmroll` have an optional advantage field. No need to roll twice and pick the higher manually.",
+        "Once your character has stats set, `/roll initiative` uses your Dexterity modifier. Set an `initiative_bonus` override with `/character stats` if your class or feat gives you a bonus.",
+        "ORC tracks **death saves** for you. When your character hits 0 HP, 'death save' will appear in `/roll`'s autocomplete. A natural 1 counts as two failures.",
+        "Your party's GM can choose what a natural 20 does on a death save — it can heal you to 1 HP (5e 2024 rules) or count as two successes. Ask your GM which is set.",
+        "Set your saving throw proficiencies with `/character saves`. Then `/roll str save` will include your proficiency bonus automatically.",
+        "Save your attacks with `/attack add` and you'll never need to remember your to-hit bonus again. `/attack roll` handles the math.",
+        "When rolling a saved attack against an enemy in an active encounter, ORC tracks the HP for you — and removes the enemy from initiative when they drop to 0.",
+        "Critical hits aren't just double damage — your GM can configure the crit rule for your party. **Perkins rule** even grants you Inspiration on a nat 20.",
+        "Complex expressions like `2d6+perception` or `1d20+strength` work in `/roll`. You can mix dice with stat names and skills to apply situation bonuses, if your table uses them.",
+        "Use `/weapon search` to look up any weapon from the 2024 SRD, then `/weapon add` to import it directly to your character. ORC calculates the hit modifier for you.",
+        "Finesse weapons? ORC figures out whether to use Strength or Dexterity automatically when you import with `/weapon add`.",
+        "Temp HP follows the 5e rule: `/hp temp` replaces your temp HP only if the new amount is higher. It won't overwrite a larger pool.",
+        "Damage while at 0 HP adds a death save failure automatically. Your GM doesn't need to track it manually.",
+        "Party members can have their HP adjusted by the GM with `/hp damage` and `/hp heal` using the `partymember` field — no need for the player to be present.",
+        "Add temp HP to your entire party at once with `/hp party_temp`. Useful after a short rest or a bardic performance.",
+        "Use `/party roll perception` to roll Perception for every member of your party at once. Great for group checks.",
+        "Your character sheet has four pages of information — stats, skills, and attacks are all one button press away in `/character view`.",
+        "Multiclassing is supported. Use `/character class_add` to add a second class. ORC tracks each class separately and recalculates your proficiency bonus.",
+        "Party GMs receive a DM whenever HP changes during an encounter — they always know the state of the fight even in a big session.",
+        "Your party's GM can set **enemy initiative mode** to roll individually per enemy, per enemy type, or a single shared roll for all enemies.",
+        "Enemy AC can be hidden from players and shown only to GMs. Your GM controls this with `/party settings enemy_ac`.",
+        "Use `/encounter enemy` with a count to add multiple enemies at once. 'Goblin' with count 3 becomes Goblin 1, 2, and 3 in initiative.",
+        "Enemy HP can be set as a dice formula — `/encounter enemy` accepts `2d8+4` for max HP, so each enemy rolls their own.",
+        "Adding an enemy mid-encounter? ORC gives your GM a menu to place them at the top, bottom, after the current turn, or in initiative order by roll.",
+        "The `/encounter view` command shows different information to GMs — they see exact HP, AC, and initiative modifiers that players don't.",
+        "Inspiration can be granted by a GM to any party member, or to yourself if you earn it. Check your status with `/inspiration status`.",
+        "Enter the world of OGRE, the Opensource Gaming and Roleplaying Environment. A shared 5e setting in the middle of a steampunk industrial revolution!",
+    ]
     DEATH_SAVE_DAMAGE_FAILURE = (
         "💀 **{char_name}** took damage while dying — 1 failure recorded "
         "({failures}/3 failures)."
@@ -583,6 +625,11 @@ class Strings:
     )
     DEATH_SAVE_COUNTER_DISPLAY = "(Dying: {successes}✓ {failures}✗)"
 
+        #tips
+
+
+
+
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]
     NAT_1_ATTACK = [
         "That'll be a miss",
@@ -592,3 +639,6 @@ class Strings:
     NAT_1_SKILLCHECK = []
     NAT_20_SAVE = []
     NAT_1_SAVE = []
+
+
+

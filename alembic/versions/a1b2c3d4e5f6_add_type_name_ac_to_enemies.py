@@ -32,5 +32,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Remove type_name and ac columns from enemies."""
-    op.drop_column("enemies", "ac")
-    op.drop_column("enemies", "type_name")
+    with op.batch_alter_table("enemies", schema=None) as batch_op:
+        batch_op.drop_column("ac")
+        batch_op.drop_column("type_name")

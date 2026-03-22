@@ -245,6 +245,7 @@ async def perform_roll(
             notation=notation,
             breakdown=result.breakdown(),
             total=result.total,
+            tip=random.choice(Strings.TIPS),
         )
     except ValueError as e:
         logger.debug(f"ValueError in perform_roll for {notation!r}: {e}")

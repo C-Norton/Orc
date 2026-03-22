@@ -6,6 +6,35 @@ from logging.handlers import RotatingFileHandler
 import dotenv
 
 
+class LogBufferHandler(logging.Handler):
+    """Buffers every log record and DMs the developer on WARNING+ events.
+
+    The buffer (maintained in ``dev_notifications``) always holds the last 10
+    formatted lines regardless of level, so any WARNING/ERROR DM automatically
+    includes recent DEBUG/INFO context.
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Buffer this record; if WARNING or above, schedule a developer DM."""
+        from utils.dev_notifications import (
+            buffer_log_line,
+            get_recent_logs,
+            schedule_developer_dm,
+        )
+
+        formatted = self.format(record)
+        buffer_log_line(formatted)
+
+        if record.levelno >= logging.WARNING:
+            recent = get_recent_logs()
+            message = (
+                f"**{record.levelname}: `{record.name}`**\n"
+                f"```\n{formatted[:800]}\n```\n"
+                f"**Recent logs:**\n```\n{recent}\n```"
+            )
+            schedule_developer_dm(message)
+
+
 def setup_logging():
     dotenv.load_dotenv()
 
@@ -48,6 +77,12 @@ def setup_logging():
         debug_file_handler.setLevel(logging.DEBUG)
         debug_file_handler.setFormatter(formatter)
         root_logger.addHandler(debug_file_handler)
+
+    # Buffer handler: captures all records for context and DMs developer on WARNING+.
+    buffer_handler = LogBufferHandler()
+    buffer_handler.setLevel(logging.DEBUG)
+    buffer_handler.setFormatter(formatter)
+    root_logger.addHandler(buffer_handler)
 
     # Silence noisy third-party libraries.
     logging.getLogger("discord").setLevel(logging.WARNING)

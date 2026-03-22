@@ -22,6 +22,7 @@ from database import SessionLocal
 from models import Attack, Character
 from utils.db_helpers import get_active_character, get_or_create_user_server
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
+from utils.dev_notifications import notify_command_error
 from utils.logging_config import get_logger
 from utils.strings import Strings
 from utils.weapon_utils import (
@@ -110,9 +111,7 @@ def register_weapon_commands(bot: commands.Bot) -> None:
                 logger.error(
                     f"/weapon search API error for query {query!r}: {api_error}"
                 )
-                await interaction.followup.send(
-                    Strings.WEAPON_SEARCH_ERROR, ephemeral=True
-                )
+                await notify_command_error(interaction, api_error)
                 return
 
             if not weapon_list:

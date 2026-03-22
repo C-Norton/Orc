@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from utils.dev_notifications import notify_background_error
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
@@ -171,6 +172,9 @@ async def on_guild_join(guild: discord.Guild) -> None:
     except Exception as e:
         logger.error(
             f"Failed to send welcome message to {guild.name} ({guild.id}): {e}"
+        )
+        await notify_background_error(
+            e, context=f"Failed to send welcome message to {guild.name} ({guild.id})"
         )
 
 

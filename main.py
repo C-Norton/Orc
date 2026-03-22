@@ -2,6 +2,8 @@ import os
 import discord
 from discord.ext import commands
 import dotenv
+from alembic.config import Config
+from alembic import command as alembic_command
 from database import SessionLocal
 from models import Server
 from commands.meta_commands import register_meta_commands
@@ -13,6 +15,7 @@ from commands.encounter_commands import register_encounter_commands
 from commands.health_commands import register_health_commands
 from commands.inspiration_commands import register_inspiration_commands
 from commands.weapon_commands import register_weapon_commands
+from utils.dev_notifications import notify_background_error, notify_command_error, notify_startup, set_discord_client
 from utils.logging_config import setup_logging, get_logger
 from utils.rate_limiter import check_rate_limit
 
@@ -23,6 +26,18 @@ TOKEN = os.getenv("DISCORD_API_TOKEN")
 # Setup logging
 setup_logging()
 logger = get_logger(__name__)
+
+
+def run_migrations() -> None:
+    """Apply any pending Alembic migrations.
+
+    Safe to call unconditionally — Alembic is idempotent and will no-op when
+    the database is already at head.  Works with both SQLite and PostgreSQL.
+    """
+    alembic_cfg = Config("alembic.ini")
+    alembic_command.upgrade(alembic_cfg, "head")
+    logger.info("Database migrations applied (or already at head)")
+
 
 # Define bot intents
 intents = discord.Intents.default()
@@ -35,6 +50,7 @@ class DnDBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         """Called by the bot to perform asynchronous setup tasks."""
+        run_migrations()
         # Register commands
         register_meta_commands(self)
         register_roll_commands(self)
@@ -45,8 +61,24 @@ class DnDBot(commands.Bot):
         register_health_commands(self)
         register_inspiration_commands(self)
         register_weapon_commands(self)
+
+        @self.tree.error
+        async def on_app_command_error(
+            interaction: discord.Interaction,
+            error: discord.app_commands.AppCommandError,
+        ) -> None:
+            """Fallback handler for unhandled app command errors."""
+            original = getattr(error, "original", error)
+            logger.error(
+                f"Unhandled app command error from {interaction.user} "
+                f"(guild {interaction.guild_id}): {type(original).__name__}: {original}",
+                exc_info=original,
+            )
+            await notify_command_error(interaction, original)
+
         # This syncs the slash commands globally (or to specific guilds if needed)
         # Note: Global sync can take up to an hour to propagate.
+        logger.info("Syncing slash commands with Discord...")
         await self.tree.sync()
         logger.info(f"Synced slash commands for {self.user}")
 
@@ -75,6 +107,8 @@ class DnDBot(commands.Bot):
     async def on_ready(self) -> None:
         logger.info(f"Logged in as {self.user} (ID: {self.user.id})")
         logger.debug("Bot is ready and running")
+        set_discord_client(self)
+        await notify_startup()
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Update the database when the bot joins a new server."""
@@ -88,6 +122,9 @@ class DnDBot(commands.Bot):
                 logger.info(f"Added new server: {guild.name} ({guild.id})")
         except Exception as e:
             logger.error(f"Error on guild join {guild.name}: {e}")
+            await notify_background_error(
+                e, context=f"Error in on_guild_join for {guild.name} ({guild.id})"
+            )
         finally:
             db.close()
 

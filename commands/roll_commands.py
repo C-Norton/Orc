@@ -15,9 +15,10 @@ from utils.constants import SKILL_TO_STAT, STAT_NAMES
 from utils.db_helpers import get_active_character, get_or_create_user_server
 from utils.death_save_logic import character_is_dying, process_death_save
 from utils.dnd_logic import perform_roll
+from utils.dev_notifications import notify_command_error
 from utils.logging_config import get_logger
 from utils.strings import Strings
-
+import random
 logger = get_logger(__name__)
 
 
@@ -204,6 +205,8 @@ def register_roll_commands(bot: commands.Bot) -> None:
         Pure dice notation (e.g. ``1d20``) does not require an active character
         for the roll itself, but the bot still looks up the active character
         afterwards so GMs can be notified if the character is in any parties.
+
+        Selects a random tip and displays it along side the result message
         """
         logger.debug(
             f"Command /gmroll called by {interaction.user} (ID: {interaction.user.id}) "
@@ -235,6 +238,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     notation=notation,
                     breakdown=result.breakdown(),
                     total=result.total,
+                    tip=random.choice(Strings.TIPS)
                 )
                 # Still attempt to resolve the active character so GMs can be
                 # notified even when the notation itself didn't need one.
@@ -272,6 +276,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     char_name=char.name,
                     notation=notation,
                     result=response,
+                    tip=random.choice(Strings.TIPS),
                 )
                 await _notify_gmroll_gms(interaction.client, char, gm_message)
 
@@ -283,9 +288,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 f"Unexpected error in /gmroll (notation={notation!r}): {exc}",
                 exc_info=True,
             )
-            await interaction.response.send_message(
-                Strings.SERVER_ERROR, ephemeral=True
-            )
+            await notify_command_error(interaction, exc)
         finally:
             db.close()
     @bot.tree.command(
@@ -309,6 +312,13 @@ def register_roll_commands(bot: commands.Bot) -> None:
         notation: str,
         advantage: str = None,
     ) -> None:
+
+        """"
+        Rolls dice, a skill check, a save, or a complex expression.
+        Outputs result to the channel.
+        Selects a random tip and displays it along side the result message
+        """
+
         logger.debug(
             f"Command /roll called by {interaction.user} (ID: {interaction.user.id}) "
             f"in guild {interaction.guild_id} — notation={notation!r} advantage={advantage}"
@@ -345,6 +355,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     notation=notation,
                     breakdown=result.breakdown(),
                     total=result.total,
+                    tip=random.choice(Strings.TIPS),
                 )
                 await interaction.response.send_message(response)
                 logger.info(f"/roll (dice) completed for user {interaction.user.id}")
@@ -356,9 +367,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
             logger.error(
                 f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True
             )
-            await interaction.response.send_message(
-                Strings.SERVER_ERROR, ephemeral=True
-            )
+            await notify_command_error(interaction, e)
         finally:
             db.close()
 
