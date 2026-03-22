@@ -151,6 +151,7 @@ class DnDBot(commands.Bot):
 
     async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Purge all server data when the bot is kicked or leaves a guild."""
+        set_guild_context(str(guild.id))
         db = SessionLocal()
         try:
             server = db.query(Server).filter_by(discord_id=str(guild.id)).first()

@@ -127,6 +127,11 @@ def has_named_tokens(tokens: List[Tuple[int, str]]) -> bool:
     return any(not _DICE_RE.match(t) and not _NUMBER_RE.match(t) for _, t in tokens)
 
 
+def get_named_tokens(tokens: List[Tuple[int, str]]) -> List[str]:
+    """Return the list of named (non-dice, non-number) token strings."""
+    return [t for _, t in tokens if not _DICE_RE.match(t) and not _NUMBER_RE.match(t)]
+
+
 def evaluate_expression(
     tokens: List[Tuple[int, str]],
     named_resolver: Optional[Callable[[str], Tuple[int, str]]] = None,

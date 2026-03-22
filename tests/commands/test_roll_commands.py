@@ -254,3 +254,55 @@ async def test_roll_no_advantage_is_default(
     msg = _sent_message(interaction)
     assert "Aldric" in msg
     assert "12" in msg
+
+
+# ---------------------------------------------------------------------------
+# Regression: invalid notation on server with no character (GitHub issue fix)
+# ---------------------------------------------------------------------------
+
+
+async def test_roll_invalid_notation_no_character_shows_error_not_create_prompt(
+    roll_bot, interaction
+):
+    """Regression: unrecognized notation on a server with no character should
+    return an invalid-input error, not the 'create a character first' prompt.
+
+    Before the fix, _needs_character returned True for any token that wasn't a
+    dice group or integer (including garbage like 'foobar'), so the command
+    fell into the character-lookup branch and replied with CHARACTER_NOT_FOUND.
+    """
+    cb = get_callback(roll_bot, "roll")
+    await cb(interaction, notation="foobar")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = _sent_message(interaction)
+    assert "create" not in msg.lower(), (
+        "Should not ask user to create a character for invalid input"
+    )
+    assert "❌" in msg
+
+
+async def test_gmroll_invalid_notation_no_character_shows_error_not_create_prompt(
+    roll_bot, interaction
+):
+    """Same regression for /gmroll."""
+    cb = get_callback(roll_bot, "gmroll")
+    await cb(interaction, notation="foobar")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = _sent_message(interaction)
+    assert "create" not in msg.lower()
+    assert "❌" in msg
+
+
+async def test_roll_invalid_multiword_notation_no_character_shows_error(
+    roll_bot, interaction
+):
+    """Multi-token expression with unrecognized words → error, not create-char prompt."""
+    cb = get_callback(roll_bot, "roll")
+    await cb(interaction, notation="1d6+notaskill")
+
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    msg = _sent_message(interaction)
+    assert "create" not in msg.lower()
+    assert "❌" in msg
