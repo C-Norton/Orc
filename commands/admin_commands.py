@@ -7,6 +7,8 @@ invisible to regular users and do not appear in Discord's command picker.
 
 from __future__ import annotations
 
+import os
+import sys
 import time
 
 import discord
@@ -148,6 +150,25 @@ def register_admin_commands(bot: commands.Bot) -> None:
             recent = "…(truncated)\n" + recent[-1800:]
         await ctx.send(f"**Recent logs:**\n```\n{recent}\n```")
 
+    @bot.command(name="restart")
+    async def admin_restart(ctx: commands.Context) -> None:
+        """Restart the bot process by re-executing the current Python interpreter.
+
+        Sends an acknowledgement DM before exiting so the developer knows the
+        restart was received.  The process manager (e.g. systemd or Docker
+        restart policy) is expected to relaunch the bot automatically.
+
+        Usage: ``!restart``
+        """
+        if not _is_developer(ctx):
+            return
+
+        logger.info(
+            f"Admin !restart requested by {ctx.author} ({ctx.author.id})"
+        )
+        await ctx.send("♻️ Restarting…", delete_after=5)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
     @bot.command(name="help")
     async def admin_help(ctx: commands.Context) -> None:
         """List all admin commands.
@@ -162,6 +183,7 @@ def register_admin_commands(bot: commands.Bot) -> None:
             "`!message <guild_id> <message>` — Send a message to a guild's general channel\n"
             "`!stats` — Bot uptime and database row counts\n"
             "`!logs` — Last 25 log lines\n"
+            "`!restart` — Restart the bot process\n"
             "`!help` — This list"
         )
         await ctx.send(help_text)

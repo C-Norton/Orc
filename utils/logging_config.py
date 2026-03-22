@@ -29,15 +29,18 @@ def set_guild_context(guild_id: str) -> None:
     _guild_id_var.set(guild_id)
 
 
-class _GuildContextFilter(logging.Filter):
-    """Inject the current guild ID into every log record as ``guild_id``.
+class _GuildAwareFormatter(logging.Formatter):
+    """Formatter that injects the current guild ID into every log record.
 
-    When no guild context is active the field is set to ``"-"``.
+    Sets ``record.guild_id`` directly inside ``format()`` so the value is
+    always present regardless of how the record reached this formatter
+    (direct log call vs. propagation from a child logger).  When no guild
+    context is active the field shows ``"-"``.
     """
 
-    def filter(self, record: logging.LogRecord) -> bool:
+    def format(self, record: logging.LogRecord) -> str:
         record.guild_id = _guild_id_var.get() or "-"  # type: ignore[attr-defined]
-        return True
+        return super().format(record)
 
 
 class LogBufferHandler(logging.Handler):
@@ -56,7 +59,10 @@ class LogBufferHandler(logging.Handler):
             schedule_developer_dm,
         )
 
-        formatted = self.format(record)
+        try:
+            formatted = self.format(record)
+        except Exception:
+            formatted = f"[format error] {record.getMessage()}"
         buffer_log_line(formatted)
 
         if record.levelno >= logging.WARNING:
@@ -73,12 +79,11 @@ def setup_logging():
     dotenv.load_dotenv()
 
     log_format = "%(asctime)s - %(name)s - %(levelname)s - [guild:%(guild_id)s] - %(message)s"
-    formatter = logging.Formatter(log_format)
+    formatter = _GuildAwareFormatter(log_format)
 
     # Root logger captures everything; handlers filter by level independently.
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
-    root_logger.addFilter(_GuildContextFilter())
 
     # Console handler: always active. In Docker, stdout is captured by the
     # container runtime and shipped to Cloud Logging by the Ops Agent.
