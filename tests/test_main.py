@@ -131,13 +131,13 @@ def test_run_migrations_partial_applies_only_remaining_revisions(
 
 
 # ---------------------------------------------------------------------------
-# on_interaction — DM guard
+# GuildContextTree.interaction_check — DM guard
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture()
 def bot(mocker):
-    """A minimal DnDBot instance for testing on_interaction."""
+    """A minimal DnDBot instance for testing interaction_check and on_interaction."""
     instance = DnDBot()
     # Prevent setup_hook from doing real network work during tests.
     mocker.patch.object(instance.tree, "sync", return_value=None)
@@ -148,24 +148,37 @@ def bot(mocker):
 async def test_dm_interaction_is_rejected_with_guild_only_message(mocker, bot):
     """Commands invoked outside a guild (DMs) must return an ephemeral error.
 
-    Regression test for AttributeError: 'NoneType' has no attribute 'name'
-    when interaction.guild is None.
+    The check is enforced by GuildContextTree.interaction_check, which runs
+    before command dispatch and returns False to abort it — preventing the
+    AttributeError: 'NoneType' has no attribute 'name' crash that occurred
+    when character_create tried to access interaction.guild.name in a DM.
     """
     interaction = mocker.Mock(spec=discord.Interaction)
-    interaction.type = discord.InteractionType.application_command
     interaction.guild_id = None
     interaction.response = mocker.AsyncMock()
 
-    await bot.on_interaction(interaction)
+    result = await bot.tree.interaction_check(interaction)
 
+    assert result is False
     interaction.response.send_message.assert_called_once_with(
         Strings.ERROR_GUILD_ONLY, ephemeral=True
     )
 
 
 @pytest.mark.asyncio
-async def test_dm_interaction_does_not_proceed_to_command(mocker, bot):
-    """on_interaction must return early for DM interactions — no further processing."""
+async def test_guild_interaction_passes_check(mocker, bot):
+    """Interactions from inside a guild must pass interaction_check."""
+    interaction = mocker.Mock(spec=discord.Interaction)
+    interaction.guild_id = 12345
+
+    result = await bot.tree.interaction_check(interaction)
+
+    assert result is True
+
+
+@pytest.mark.asyncio
+async def test_dm_interaction_does_not_call_rate_limiter(mocker, bot):
+    """on_interaction must not call the rate limiter for DM interactions (guild_id is None)."""
     mock_check_rate = mocker.patch("main.check_rate_limit")
     interaction = mocker.Mock(spec=discord.Interaction)
     interaction.type = discord.InteractionType.application_command
@@ -174,4 +187,5 @@ async def test_dm_interaction_does_not_proceed_to_command(mocker, bot):
 
     await bot.on_interaction(interaction)
 
-    mock_check_rate.assert_not_called()
+    # Rate limiter receives guild_id="dm" — the None case is handled without skipping
+    mock_check_rate.assert_called_once_with(str(interaction.user.id), "dm")

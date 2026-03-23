@@ -89,28 +89,27 @@ class _BufferingStreamHandler(logging.StreamHandler):
     _orc_filter: _OrcOnlyFilter = _OrcOnlyFilter()
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Buffer ORC records; write to stream if at or above console level."""
-        if self._orc_filter.filter(record):
-            from utils.dev_notifications import (
-                buffer_log_line,
-                get_recent_logs,
-                schedule_developer_dm,
-            )
+        """Schedule a developer DM for WARNING+ ORC records; write to stream at INFO+.
+
+        Buffering is handled by ``_OrcLogger`` directly on each log call.  This
+        handler is responsible only for the WARNING+ developer-DM path and for
+        writing records to stdout.
+        """
+        if self._orc_filter.filter(record) and record.levelno >= logging.WARNING:
+            from utils.dev_notifications import get_recent_logs, schedule_developer_dm
 
             try:
                 formatted = self.format(record)
             except Exception:
                 formatted = f"[format error] {record.getMessage()}"
-            buffer_log_line(formatted)
 
-            if record.levelno >= logging.WARNING:
-                recent = get_recent_logs()
-                message = (
-                    f"**{record.levelname}: `{record.name}`**\n"
-                    f"```\n{formatted[:800]}\n```\n"
-                    f"**Recent logs:**\n```\n{recent}\n```"
-                )
-                schedule_developer_dm(message)
+            recent = get_recent_logs()
+            message = (
+                f"**{record.levelname}: `{record.name}`**\n"
+                f"```\n{formatted[:800]}\n```\n"
+                f"**Recent logs:**\n```\n{recent}\n```"
+            )
+            schedule_developer_dm(message)
 
         if record.levelno >= self._CONSOLE_LEVEL:
             super().emit(record)

@@ -81,13 +81,22 @@ intents.message_content = True
 
 
 class GuildContextTree(discord.app_commands.CommandTree):
-    """CommandTree subclass that injects guild context into the logging system.
+    """CommandTree subclass that enforces guild-only access and injects guild context.
 
-    Overrides ``call`` so that every slash-command invocation automatically
-    sets the current guild's snowflake in the logging context variable.  This
-    means all log messages emitted during a command handler automatically
-    include the originating guild ID without any per-command boilerplate.
+    ``interaction_check`` runs before every command and returns ``False`` (with
+    an ephemeral reply) for DM interactions, which prevents the command handler
+    from ever being called.  ``call`` sets the guild logging context variable so
+    all log messages automatically include the originating guild ID.
     """
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Block commands invoked outside a guild and return False to abort dispatch."""
+        if interaction.guild_id is None:
+            await interaction.response.send_message(
+                Strings.ERROR_GUILD_ONLY, ephemeral=True
+            )
+            return False
+        return True
 
     async def call(self, interaction: discord.Interaction) -> None:
         """Set guild logging context then dispatch the interaction."""
@@ -139,15 +148,9 @@ class DnDBot(commands.Bot):
         logger.info(f"Synced slash commands for {self.user}")
 
     async def on_interaction(self, interaction: discord.Interaction) -> None:
-        """Enforce guild-only access and rate limits before every slash command."""
+        """Enforce rate limits before every slash command."""
         if interaction.type == discord.InteractionType.application_command:
-            if interaction.guild_id is None:
-                await interaction.response.send_message(
-                    Strings.ERROR_GUILD_ONLY, ephemeral=True
-                )
-                return
-
-            if check_rate_limit(str(interaction.user.id), str(interaction.guild_id)):
+            if check_rate_limit(str(interaction.user.id), str(interaction.guild_id or "dm")):
                 logger.warning(
                     f"Rate limit exceeded: user {interaction.user.id} "
                     f"({interaction.user}) sent >8 commands in 10s in guild {interaction.guild_id}"

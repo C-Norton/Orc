@@ -628,16 +628,18 @@ def buffer_handler(mocker):
     logger.propagate = True
 
 
-def test_log_buffer_handler_buffers_debug_lines(buffer_handler):
+def test_log_buffer_handler_does_not_buffer_debug_lines(buffer_handler):
+    """Buffering is now _OrcLogger's responsibility; the handler must not duplicate it."""
     handler, logger = buffer_handler
     logger.debug("debug line")
-    assert "debug line" in get_recent_logs()
+    assert "debug line" not in get_recent_logs()
 
 
-def test_log_buffer_handler_buffers_info_lines(buffer_handler):
+def test_log_buffer_handler_does_not_buffer_info_lines(buffer_handler):
+    """Buffering is now _OrcLogger's responsibility; the handler must not duplicate it."""
     handler, logger = buffer_handler
     logger.info("info line")
-    assert "info line" in get_recent_logs()
+    assert "info line" not in get_recent_logs()
 
 
 def test_log_buffer_handler_no_dm_for_debug(mocker, buffer_handler):
@@ -671,9 +673,11 @@ def test_log_buffer_handler_dms_on_error(mocker, buffer_handler):
 
 
 def test_log_buffer_handler_warning_dm_includes_recent_context(mocker, buffer_handler):
+    """The DM for a WARNING must include lines already in the buffer (written by _OrcLogger)."""
     mock_schedule = mocker.patch("utils.dev_notifications.schedule_developer_dm")
     handler, logger = buffer_handler
-    logger.info("pre-warning context")
+    # Pre-populate the buffer directly (simulating what _OrcLogger would have done)
+    buffer_log_line("pre-warning context")
     logger.warning("warning event")
     dm_message = mock_schedule.call_args[0][0]
     assert "pre-warning context" in dm_message
