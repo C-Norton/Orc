@@ -195,9 +195,9 @@ async def test_perform_roll_invalid_skill_returns_error(sample_character, db_ses
             5,
             0,
             10,
-            -5,
             0,
-        ),  # Going below zero so that we can do the instant death on massive damage rule.
+            0,
+        ),  # Damage exceeds current HP — clamped to 0 (massive damage check is in the command handler).
         (30, 0, 0, 30, 0),  # zero damage is a no-op
     ],
 )

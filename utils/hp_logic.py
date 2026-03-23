@@ -2,14 +2,26 @@ from utils.strings import Strings
 
 
 def apply_damage(current_hp: int, temp_hp: int, damage: int) -> tuple[int, int]:
+    """Apply damage to a character, absorbing through temp HP first.
+
+    HP is clamped to a minimum of 0 — it never goes negative.  Callers that
+    need to check for massive damage or the downed state must compare the
+    returned new_hp against 0 and the raw damage against max_hp themselves.
+
+    Args:
+        current_hp: The character's current hit points before damage.
+        temp_hp: The character's current temporary hit points.
+        damage: The amount of damage to apply.
+
+    Returns:
+        A tuple of (new_hp, new_temp_hp) after absorbing damage.
+    """
     if temp_hp > 0:
-        temp_hp -= damage
-        if temp_hp > 0:
-            return current_hp, temp_hp
-        else:
-            return current_hp + temp_hp, 0
+        absorbed = min(temp_hp, damage)
+        remaining = damage - absorbed
+        return max(0, current_hp - remaining), temp_hp - absorbed
     else:
-        return current_hp - damage, 0
+        return max(0, current_hp - damage), 0
 
 
 def apply_temp_hp(current_temp: int, new_temp: int) -> int:

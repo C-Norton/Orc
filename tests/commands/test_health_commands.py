@@ -143,7 +143,6 @@ async def test_damage_burns_temp_hp_first(
     verify.close()
 
 
-async def test_damage_can_go_below_zero(
 async def test_massive_damage_clamps_hp_to_zero_and_kills(
     health_bot, sample_character, db_session, interaction, session_factory
 ):
@@ -159,13 +158,12 @@ async def test_massive_damage_clamps_hp_to_zero_and_kills(
     db_session.commit()
 
     cb = get_callback(health_bot, "hp", "damage")
-    await cb(
-        interaction, amount="100"
-    )  # 5 - 100 = -95, which is <= -10 (massive damage)
+    # 100 damage >= max_hp (10) → massive damage; HP must be clamped to 0
+    await cb(interaction, amount="100")
 
     verify = session_factory()
     char = verify.query(Character).filter_by(name="Aldric").first()
-    assert char.current_hp == -95  # HP goes negative
+    assert char.current_hp == 0  # clamped, never negative
     verify.close()
 
     msg = interaction.response.send_message.call_args.args[0]
@@ -282,6 +280,7 @@ async def test_hp_view_sends_message(
     assert "Aldric" in msg
     assert "22" in msg
     assert "30" in msg
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_hp_view_no_character(

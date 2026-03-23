@@ -54,12 +54,11 @@ def test_apply_damage_no_temp_reduces_current_hp():
 
 
 def test_apply_damage_exceeds_current_plus_temp():
-    """Damage exceeding temp + current: temp goes to 0, current can go negative."""
-    # 5 temp + 3 current = 8 effective; 15 damage → temp=0, current=3-10=-7
+    """Damage exceeding temp + current: temp goes to 0, current HP clamped to 0."""
+    # 5 temp absorbed first, then 10 remaining damage vs 3 current HP → clamped to 0
     current_hp, temp_hp = apply_damage(current_hp=3, temp_hp=5, damage=15)
     assert temp_hp == 0
-    # After absorbing 5 temp, remaining damage=10, current_hp=3-10=-7
-    assert current_hp == -7
+    assert current_hp == 0
 
 
 # ---------------------------------------------------------------------------
