@@ -171,7 +171,7 @@ class Strings:
     HELP_INSPIRATION_NAME = "💫 **Inspiration Tracking**"
     HELP_INSPIRATION_VALUE = (
         "**/inspiration grant [character name]**: Gives Inspiration to a character.\n"
-        "**/inspiration remove [character name]**: Removes Inspiration from a character.\n"
+        "**/inspiration use [character name]**: Uses (spends) Inspiration for a character.\n"
         "**/inspiration status [character name]**: Checks if a character has inspiration.\n"
         "Note that only GMs can manage other characters' inspiration."
     )

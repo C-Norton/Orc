@@ -1109,14 +1109,14 @@ async def test_inspiration_status_without_character_rejected(
     assert "character" in msg.lower()
 
 
-async def test_inspiration_remove_before_character_in_party_rejected(
+async def test_inspiration_use_before_character_in_party_rejected(
     inspiration_bot, sample_active_party, sample_character, db_session, interaction
 ):
-    """``/inspiration remove`` for a character not in the active party must
+    """``/inspiration use`` for a character not in the active party must
     return an ephemeral error — the character exists but is not a member.
     """
     # sample_character is NOT added to sample_active_party
-    cb = get_callback(inspiration_bot, "inspiration", "remove")
+    cb = get_callback(inspiration_bot, "inspiration", "use")
     await cb(interaction, partymember="Aldric")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True

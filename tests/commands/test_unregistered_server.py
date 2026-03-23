@@ -875,13 +875,13 @@ async def test_inspiration_grant_partymember_in_unregistered_server_returns_ephe
     assert Strings.ERROR_NO_ACTIVE_PARTY in msg
 
 
-async def test_inspiration_remove_self_in_unregistered_server_returns_ephemeral(
+async def test_inspiration_use_self_in_unregistered_server_returns_ephemeral(
     mocker, inspiration_bot
 ):
-    """``/inspiration remove`` returns an ephemeral 'no character' error when the
+    """``/inspiration use`` returns an ephemeral 'no character' error when the
     server is unregistered."""
     interaction = _unknown_server_interaction(mocker)
-    cb = get_callback(inspiration_bot, "inspiration", "remove")
+    cb = get_callback(inspiration_bot, "inspiration", "use")
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True

@@ -82,18 +82,18 @@ async def test_grant_no_character_returns_error(
 
 
 # ---------------------------------------------------------------------------
-# /inspiration remove — self
+# /inspiration use — self
 # ---------------------------------------------------------------------------
 
 
-async def test_remove_clears_inspiration(
+async def test_use_clears_inspiration(
     inspiration_bot, sample_character, db_session, interaction
 ):
-    """Removing inspiration from own character sets inspiration=False."""
+    """Using inspiration on own character sets inspiration=False."""
     sample_character.inspiration = True
     db_session.commit()
 
-    cb = get_callback(inspiration_bot, "inspiration", "remove")
+    cb = get_callback(inspiration_bot, "inspiration", "use")
     await cb(interaction)
 
     db_session.refresh(sample_character)
@@ -102,11 +102,11 @@ async def test_remove_clears_inspiration(
     assert "no longer" in msg.lower()
 
 
-async def test_remove_when_not_held_returns_error(
+async def test_use_when_not_held_returns_error(
     inspiration_bot, sample_character, db_session, interaction
 ):
-    """Removing inspiration when not held returns an ephemeral error."""
-    cb = get_callback(inspiration_bot, "inspiration", "remove")
+    """Using inspiration when not held returns an ephemeral error."""
+    cb = get_callback(inspiration_bot, "inspiration", "use")
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
@@ -314,16 +314,16 @@ async def test_non_perkins_crit_does_not_grant_inspiration(
 
 
 # ---------------------------------------------------------------------------
-# Inspiration lifecycle: grant → remove → grant again
+# Inspiration lifecycle: grant → use → grant again
 # ---------------------------------------------------------------------------
 
 
 async def test_grant_then_spend_then_grant_again(
     inspiration_bot, sample_character, db_session, interaction
 ):
-    """Grant → remove → grant again leaves inspiration=True (no stuck state)."""
+    """Grant → use → grant again leaves inspiration=True (no stuck state)."""
     cb_grant = get_callback(inspiration_bot, "inspiration", "grant")
-    cb_remove = get_callback(inspiration_bot, "inspiration", "remove")
+    cb_remove = get_callback(inspiration_bot, "inspiration", "use")
 
     await cb_grant(interaction)
     db_session.refresh(sample_character)
@@ -386,11 +386,11 @@ async def test_perkins_crit_already_inspired_no_error(
 
 
 # ---------------------------------------------------------------------------
-# GM can remove another party member's inspiration
+# GM can use another party member's inspiration
 # ---------------------------------------------------------------------------
 
 
-async def test_gm_can_remove_from_party_member(
+async def test_gm_can_use_for_party_member(
     mocker,
     inspiration_bot,
     sample_character,
@@ -398,7 +398,7 @@ async def test_gm_can_remove_from_party_member(
     sample_active_party,
     interaction,
 ):
-    """A GM can call /inspiration remove partymember=<name> to clear a target's inspiration."""
+    """A GM can call /inspiration use partymember=<name> to spend a target's inspiration."""
     from models import Character, ClassLevel
 
     target = Character(
@@ -414,7 +414,7 @@ async def test_gm_can_remove_from_party_member(
     sample_active_party.characters.append(target)
     db_session.commit()
 
-    cb = get_callback(inspiration_bot, "inspiration", "remove")
+    cb = get_callback(inspiration_bot, "inspiration", "use")
     await cb(interaction, partymember="Merlin")
 
     db_session.refresh(target)
@@ -561,7 +561,7 @@ async def test_non_gm_can_grant_inspiration_to_own_inactive_character(
     )
 
 
-async def test_non_gm_can_remove_inspiration_from_own_inactive_character(
+async def test_non_gm_can_use_inspiration_for_own_inactive_character(
     mocker,
     inspiration_bot,
     sample_character,
@@ -569,7 +569,7 @@ async def test_non_gm_can_remove_inspiration_from_own_inactive_character(
     sample_active_party,
     interaction,
 ):
-    """A non-GM player can remove inspiration from their own inactive character by name."""
+    """A non-GM player can use inspiration for their own inactive character by name."""
     from models import Character, ClassLevel, User
     from sqlalchemy import insert as sa_insert
 
@@ -607,7 +607,7 @@ async def test_non_gm_can_remove_inspiration_from_own_inactive_character(
     db_session.commit()
 
     non_gm_interaction = make_interaction(mocker, user_id=6666, guild_id=222)
-    cb = get_callback(inspiration_bot, "inspiration", "remove")
+    cb = get_callback(inspiration_bot, "inspiration", "use")
     await cb(non_gm_interaction, partymember="Durgin")
 
     db_session.refresh(inactive_char)

@@ -6,7 +6,7 @@ Perkins crit rule) that lets a player roll with advantage on any d20 test.
 Workflow::
 
     /inspiration grant [partymember]  — grant Inspiration (self or GM for others)
-    /inspiration remove [partymember] — remove Inspiration (self or GM for others)
+    /inspiration use [partymember]    — use Inspiration (self or GM for others)
     /inspiration status [partymember] — check Inspiration status
 """
 
@@ -119,24 +119,24 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         return await _party_member_autocomplete(interaction, current)
 
     @inspiration_group.command(
-        name="remove",
-        description="Remove Inspiration from yourself or a party member (GM only for others)",
+        name="use",
+        description="Use Inspiration for yourself or a party member (GM only for others)",
     )
     @app_commands.describe(
-        partymember="Party member to remove Inspiration from (GM only; defaults to yourself)"
+        partymember="Party member to use Inspiration for (GM only; defaults to yourself)"
     )
-    async def inspiration_remove(
+    async def inspiration_use(
         interaction: discord.Interaction,
         partymember: Optional[str] = None,
     ) -> None:
-        """Remove Inspiration from a character.
+        """Use (spend) Inspiration for a character.
 
         Used when a player spends their Inspiration or when a GM needs to
-        revoke it.  Players may only remove their own; GMs may remove any
+        revoke it.  Players may only use their own; GMs may use any
         party member's.
         """
         logger.debug(
-            f"Command /inspiration remove called by {interaction.user.id} "
+            f"Command /inspiration use called by {interaction.user.id} "
             f"partymember={partymember!r}"
         )
         db = SessionLocal()
@@ -168,8 +168,8 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
         finally:
             db.close()
 
-    @inspiration_remove.autocomplete("partymember")
-    async def inspiration_remove_autocomplete(
+    @inspiration_use.autocomplete("partymember")
+    async def inspiration_use_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         return await _party_member_autocomplete(interaction, current)
