@@ -1,8 +1,8 @@
 """Developer notification utilities for the ORC bot.
 
-Maintains a rolling buffer of the last 10 log lines and exposes helpers for
-sending DMs to the bot developer on WARNING+ log events, command errors,
-background errors, and bot startup.
+Maintains a rolling buffer of the last 25 log lines and a separate 250-entry
+warning buffer, and exposes helpers for sending DMs to the bot developer on
+WARNING+ log events, command errors, background errors, and bot startup.
 """
 
 from __future__ import annotations
@@ -10,7 +10,9 @@ from __future__ import annotations
 import asyncio
 import collections
 import logging
+import math
 import os
+import sys
 import traceback
 from typing import Optional
 
@@ -18,9 +20,12 @@ import discord
 
 DEVELOPER_DISCORD_ID: int = 181919139751788545
 _LOG_BUFFER_SIZE: int = 25
+_WARNING_BUFFER_SIZE: int = 250
 
 _client: Optional[discord.Client] = None
 _log_buffer: collections.deque[str] = collections.deque(maxlen=_LOG_BUFFER_SIZE)
+_warning_buffer: collections.deque[str] = collections.deque(maxlen=_WARNING_BUFFER_SIZE)
+_total_buffered_count: int = 0
 
 _dev_logger = logging.getLogger(__name__)
 
@@ -32,8 +37,20 @@ def set_discord_client(client: discord.Client) -> None:
 
 
 def buffer_log_line(line: str) -> None:
-    """Append a formatted log line to the circular buffer."""
+    """Append a formatted log line to the recent-log circular buffer."""
+    global _total_buffered_count
     _log_buffer.append(line)
+    _total_buffered_count += 1
+
+
+def buffer_warning_line(line: str) -> None:
+    """Append a formatted WARNING+ log line to the warning circular buffer."""
+    _warning_buffer.append(line)
+
+
+def get_buffer_stats() -> str:
+    """Return diagnostic stats about the log buffer for use in !logs output."""
+    return f"buffer: {len(_log_buffer)}/{_LOG_BUFFER_SIZE} entries, total ever buffered: {_total_buffered_count}"
 
 
 def get_recent_logs() -> str:
@@ -41,8 +58,32 @@ def get_recent_logs() -> str:
     return "\n".join(_log_buffer) or "(no recent logs)"
 
 
+def get_warning_logs_page(
+    page: int = 0, page_size: int = 25
+) -> tuple[list[str], int, int]:
+    """Return a page of warning-buffer entries ordered most-recent-first.
+
+    Args:
+        page: Zero-based page index.
+        page_size: Number of entries per page.
+
+    Returns:
+        Tuple of (entries_for_page, clamped_page, total_pages).
+    """
+    all_entries = list(reversed(list(_warning_buffer)))
+    total_pages = max(1, math.ceil(len(all_entries) / page_size))
+    clamped_page = max(0, min(page, total_pages - 1))
+    start = clamped_page * page_size
+    return all_entries[start : start + page_size], clamped_page, total_pages
+
+
 async def _send_developer_dm(message: str) -> None:
-    """Send a DM to the developer, silently ignoring all failures."""
+    """Send a DM to the developer, writing failures to stderr.
+
+    Failures are written to stderr rather than going back through the logging
+    system to prevent an infinite loop (failed DM → error log → new DM attempt
+    → failed DM → ...).
+    """
     if _client is None:
         return
     try:

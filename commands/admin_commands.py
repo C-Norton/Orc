@@ -16,12 +16,69 @@ from discord.ext import commands
 from sqlalchemy import inspect as sa_inspect, text
 
 from database import SessionLocal
-from utils.dev_notifications import get_recent_logs
+from utils.dev_notifications import get_buffer_stats, get_recent_logs, get_warning_logs_page
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 DEVELOPER_DISCORD_ID: int = 181919139751788545
+
+
+class _WarningLogsView(discord.ui.View):
+    """Interactive paginated view for browsing the warning/error log buffer.
+
+    Entries are displayed most-recent-first.  Navigation buttons are
+    automatically disabled at the start and end of the buffer.
+    """
+
+    PAGE_SIZE: int = 25
+
+    def __init__(self, page: int, total_pages: int) -> None:
+        super().__init__(timeout=120)
+        self._page = page
+        self._total_pages = total_pages
+        self._refresh_buttons()
+
+    def _refresh_buttons(self) -> None:
+        """Disable navigation buttons at the buffer boundaries."""
+        self.prev_button.disabled = self._page == 0
+        self.next_button.disabled = self._page >= self._total_pages - 1
+
+    @staticmethod
+    def build_content(page: int, total_pages: int) -> str:
+        """Build the message string for *page* of the warning log buffer."""
+        entries, _, _ = get_warning_logs_page(
+            page=page, page_size=_WarningLogsView.PAGE_SIZE
+        )
+        body = "\n".join(entries) or "(no warning logs)"
+        if len(body) > 1800:
+            body = body[:1800] + "\n…"
+        return (
+            f"**Warning logs** (page {page + 1}/{total_pages}, most recent first):\n"
+            f"```\n{body}\n```"
+        )
+
+    @discord.ui.button(label="◀ Prev", style=discord.ButtonStyle.secondary)
+    async def prev_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Navigate to the previous page."""
+        self._page -= 1
+        self._refresh_buttons()
+        await interaction.response.edit_message(
+            content=self.build_content(self._page, self._total_pages), view=self
+        )
+
+    @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.secondary)
+    async def next_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Navigate to the next page."""
+        self._page += 1
+        self._refresh_buttons()
+        await interaction.response.edit_message(
+            content=self.build_content(self._page, self._total_pages), view=self
+        )
 
 _start_time: float = 0.0
 
@@ -144,11 +201,13 @@ def register_admin_commands(bot: commands.Bot) -> None:
         if not _is_developer(ctx):
             return
 
+        stats = get_buffer_stats()
+        logger.debug(f"!logs invoked — {stats}")
         recent = get_recent_logs()
         # Truncate to stay within Discord's 2000-char limit
         if len(recent) > 1800:
             recent = "…(truncated)\n" + recent[-1800:]
-        await ctx.send(f"**Recent logs:**\n```\n{recent}\n```")
+        await ctx.send(f"**Recent logs** ({stats}):\n```\n{recent}\n```")
 
     @bot.command(name="restart")
     async def admin_restart(ctx: commands.Context) -> None:
@@ -169,6 +228,25 @@ def register_admin_commands(bot: commands.Bot) -> None:
         await ctx.send("♻️ Restarting…", delete_after=5)
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
+    @bot.command(name="warninglogs")
+    async def admin_warning_logs(ctx: commands.Context) -> None:
+        """Show paginated WARNING+ log entries, most recent first.
+
+        Displays up to 25 entries per page from the 250-entry warning buffer.
+        Use the Prev/Next buttons to navigate.
+
+        Usage: ``!warninglogs``
+        """
+        if not _is_developer(ctx):
+            return
+
+        _, _, total_pages = get_warning_logs_page(
+            page=0, page_size=_WarningLogsView.PAGE_SIZE
+        )
+        view = _WarningLogsView(page=0, total_pages=total_pages)
+        content = _WarningLogsView.build_content(page=0, total_pages=total_pages)
+        await ctx.send(content, view=view)
+
     @bot.command(name="help")
     async def admin_help(ctx: commands.Context) -> None:
         """List all admin commands.
@@ -183,6 +261,7 @@ def register_admin_commands(bot: commands.Bot) -> None:
             "`!message <guild_id> <message>` — Send a message to a guild's general channel\n"
             "`!stats` — Bot uptime and database row counts\n"
             "`!logs` — Last 25 log lines\n"
+            "`!warninglogs` — Paginated WARNING+ log history (250 entries, most recent first)\n"
             "`!restart` — Restart the bot process\n"
             "`!help` — This list"
         )

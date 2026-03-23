@@ -1,4 +1,5 @@
 import contextvars
+import datetime
 import logging
 import os
 import sys
@@ -43,36 +44,149 @@ class _GuildAwareFormatter(logging.Formatter):
         return super().format(record)
 
 
-class LogBufferHandler(logging.Handler):
-    """Buffers every log record and DMs the developer on WARNING+ events.
+_THIRD_PARTY_LOGGER_PREFIXES: tuple[str, ...] = (
+    "discord.",
+    "discord",
+    "sqlalchemy.",
+    "sqlalchemy",
+    "asyncio",
+    "alembic.",
+    "alembic",
+)
 
-    The buffer (maintained in ``dev_notifications``) always holds the last 10
-    formatted lines regardless of level, so any WARNING/ERROR DM automatically
-    includes recent DEBUG/INFO context.
+
+class _OrcOnlyFilter(logging.Filter):
+    """Accepts only log records originating from ORC's own loggers.
+
+    Filters out third-party library noise (discord.py, SQLAlchemy, asyncio,
+    Alembic) so the developer log buffer stays focused on bot activity.
+    Records from the root logger (name == "root") are also accepted since
+    ORC uses ``logging.info(...)`` directly during startup.
     """
 
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Return True only for records from ORC or root loggers."""
+        return not record.name.startswith(_THIRD_PARTY_LOGGER_PREFIXES)
+
+
+class _BufferingStreamHandler(logging.StreamHandler):
+    """StreamHandler that also buffers ORC records and DMs the developer on WARNING+.
+
+    Combines the console handler and the former ``LogBufferHandler`` into one.
+    Using a ``StreamHandler`` subclass (rather than a plain ``Handler``) ensures
+    the buffer receives async log records — plain ``Handler`` subclasses can
+    silently lose records that are propagated from child loggers inside the
+    asyncio event loop.
+
+    * All ORC records (DEBUG+) are buffered via ``dev_notifications``.
+    * Only records at ``_CONSOLE_LEVEL`` (INFO) or above are written to the stream.
+    * WARNING+ ORC records also schedule a developer DM with recent log context.
+    * Third-party library records (discord, sqlalchemy, asyncio, alembic) bypass
+      the buffer/DM path but still reach the stream at INFO+.
+    """
+
+    _CONSOLE_LEVEL: int = logging.INFO
+    _orc_filter: _OrcOnlyFilter = _OrcOnlyFilter()
+
     def emit(self, record: logging.LogRecord) -> None:
-        """Buffer this record; if WARNING or above, schedule a developer DM."""
-        from utils.dev_notifications import (
-            buffer_log_line,
-            get_recent_logs,
-            schedule_developer_dm,
-        )
+        """Buffer ORC records; write to stream if at or above console level."""
+        if self._orc_filter.filter(record):
+            from utils.dev_notifications import (
+                buffer_log_line,
+                get_recent_logs,
+                schedule_developer_dm,
+            )
+
+            try:
+                formatted = self.format(record)
+            except Exception:
+                formatted = f"[format error] {record.getMessage()}"
+            buffer_log_line(formatted)
+
+            if record.levelno >= logging.WARNING:
+                recent = get_recent_logs()
+                message = (
+                    f"**{record.levelname}: `{record.name}`**\n"
+                    f"```\n{formatted[:800]}\n```\n"
+                    f"**Recent logs:**\n```\n{recent}\n```"
+                )
+                schedule_developer_dm(message)
+
+        if record.levelno >= self._CONSOLE_LEVEL:
+            super().emit(record)
+
+
+# Keep the old name available so existing imports in tests don't break.
+LogBufferHandler = _BufferingStreamHandler
+
+
+class _OrcLogger:
+    """Proxy logger that directly populates the dev-notification buffers.
+
+    Wraps a standard :class:`logging.Logger` so that every log call
+    simultaneously:
+
+    - Dispatches through the normal Python logging machinery (handlers,
+      propagation, file output, etc.).
+    - Directly appends to the in-memory buffers in ``dev_notifications``
+      to guarantee the buffer is always populated regardless of whether
+      handler propagation is working correctly in the asyncio event loop.
+
+    Use :func:`get_logger` to obtain instances; do not instantiate directly.
+    """
+
+    def __init__(self, logger: logging.Logger) -> None:
+        self._logger = logger
+
+    def _buffer(self, level: int, msg: str, *args: object) -> None:
+        """Format *msg* and push it directly into the dev-notification buffers."""
+        from utils.dev_notifications import buffer_log_line, buffer_warning_line
 
         try:
-            formatted = self.format(record)
+            formatted_msg = str(msg) % args if args else str(msg)
         except Exception:
-            formatted = f"[format error] {record.getMessage()}"
-        buffer_log_line(formatted)
+            formatted_msg = str(msg)
 
-        if record.levelno >= logging.WARNING:
-            recent = get_recent_logs()
-            message = (
-                f"**{record.levelname}: `{record.name}`**\n"
-                f"```\n{formatted[:800]}\n```\n"
-                f"**Recent logs:**\n```\n{recent}\n```"
-            )
-            schedule_developer_dm(message)
+        guild_id = _guild_id_var.get() or "-"
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+        level_name = logging.getLevelName(level)
+        line = (
+            f"{timestamp} - {self._logger.name} - {level_name}"
+            f" - [guild:{guild_id}] - {formatted_msg}"
+        )
+        buffer_log_line(line)
+        if level >= logging.WARNING:
+            buffer_warning_line(line)
+
+    def debug(self, msg: str, *args: object, **kwargs: object) -> None:
+        """Log a DEBUG-level message."""
+        self._buffer(logging.DEBUG, msg, *args)
+        self._logger.debug(msg, *args, **kwargs)
+
+    def info(self, msg: str, *args: object, **kwargs: object) -> None:
+        """Log an INFO-level message."""
+        self._buffer(logging.INFO, msg, *args)
+        self._logger.info(msg, *args, **kwargs)
+
+    def warning(self, msg: str, *args: object, **kwargs: object) -> None:
+        """Log a WARNING-level message."""
+        self._buffer(logging.WARNING, msg, *args)
+        self._logger.warning(msg, *args, **kwargs)
+
+    def error(self, msg: str, *args: object, **kwargs: object) -> None:
+        """Log an ERROR-level message."""
+        self._buffer(logging.ERROR, msg, *args)
+        self._logger.error(msg, *args, **kwargs)
+
+    def critical(self, msg: str, *args: object, **kwargs: object) -> None:
+        """Log a CRITICAL-level message."""
+        self._buffer(logging.CRITICAL, msg, *args)
+        self._logger.critical(msg, *args, **kwargs)
+
+    def exception(self, msg: str, *args: object, **kwargs: object) -> None:
+        """Log an ERROR-level message with exception traceback."""
+        self._buffer(logging.ERROR, msg, *args)
+        self._logger.exception(msg, *args, **kwargs)
 
 
 def setup_logging():
@@ -85,12 +199,12 @@ def setup_logging():
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
 
-    # Console handler: always active. In Docker, stdout is captured by the
-    # container runtime and shipped to Cloud Logging by the Ops Agent.
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(formatter)
-    root_logger.addHandler(console_handler)
+    # Combined console + buffer handler.  Level is DEBUG so all ORC records
+    # reach emit(); the handler itself gates stream output at INFO+.
+    console_buffer_handler = _BufferingStreamHandler(sys.stdout)
+    console_buffer_handler.setLevel(logging.DEBUG)
+    console_buffer_handler.setFormatter(formatter)
+    root_logger.addHandler(console_buffer_handler)
 
     # File handlers: only in local development (no LOG_LEVEL env var).
     # In Docker, LOG_LEVEL is injected via /etc/orc-bot.env, so file handlers
@@ -118,18 +232,23 @@ def setup_logging():
         debug_file_handler.setFormatter(formatter)
         root_logger.addHandler(debug_file_handler)
 
-    # Buffer handler: captures all records for context and DMs developer on WARNING+.
-    buffer_handler = LogBufferHandler()
-    buffer_handler.setLevel(logging.DEBUG)
-    buffer_handler.setFormatter(formatter)
-    root_logger.addHandler(buffer_handler)
-
     # Silence noisy third-party libraries.
     logging.getLogger("discord").setLevel(logging.WARNING)
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
 
+    handler_names = [type(h).__name__ for h in root_logger.handlers]
     logging.info("Logging initialized")
+    logging.debug(
+        f"Root logger has {len(root_logger.handlers)} handler(s): {handler_names}"
+    )
 
 
-def get_logger(name):
-    return logging.getLogger(name)
+def get_logger(name: str) -> _OrcLogger:
+    """Return an :class:`_OrcLogger` wrapping the standard logger for *name*.
+
+    Use this instead of ``logging.getLogger`` throughout the ORC codebase so
+    that every log call also populates the in-memory dev-notification buffers
+    directly, bypassing any handler propagation issues.
+    """
+    return _OrcLogger(logging.getLogger(name))

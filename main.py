@@ -88,11 +88,14 @@ class DnDBot(commands.Bot):
         ) -> None:
             """Fallback handler for unhandled app command errors."""
             original = getattr(error, "original", error)
-            logger.error(
-                f"Unhandled app command error from {interaction.user} "
-                f"(guild {interaction.guild_id}): {type(original).__name__}: {original}",
-                exc_info=original,
-            )
+            try:
+                logger.error(
+                    f"Unhandled app command error from {interaction.user} "
+                    f"(guild {interaction.guild_id}): {type(original).__name__}: {original}",
+                    exc_info=original,
+                )
+            except Exception:
+                pass
             await notify_command_error(interaction, original)
 
         # This syncs the slash commands globally (or to specific guilds if needed)
@@ -141,6 +144,7 @@ class DnDBot(commands.Bot):
                 db.add(server)
                 db.commit()
                 logger.info(f"Added new server: {guild.name} ({guild.id})")
+                await notify_guild_join(guild.name, guild.id, guild.member_count)
         except Exception as e:
             logger.error(f"Error on guild join {guild.name}: {e}")
             await notify_background_error(
