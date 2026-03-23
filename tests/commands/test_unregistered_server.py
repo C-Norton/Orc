@@ -632,12 +632,12 @@ async def test_attack_list_in_unregistered_server_returns_ephemeral(mocker, atta
 
 async def test_party_create_in_unregistered_server_succeeds(mocker, party_bot):
     """``/party create`` auto-registers the server and user on first use, so it
-    succeeds even on a brand-new server."""
+    succeeds even on a brand-new server.  Uses defer()+followup.send()."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="Wanderers", characters_list="")
 
-    msg = interaction.response.send_message.call_args.args[0]
+    msg = interaction.followup.send.call_args.args[0]
     assert "wanderers" in msg.lower()
 
 

@@ -25,14 +25,27 @@ async def test_create_party_empty(
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="The Fellowship")
 
-    interaction.response.send_message.assert_called_once()
-    msg = interaction.response.send_message.call_args.args[0]
+    interaction.response.defer.assert_called_once()
+    interaction.followup.send.assert_called_once()
+    msg = interaction.followup.send.call_args.args[0]
     assert "The Fellowship" in msg
 
     verify = session_factory()
     party = verify.query(Party).filter_by(name="The Fellowship").first()
     assert party is not None
     verify.close()
+
+
+async def test_create_party_defers_before_db_work(
+    party_bot, sample_user, sample_server, interaction, session_factory
+):
+    """Regression: party_create must defer() before any DB work to avoid the
+    3-second Discord timeout that caused 404 Unknown Interaction errors."""
+    cb = get_callback(party_bot, "party", "create")
+    await cb(interaction, party_name="Deferred Party")
+
+    interaction.response.defer.assert_called_once()
+    interaction.response.send_message.assert_not_called()
 
 
 async def test_create_party_with_existing_character(
@@ -54,7 +67,7 @@ async def test_create_party_partial_char_list_reports_not_found(
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="Mixed", characters_list="Aldric, Ghost")
 
-    msg = interaction.response.send_message.call_args.args[0]
+    msg = interaction.followup.send.call_args.args[0]
     assert "Ghost" in msg
     assert "not found" in msg.lower()
 
@@ -65,7 +78,7 @@ async def test_create_party_duplicate_name_rejected(
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="The Fellowship")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert interaction.followup.send.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_create_party_sets_active_party(
@@ -699,8 +712,8 @@ async def test_create_party_over_gm_limit(
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="OneMore")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
+    assert interaction.followup.send.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.followup.send.call_args.args[0]
     assert "maximum" in msg.lower()
 
 
@@ -721,8 +734,8 @@ async def test_create_party_over_server_limit(
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="CantAdd")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
+    assert interaction.followup.send.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.followup.send.call_args.args[0]
     assert "maximum" in msg.lower()
 
 

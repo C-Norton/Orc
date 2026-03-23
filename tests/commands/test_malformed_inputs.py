@@ -1288,13 +1288,13 @@ async def test_party_create_duplicate_name_rejected(
     mocker, party_bot, sample_user, sample_server, sample_party
 ):
     """Creating a party with the same name as an existing one on this server
-    must be rejected."""
+    must be rejected.  /party create uses defer()+followup.send(), not send_message."""
     interaction = make_interaction(mocker)
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name=sample_party.name, characters_list="")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
+    assert interaction.followup.send.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.followup.send.call_args.args[0]
     assert Strings.PARTY_ALREADY_EXISTS.format(party_name=sample_party.name) in msg
 
 
@@ -1394,7 +1394,8 @@ async def test_party_create_at_server_party_limit_rejected(
     parties must be rejected.
 
     Note: parties are owned by a filler user to avoid triggering the
-    per-user GM limit (20) before the server limit (60) is reached.
+    per-user GM limit before the server limit is reached.
+    /party create uses defer()+followup.send(), not send_message.
     """
     from models import User as _User
 
@@ -1410,8 +1411,8 @@ async def test_party_create_at_server_party_limit_rejected(
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="OneMore", characters_list="")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
+    assert interaction.followup.send.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.followup.send.call_args.args[0]
     assert (
         Strings.ERROR_LIMIT_PARTIES_SERVER.format(limit=MAX_PARTIES_PER_SERVER) in msg
     )
@@ -1421,7 +1422,7 @@ async def test_party_create_at_gm_party_limit_rejected(
     mocker, party_bot, sample_user, sample_server, db_session
 ):
     """Creating a party when the user is already GM of MAX_GM_PARTIES_PER_USER
-    parties must be rejected."""
+    parties must be rejected.  /party create uses defer()+followup.send()."""
     for i in range(MAX_GM_PARTIES_PER_USER):
         party = Party(name=f"GMParty{i}", gms=[sample_user], server=sample_server)
         db_session.add(party)
@@ -1431,8 +1432,8 @@ async def test_party_create_at_gm_party_limit_rejected(
     cb = get_callback(party_bot, "party", "create")
     await cb(interaction, party_name="OneMoreGM", characters_list="")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
+    assert interaction.followup.send.call_args.kwargs.get("ephemeral") is True
+    msg = interaction.followup.send.call_args.args[0]
     assert Strings.ERROR_LIMIT_GM_PARTIES.format(limit=MAX_GM_PARTIES_PER_USER) in msg
 
 

@@ -433,18 +433,19 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party create called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
         )
+        await interaction.response.defer()
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
 
             if not user or not server:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     Strings.ERROR_USER_SERVER_NOT_INIT, ephemeral=True
                 )
                 return
 
             if len(user.gm_parties) >= MAX_GM_PARTIES_PER_USER:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     Strings.ERROR_LIMIT_GM_PARTIES.format(
                         limit=MAX_GM_PARTIES_PER_USER
                     ),
@@ -454,7 +455,7 @@ def register_party_commands(bot: commands.Bot) -> None:
 
             server_party_count = db.query(Party).filter_by(server_id=server.id).count()
             if server_party_count >= MAX_PARTIES_PER_SERVER:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     Strings.ERROR_LIMIT_PARTIES_SERVER.format(
                         limit=MAX_PARTIES_PER_SERVER
                     ),
@@ -466,7 +467,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 db.query(Party).filter_by(name=party_name, server_id=server.id).first()
             )
             if existing_party:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     Strings.PARTY_ALREADY_EXISTS.format(party_name=party_name),
                     ephemeral=True,
                 )
@@ -512,7 +513,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 f"/party create completed for user {interaction.user.id}: "
                 f"created '{party_name}' with {len(found_chars)} members"
             )
-            await interaction.response.send_message(msg)
+            await interaction.followup.send(msg)
         finally:
             db.close()
 
