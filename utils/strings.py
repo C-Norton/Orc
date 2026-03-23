@@ -351,6 +351,8 @@ class Strings:
         "⚔️ **Attacks** — saved attack entries"
     )
     CHAR_SHEET_INTRO_QUICK_REF = "Quick Reference"
+    CHAR_SHEET_INSPIRATION_YES = "✨ Inspiration: **Yes**"
+    CHAR_SHEET_INSPIRATION_NO = "Inspiration: No"
     CHAR_SWITCH_SUCCESS = "Switched to character **{name}**!"
     CHAR_AC_UPDATED = "**{char_name}**'s Armor Class set to **{ac}**."
     CHAR_AC_LIMIT = "AC must be between 1 and 30."

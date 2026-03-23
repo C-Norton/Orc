@@ -1101,20 +1101,13 @@ async def test_encounter_enemy_hp_invalid_string_rejected(
     )
 
 
-@pytest.mark.xfail(
-    reason=(
-        "BUG-MFI-2: _validate_hp_format passes for over-limit dice notation such "
-        "as '101d6' (it only validates format, not limits). _parse_hp_input then "
-        "catches ValueError from roll_dice and re-raises as ValueError(stripped_value), "
-        "which is not caught by encounter_enemy, causing an unhandled exception."
-    ),
-    strict=True,
-)
 async def test_encounter_enemy_hp_too_many_dice_rejected(
     mocker, encounter_bot, sample_active_party, sample_pending_encounter
 ):
-    """101d6 HP should be rejected with an ephemeral error, but currently
-    leaks an unhandled ValueError from _parse_hp_input."""
+    """101d6 HP exceeds the 100-dice limit. _validate_hp_format passes the regex
+    (format is valid), but roll_dice raises ValueError inside _parse_hp_input.
+    The encounter_enemy handler now catches that ValueError and returns an
+    ephemeral error rather than letting it propagate as an unhandled exception."""
     interaction = make_interaction(mocker)
     cb = get_callback(encounter_bot, "encounter", "enemy")
     await cb(interaction, name="Goblin", initiative_modifier=1, max_hp="101d6")

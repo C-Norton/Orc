@@ -169,11 +169,17 @@ def _build_sheet_page0(char: Character) -> discord.Embed:
         else Strings.CHAR_SHEET_AC_NOT_SET
     )
 
+    inspiration_str = (
+        Strings.CHAR_SHEET_INSPIRATION_YES
+        if char.inspiration
+        else Strings.CHAR_SHEET_INSPIRATION_NO
+    )
     quick_lines = [
         hp_str,
         ac_str,
         f"🔰 Proficiency Bonus: **{prof_bonus:+d}**",
         f"⚡ Initiative: **{init_bonus:+d}**",
+        inspiration_str,
     ]
     embed.add_field(
         name=Strings.CHAR_SHEET_INTRO_QUICK_REF,

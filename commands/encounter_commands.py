@@ -666,9 +666,16 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            created_enemies = _create_enemies_for_encounter(
-                db, encounter, name, initiative_modifier, max_hp, count, ac
-            )
+            try:
+                created_enemies = _create_enemies_for_encounter(
+                    db, encounter, name, initiative_modifier, max_hp, count, ac
+                )
+            except ValueError:
+                await interaction.response.send_message(
+                    Strings.ENCOUNTER_INVALID_HP.format(value=max_hp),
+                    ephemeral=True,
+                )
+                return
             db.commit()
 
             if count == 1:
