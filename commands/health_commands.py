@@ -47,7 +47,8 @@ def register_health_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.HP_SET_SUCCESS.format(
                     char_name=char.name, current=max_hp, max=max_hp
-                )
+                ),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -309,7 +310,7 @@ def register_health_commands(bot: commands.Bot) -> None:
             )
             if char.temp_hp:
                 msg += Strings.HP_VIEW_TEMP.format(temp=char.temp_hp)
-            await interaction.response.send_message(msg)
+            await interaction.response.send_message(msg, ephemeral=True)
         finally:
             db.close()
 

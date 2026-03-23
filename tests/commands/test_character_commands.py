@@ -21,7 +21,7 @@ async def test_create_character_success(
     msg = interaction.response.send_message.call_args.args[0]
     assert "Aldric" in msg
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
     verify = session_factory()
@@ -358,7 +358,7 @@ async def test_view_character_by_own_name(char_bot, sample_character, interactio
     assert embed is not None
     assert "Aldric" in embed.title
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -412,7 +412,7 @@ async def test_view_character_by_party_member_name(
     assert embed is not None
     assert "Morgath" in embed.title
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -479,7 +479,7 @@ async def test_set_ac_success_message(char_bot, sample_character, interaction):
     msg = interaction.response.send_message.call_args.args[0]
     assert "15" in msg
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -612,7 +612,7 @@ async def test_add_class_success_message(char_bot, sample_character, interaction
     msg = interaction.response.send_message.call_args.args[0]
     assert "Rogue" in msg
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -691,7 +691,7 @@ async def test_remove_class_success_message(
     msg = interaction.response.send_message.call_args.args[0]
     assert "Rogue" in msg
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 

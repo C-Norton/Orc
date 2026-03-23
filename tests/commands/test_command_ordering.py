@@ -93,7 +93,7 @@ async def test_hp_status_before_set_max_shows_sentinel_values(
 
     assert interaction.response.send_message.call_args is not None
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
     msg = interaction.response.send_message.call_args.args[0]
     assert "-1" in msg

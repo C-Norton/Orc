@@ -94,7 +94,7 @@ async def test_character_create_name_at_limit_accepted(
     await cb(interaction, name=_NAME_AT_LIMIT, character_class="Fighter", level=1)
 
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -247,7 +247,7 @@ async def test_character_create_level_1_accepted(
     await cb(interaction, name="Min Level", character_class="Fighter", level=1)
 
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -260,7 +260,7 @@ async def test_character_create_level_20_accepted(
     await cb(interaction, name="Max Level", character_class="Fighter", level=20)
 
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -360,7 +360,7 @@ async def test_character_stats_minimum_values_accepted(
         initiative_bonus=0,
     )
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -381,7 +381,7 @@ async def test_character_stats_maximum_values_accepted(
         initiative_bonus=0,
     )
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -424,7 +424,7 @@ async def test_character_stats_initiative_bonus_negative_accepted(
         initiative_bonus=-10,
     )
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -470,7 +470,7 @@ async def test_character_ac_1_accepted(mocker, char_bot, sample_character):
     cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=1)
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -480,7 +480,7 @@ async def test_character_ac_30_accepted(mocker, char_bot, sample_character):
     cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=30)
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -544,7 +544,7 @@ async def test_character_class_add_exact_total_20_accepted(
     await cb(interaction, character_class="Wizard", level=15)
 
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -581,7 +581,7 @@ async def test_hp_set_max_one_accepted(mocker, health_bot, sample_character):
     cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=1)
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
@@ -596,7 +596,7 @@ async def test_hp_set_max_very_large_value_does_not_crash(
 
     assert interaction.response.send_message.called
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 

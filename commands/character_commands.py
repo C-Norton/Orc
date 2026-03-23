@@ -493,7 +493,8 @@ def register_character_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.CHAR_CREATED_ACTIVE.format(
                     name=name, level=level, char_class=character_class
-                )
+                ),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -606,7 +607,8 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"updated stats for '{char.name}'"
             )
             await interaction.response.send_message(
-                Strings.CHAR_STATS_UPDATED.format(char_name=char.name)
+                Strings.CHAR_STATS_UPDATED.format(char_name=char.name),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -667,7 +669,8 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"updated saves for '{char.name}'"
             )
             await interaction.response.send_message(
-                Strings.CHAR_SAVES_UPDATED.format(char_name=char.name)
+                Strings.CHAR_SAVES_UPDATED.format(char_name=char.name),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -749,7 +752,8 @@ def register_character_commands(bot: commands.Bot) -> None:
                     skill=matched_skill,
                     char_name=char.name,
                     status=prof_enum.name.replace("_", " ").title(),
-                )
+                ),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -794,7 +798,8 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"'{char.name}' AC set to {ac}"
             )
             await interaction.response.send_message(
-                Strings.CHAR_AC_UPDATED.format(char_name=char.name, ac=ac)
+                Strings.CHAR_AC_UPDATED.format(char_name=char.name, ac=ac),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -861,7 +866,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             embed = _build_sheet_page0(char)
             char_id = char.id
             view = CharacterSheetView(owner_id=interaction.user.id, char_id=char_id)
-            await interaction.response.send_message(embed=embed, view=view)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             view.message = await interaction.original_response()
 
             logger.info(
@@ -968,7 +973,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                     inline=True,
                 )
 
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             logger.info(
                 f"/character list completed for user {interaction.user.id}: "
                 f"listed {len(chars)} character(s)"
@@ -1017,7 +1022,8 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"/character switch completed for user {interaction.user.id}: switched to '{name}'"
             )
             await interaction.response.send_message(
-                Strings.CHAR_SWITCH_SUCCESS.format(name=name)
+                Strings.CHAR_SWITCH_SUCCESS.format(name=name),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -1228,7 +1234,8 @@ def register_character_commands(bot: commands.Bot) -> None:
                     char_class=character_class,
                     level=level,
                     total_level=total,
-                )
+                ),
+                ephemeral=True,
             )
         finally:
             db.close()
@@ -1306,7 +1313,8 @@ def register_character_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.CHAR_CLASS_REMOVED.format(
                     char_name=char.name, char_class=character_class, total_level=total
-                )
+                ),
+                ephemeral=True,
             )
         finally:
             db.close()

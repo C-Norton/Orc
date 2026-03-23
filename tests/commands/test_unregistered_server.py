@@ -214,7 +214,7 @@ async def test_character_create_in_unregistered_server_succeeds(mocker, char_bot
 
     # Success response should NOT be ephemeral
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
