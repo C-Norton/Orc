@@ -685,14 +685,14 @@ async def test_hp_damage_whitespace_only_amount_rejected(
 async def test_hp_damage_too_many_dice_rejected(
     mocker, health_bot, sample_character, db_session
 ):
-    """Dice notation with more than 100 dice must be rejected."""
+    """Dice notation with more than 1000 dice must be rejected."""
     sample_character.max_hp = 100
     sample_character.current_hp = 100
     db_session.commit()
 
     interaction = make_interaction(mocker)
     cb = get_callback(health_bot, "hp", "damage")
-    await cb(interaction, amount="101d6")
+    await cb(interaction, amount="1001d6")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
@@ -702,14 +702,14 @@ async def test_hp_damage_too_many_dice_rejected(
 async def test_hp_damage_too_many_sides_rejected(
     mocker, health_bot, sample_character, db_session
 ):
-    """Dice notation with more than 1000 sides must be rejected."""
+    """Dice notation with more than 100000 sides must be rejected."""
     sample_character.max_hp = 100
     sample_character.current_hp = 100
     db_session.commit()
 
     interaction = make_interaction(mocker)
     cb = get_callback(health_bot, "hp", "damage")
-    await cb(interaction, amount="1d1001")
+    await cb(interaction, amount="1d100001")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
@@ -719,14 +719,14 @@ async def test_hp_damage_too_many_sides_rejected(
 async def test_hp_damage_exact_dice_limit_accepted(
     mocker, health_bot, sample_character, db_session
 ):
-    """100d1000 is exactly at the limit and must be accepted."""
+    """1000d100000 is exactly at the limit and must be accepted."""
     sample_character.max_hp = 1_000_000
     sample_character.current_hp = 1_000_000
     db_session.commit()
 
     interaction = make_interaction(mocker)
     cb = get_callback(health_bot, "hp", "damage")
-    await cb(interaction, amount="100d1000")
+    await cb(interaction, amount="1000d100000")
 
     assert (
         interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
@@ -822,14 +822,14 @@ async def test_hp_heal_invalid_string_rejected(
 async def test_hp_heal_too_many_dice_rejected(
     mocker, health_bot, sample_character, db_session
 ):
-    """101d6 in /hp heal must be rejected with the dice-limit error."""
+    """1001d6 in /hp heal must be rejected with the dice-limit error."""
     sample_character.max_hp = 20
     sample_character.current_hp = 5
     db_session.commit()
 
     interaction = make_interaction(mocker)
     cb = get_callback(health_bot, "hp", "heal")
-    await cb(interaction, amount="101d6")
+    await cb(interaction, amount="1001d6")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
@@ -897,10 +897,10 @@ async def test_hp_temp_negative_does_not_set_negative_temp(
 
 
 async def test_roll_too_many_dice_rejected(mocker, roll_bot, sample_character):
-    """101d6 must be rejected with the dice-limit error."""
+    """1001d6 must be rejected with the dice-limit error."""
     interaction = make_interaction(mocker)
     cb = get_callback(roll_bot, "roll")
-    await cb(interaction, notation="101d6")
+    await cb(interaction, notation="1001d6")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
@@ -908,10 +908,10 @@ async def test_roll_too_many_dice_rejected(mocker, roll_bot, sample_character):
 
 
 async def test_roll_too_many_sides_rejected(mocker, roll_bot, sample_character):
-    """1d1001 must be rejected with the dice-limit error."""
+    """1d100001 must be rejected with the dice-limit error."""
     interaction = make_interaction(mocker)
     cb = get_callback(roll_bot, "roll")
-    await cb(interaction, notation="1d1001")
+    await cb(interaction, notation="1d100001")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
@@ -994,10 +994,10 @@ async def test_roll_very_long_notation_does_not_hang(mocker, roll_bot):
 
 
 async def test_roll_exact_dice_limit_accepted(mocker, roll_bot):
-    """100d1000 is the exact boundary and must succeed."""
+    """1000d100000 is the exact boundary and must succeed."""
     interaction = make_interaction(mocker)
     cb = get_callback(roll_bot, "roll")
-    await cb(interaction, notation="100d1000")
+    await cb(interaction, notation="1000d100000")
 
     assert (
         interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
@@ -1023,10 +1023,10 @@ async def test_attack_add_invalid_damage_formula_rejected(
 async def test_attack_add_too_many_dice_in_formula_rejected(
     mocker, attack_bot, sample_character
 ):
-    """101d6 in the damage formula must be rejected with the dice-limit error."""
+    """1001d6 in the damage formula must be rejected with the dice-limit error."""
     interaction = make_interaction(mocker)
     cb = get_callback(attack_bot, "attack", "add")
-    await cb(interaction, name="Sword", hit_mod=5, damage_formula="101d6")
+    await cb(interaction, name="Sword", hit_mod=5, damage_formula="1001d6")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]
@@ -1104,13 +1104,13 @@ async def test_encounter_enemy_hp_invalid_string_rejected(
 async def test_encounter_enemy_hp_too_many_dice_rejected(
     mocker, encounter_bot, sample_active_party, sample_pending_encounter
 ):
-    """101d6 HP exceeds the 100-dice limit. _validate_hp_format passes the regex
+    """1001d6 HP exceeds the 1000-dice limit. _validate_hp_format passes the regex
     (format is valid), but roll_dice raises ValueError inside _parse_hp_input.
     The encounter_enemy handler now catches that ValueError and returns an
     ephemeral error rather than letting it propagate as an unhandled exception."""
     interaction = make_interaction(mocker)
     cb = get_callback(encounter_bot, "encounter", "enemy")
-    await cb(interaction, name="Goblin", initiative_modifier=1, max_hp="101d6")
+    await cb(interaction, name="Goblin", initiative_modifier=1, max_hp="1001d6")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 

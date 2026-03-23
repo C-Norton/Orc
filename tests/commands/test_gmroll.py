@@ -845,11 +845,11 @@ async def test_gmroll_zero_dice_returns_ephemeral_response(
 async def test_gmroll_over_dice_limit_returns_ephemeral_error(
     roll_bot, sample_character, db_session, interaction, mocker
 ):
-    """``101d6`` exceeds the 100-dice cap and must return an ephemeral error."""
+    """``1001d6`` exceeds the 1000-dice cap and must return an ephemeral error."""
     interaction.client.fetch_user = mocker.AsyncMock(return_value=mocker.AsyncMock())
 
     cb = get_callback(roll_bot, "gmroll")
-    await cb(interaction, notation="101d6")
+    await cb(interaction, notation="1001d6")
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 

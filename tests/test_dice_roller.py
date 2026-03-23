@@ -69,24 +69,24 @@ def test_roll_is_within_bounds():
 # ---------------------------------------------------------------------------
 
 
-def test_exactly_100_dice_is_allowed():
-    rolls, _, _ = roll_dice("100d6")
-    assert len(rolls) == 100
+def test_exactly_1000_dice_is_allowed():
+    rolls, _, _ = roll_dice("1000d6")
+    assert len(rolls) == 1000
 
 
-def test_exactly_1000_sides_is_allowed():
-    rolls, _, _ = roll_dice("1d1000")
+def test_exactly_100000_sides_is_allowed():
+    rolls, _, _ = roll_dice("1d100000")
     assert len(rolls) == 1
 
 
 def test_101_dice_raises():
     with pytest.raises(ValueError, match="Too many"):
-        roll_dice("101d6")
+        roll_dice("1001d6")
 
 
 def test_1001_sides_raises():
     with pytest.raises(ValueError, match="Too many"):
-        roll_dice("1d1001")
+        roll_dice("1d100001")
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +214,7 @@ class TestEvaluateExpressionPure:
         assert result.terms[0].rolls == []
 
     def test_over_100_dice_raises(self):
-        tokens = parse_expression_tokens("101d6")
+        tokens = parse_expression_tokens("1001d6")
         with pytest.raises(ValueError, match="Too many"):
             evaluate_expression(tokens)
 

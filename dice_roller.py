@@ -83,7 +83,7 @@ def _roll_dice_group(
     count = int(m.group(1)) if m.group(1) else 1
     sides = int(m.group(2))
 
-    if count > 100 or sides > 1000:
+    if count > 1000 or sides > 100000:
         raise ValueError(Strings.ERROR_DICE_LIMIT)
 
     # Advantage / disadvantage: only for a single d20
@@ -201,7 +201,7 @@ def roll_dice(notation: str) -> Tuple[List[int], int, int]:
     sides = int(match.group(2))
     modifier = int(match.group(3)) if match.group(3) else 0
 
-    if count > 100 or sides > 1000:
+    if count > 1000 or sides > 100000:
         logger.warning(f"Dice roll exceeded limits: {count}d{sides}")
         raise ValueError(Strings.ERROR_DICE_LIMIT)
 
