@@ -11,7 +11,8 @@ from utils.strings import Strings
 
 
 async def test_help_command_sends_toc_embed(meta_bot, interaction, mocker):
-    """The /help command sends a TOC embed."""
+    """The /help command sends a TOC embed with a random tip in a dedicated field."""
+    mocker.patch("commands.meta_commands.random.choice", return_value="A known tip")
     cb = get_callback(meta_bot, "help")
 
     mock_message = mocker.AsyncMock(spec=discord.Message)
@@ -25,7 +26,9 @@ async def test_help_command_sends_toc_embed(meta_bot, interaction, mocker):
     embed = kwargs.get("embed")
     assert embed.title == Strings.HELP_TITLE
     assert Strings.HELP_DESCRIPTION in embed.description
-    assert embed.footer.text == Strings.HELP_FOOTER
+    tip_field = next((f for f in embed.fields if f.name == "💡 Tip"), None)
+    assert tip_field is not None
+    assert "A known tip" in tip_field.value
 
 
 async def test_help_command_sends_help_view(meta_bot, interaction, mocker):
@@ -87,10 +90,10 @@ async def test_help_command_stores_message_reference(meta_bot, interaction, mock
 
 async def test_page_button_edits_to_page_embed(mocker):
     """Clicking a page button edits the message to show that page's embed."""
+    mocker.patch("commands.meta_commands.random.choice", return_value="Page tip")
     owner_id = 111
     view = HelpView(owner_id=owner_id)
 
-    # Pick the first page button (not Home)
     emoji, label, embed_title, embed_content = HELP_PAGES[0]
     page_btn = next(
         item for item in view.children if getattr(item, "label", "") == label
@@ -108,11 +111,69 @@ async def test_page_button_edits_to_page_embed(mocker):
     embed = kwargs.get("embed")
     assert embed_title in embed.title
     assert embed.description == embed_content
-    assert embed.footer.text == Strings.HELP_FOOTER
+    tip_field = next((f for f in embed.fields if f.name == "💡 Tip"), None)
+    assert tip_field is not None
+    assert "Page tip" in tip_field.value
+
+
+async def test_page_button_tip_drawn_from_tips_list(mocker):
+    """The page embed footer tip is chosen from Strings.TIPS."""
+    mock_choice = mocker.patch("commands.meta_commands.random.choice")
+    mock_choice.return_value = "Some tip"
+    owner_id = 111
+    view = HelpView(owner_id=owner_id)
+
+    _, label, _, _ = HELP_PAGES[0]
+    page_btn = next(
+        item for item in view.children if getattr(item, "label", "") == label
+    )
+
+    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    btn_interaction.user = mocker.MagicMock()
+    btn_interaction.user.id = owner_id
+    btn_interaction.response = mocker.AsyncMock()
+
+    await page_btn.callback(btn_interaction)
+
+    mock_choice.assert_called_with(Strings.TIPS)
+
+
+async def test_tip_changes_between_navigations(mocker):
+    """Each navigation produces a fresh random tip — different calls to random.choice."""
+    tips = ["First tip", "Second tip", "Third tip"]
+    mock_choice = mocker.patch(
+        "commands.meta_commands.random.choice", side_effect=tips
+    )
+    owner_id = 111
+    view = HelpView(owner_id=owner_id)
+
+    _, label_a, _, _ = HELP_PAGES[0]
+    _, label_b, _, _ = HELP_PAGES[1]
+    btn_a = next(item for item in view.children if getattr(item, "label", "") == label_a)
+    btn_b = next(item for item in view.children if getattr(item, "label", "") == label_b)
+    home_btn = next(item for item in view.children if getattr(item, "label", "") == "Home")
+
+    tip_values = []
+    for btn in (btn_a, btn_b, home_btn):
+        itr = mocker.AsyncMock(spec=discord.Interaction)
+        itr.user = mocker.MagicMock()
+        itr.user.id = owner_id
+        itr.response = mocker.AsyncMock()
+        await btn.callback(itr)
+        _, kwargs = itr.response.edit_message.call_args
+        embed = kwargs["embed"]
+        tip_field = next((f for f in embed.fields if f.name == "💡 Tip"), None)
+        tip_values.append(tip_field.value if tip_field else None)
+
+    assert tip_values[0] != tip_values[1] != tip_values[2], (
+        "Each navigation should produce a different tip"
+    )
+    assert mock_choice.call_count == 3
 
 
 async def test_home_button_returns_to_toc(mocker):
     """Clicking the Home button edits the message back to the TOC embed."""
+    mocker.patch("commands.meta_commands.random.choice", return_value="Home tip")
     owner_id = 111
     view = HelpView(owner_id=owner_id)
 
@@ -132,6 +193,9 @@ async def test_home_button_returns_to_toc(mocker):
     embed = kwargs.get("embed")
     assert embed.title == Strings.HELP_TITLE
     assert Strings.HELP_DESCRIPTION in embed.description
+    tip_field = next((f for f in embed.fields if f.name == "💡 Tip"), None)
+    assert tip_field is not None
+    assert "Home tip" in tip_field.value
 
 
 async def test_all_page_buttons_produce_distinct_embeds(mocker):

@@ -38,7 +38,27 @@ HELP_PAGES: list[tuple[str, str, str, str]] = [
 ]
 
 
-def _toc_embed() -> discord.Embed:
+def _random_tip() -> str:
+    """Return a random tip for use as a help embed field."""
+    return random.choice(Strings.TIPS)
+
+
+def _add_tip_field(embed: discord.Embed, tip: str) -> None:
+    """Append a blank separator and a tip field to an embed.
+
+    Embed footers are plain-text only and do not render markdown or links.
+    A dedicated field supports full formatting, so tips with URLs and bold
+    text display correctly.
+
+    Args:
+        embed: The embed to modify in place.
+        tip: The tip text to display.
+    """
+    embed.add_field(name="\u200b", value="\u200b", inline=False)
+    embed.add_field(name="💡 Tip", value=tip, inline=False)
+
+
+def _toc_embed(tip: str) -> discord.Embed:
     """Build the table-of-contents embed."""
     embed = discord.Embed(
         title=Strings.HELP_TITLE,
@@ -47,18 +67,18 @@ def _toc_embed() -> discord.Embed:
         ),
         color=discord.Color.gold(),
     )
-    embed.set_footer(text=Strings.HELP_FOOTER)
+    _add_tip_field(embed, tip)
     return embed
 
 
-def _page_embed(title: str, content: str) -> discord.Embed:
+def _page_embed(title: str, content: str, tip: str) -> discord.Embed:
     """Build a help-page embed."""
     embed = discord.Embed(
         title=title,
         description=content,
         color=discord.Color.gold(),
     )
-    embed.set_footer(text=Strings.HELP_FOOTER)
+    _add_tip_field(embed, tip)
     return embed
 
 
@@ -75,8 +95,8 @@ class _HelpPageButton(discord.ui.Button):
         self._embed_content = embed_content
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        """Edit the help message to show this page."""
-        embed = _page_embed(self._embed_title, self._embed_content)
+        """Edit the help message to show this page with a fresh random tip."""
+        embed = _page_embed(self._embed_title, self._embed_content, _random_tip())
         await interaction.response.edit_message(embed=embed, view=self.view)
 
 
@@ -89,8 +109,10 @@ class _HelpHomeButton(discord.ui.Button):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        """Edit the help message to show the table of contents."""
-        await interaction.response.edit_message(embed=_toc_embed(), view=self.view)
+        """Edit the help message to show the table of contents with a fresh random tip."""
+        await interaction.response.edit_message(
+            embed=_toc_embed(_random_tip()), view=self.view
+        )
 
 
 class HelpView(discord.ui.View):
@@ -202,7 +224,7 @@ def register_meta_commands(bot: commands.Bot) -> None:
         )
 
         view = HelpView(owner_id=interaction.user.id)
-        await interaction.response.send_message(embed=_toc_embed(), view=view)
+        await interaction.response.send_message(embed=_toc_embed(_random_tip()), view=view)
         view.message = await interaction.original_response()
         logger.info(f"/help served to user {interaction.user.id}")
 

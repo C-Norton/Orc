@@ -36,7 +36,7 @@ class Strings:
         "Thank you for using ORC - the Opensource Roleplaying Companion bot for D&D 5e"
     )
     HELP_DESCRIPTION = "Check out our shared setting: [Open Source Gaming and Roleplaying environment (OGRE)](https://www.worldanvil.com/w/open-source-gaming-and-roleplaying-environment-wobbix/)"
-    HELP_FOOTER = "Tip: Use autocomplete for character, party, skill names, and more!"
+    HELP_TIP_FOOTER = "💡 Tip: {tip}"
     HELP_NOT_YOUR_MENU = (
         "This help menu belongs to someone else. Use `/help` to open your own."
     )
@@ -617,7 +617,7 @@ class Strings:
         "Adding an enemy mid-encounter? ORC gives your GM a menu to place them at the top, bottom, after the current turn, or in initiative order by roll.",
         "The `/encounter view` command shows different information to GMs — they see exact HP, AC, and initiative modifiers that players don't.",
         "Inspiration can be granted by a GM to any party member, or to yourself if you earn it. Check your status with `/inspiration status`.",
-        "Enter the world of OGRE, the Opensource Gaming and Roleplaying Environment. A shared 5e setting in the middle of a steampunk industrial revolution!",
+        "Enter the world of [OGRE](https://discord.gg/2cBKmVTpHR), the Opensource Gaming and Roleplaying Environment. A shared 5e setting in the middle of a steampunk industrial revolution!",
     ]
     DEATH_SAVE_DAMAGE_FAILURE = (
         "💀 **{char_name}** took damage while dying — 1 failure recorded "
