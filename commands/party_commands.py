@@ -764,9 +764,11 @@ def register_party_commands(bot: commands.Bot) -> None:
                 notation=notation, party_name=party.name
             ) + "\n".join(results)
             if len(response) > 2000:
-                await interaction.followup.send(response[:1997] + "...")
+                await interaction.followup.send(
+                    response[:1997] + "...", suppress_embeds=True
+                )
             else:
-                await interaction.followup.send(response)
+                await interaction.followup.send(response, suppress_embeds=True)
             logger.info(
                 f"/party roll completed for user {interaction.user.id}: "
                 f"rolled {notation} for {len(party.characters)} members in '{party.name}'"
@@ -818,7 +820,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 return
 
             response = await perform_roll(char, notation, db)
-            await interaction.response.send_message(response)
+            await interaction.response.send_message(response, suppress_embeds=True)
             logger.info(
                 f"/party roll_as completed for user {interaction.user.id}: "
                 f"rolled {notation} as '{member_name}'"

@@ -89,7 +89,7 @@ async def _notify_gmroll_gms(
         for gm in party.gms:
             try:
                 discord_user = await client.fetch_user(int(gm.discord_id))
-                await discord_user.send(gm_message)
+                await discord_user.send(gm_message, suppress_embeds=True)
                 logger.debug(
                     f"/gmroll DM sent to GM {gm.discord_id} "
                     f"(party '{party.name}', char '{char.name}')"
@@ -266,7 +266,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     char = None
 
             # Player always gets an ephemeral response.
-            await interaction.response.send_message(response, ephemeral=True)
+            await interaction.response.send_message(
+                response, ephemeral=True, suppress_embeds=True
+            )
             logger.info(f"/gmroll completed for user {interaction.user.id}")
 
             # DM every GM across all parties the character belongs to.
@@ -351,7 +353,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     return
 
                 response = await perform_roll(char, notation, db, advantage=advantage)
-                await interaction.response.send_message(response)
+                await interaction.response.send_message(
+                    response, suppress_embeds=True
+                )
                 logger.info(
                     f"/roll (character) completed for user {interaction.user.id}"
                 )
@@ -366,7 +370,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     total=result.total,
                     tip=random.choice(Strings.TIPS),
                 )
-                await interaction.response.send_message(response)
+                await interaction.response.send_message(
+                    response, suppress_embeds=True
+                )
                 logger.info(f"/roll (dice) completed for user {interaction.user.id}")
 
         except ValueError as e:

@@ -212,7 +212,8 @@ def register_meta_commands(bot: commands.Bot) -> None:
             f"Command /tip called by {interaction.user} (ID: {interaction.user.id})"
         )
         await interaction.response.send_message(
-            Strings.TIP_COMMAND_RESPONSE.format(tip=random.choice(Strings.TIPS))
+            Strings.TIP_COMMAND_RESPONSE.format(tip=random.choice(Strings.TIPS)),
+            suppress_embeds=True,
         )
         logger.info(f"/tip served to user {interaction.user.id}")
 
