@@ -55,7 +55,7 @@ def _add_tip_field(embed: discord.Embed, tip: str) -> None:
         tip: The tip text to display.
     """
     embed.add_field(name="\u200b", value="\u200b", inline=False)
-    embed.add_field(name="💡 Tip", value=tip, inline=False)
+    embed.add_field(name=Strings.HELP_TIP_FIELD_NAME, value=tip, inline=False)
 
 
 def _toc_embed(tip: str) -> discord.Embed:
@@ -105,7 +105,7 @@ class _HelpHomeButton(discord.ui.Button):
 
     def __init__(self, row: int) -> None:
         super().__init__(
-            emoji="🏠", label="Home", style=discord.ButtonStyle.primary, row=row
+            emoji="🏠", label=Strings.BUTTON_HOME, style=discord.ButtonStyle.primary, row=row
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:

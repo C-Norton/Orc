@@ -18,6 +18,7 @@ from sqlalchemy import inspect as sa_inspect, text
 from database import SessionLocal
 from utils.dev_notifications import get_buffer_stats, get_recent_logs, get_warning_logs_page
 from utils.logging_config import get_logger
+from utils.strings import Strings
 
 logger = get_logger(__name__)
 
@@ -53,12 +54,11 @@ class _WarningLogsView(discord.ui.View):
         body = "\n".join(entries) or "(no warning logs)"
         if len(body) > 1800:
             body = body[:1800] + "\n…"
-        return (
-            f"**Warning logs** (page {page + 1}/{total_pages}, most recent first):\n"
-            f"```\n{body}\n```"
+        return Strings.ADMIN_WARNING_LOGS_DISPLAY.format(
+            page=page + 1, total_pages=total_pages, body=body
         )
 
-    @discord.ui.button(label="◀ Prev", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_PREV_SHORT, style=discord.ButtonStyle.secondary)
     async def prev_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -69,7 +69,7 @@ class _WarningLogsView(discord.ui.View):
             content=self.build_content(self._page, self._total_pages), view=self
         )
 
-    @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_NEXT_SHORT, style=discord.ButtonStyle.secondary)
     async def next_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -126,7 +126,9 @@ def register_admin_commands(bot: commands.Bot) -> None:
 
         guild = bot.get_guild(guild_id)
         if guild is None:
-            await ctx.send(f"❌ Guild `{guild_id}` not found (bot may not be in it).")
+            await ctx.send(
+                Strings.ADMIN_GUILD_NOT_FOUND.format(guild_id=guild_id)
+            )
             return
 
         channel = (
@@ -143,12 +145,17 @@ def register_admin_commands(bot: commands.Bot) -> None:
         )
 
         if channel is None:
-            await ctx.send(f"❌ No writable text channel found in **{guild.name}**.")
+            await ctx.send(
+                Strings.ADMIN_NO_WRITABLE_CHANNEL.format(guild_name=guild.name)
+            )
             return
 
         await channel.send(message)
         await ctx.send(
-            f"✅ Message sent to **#{channel.name}** in **{guild.name}**.", delete_after=10
+            Strings.ADMIN_MESSAGE_SENT.format(
+                channel_name=channel.name, guild_name=guild.name
+            ),
+            delete_after=10,
         )
         logger.info(
             f"Admin !message sent to #{channel.name} in {guild.name} ({guild_id})"
@@ -207,7 +214,7 @@ def register_admin_commands(bot: commands.Bot) -> None:
         # Truncate to stay within Discord's 2000-char limit
         if len(recent) > 1800:
             recent = "…(truncated)\n" + recent[-1800:]
-        await ctx.send(f"**Recent logs** ({stats}):\n```\n{recent}\n```")
+        await ctx.send(Strings.ADMIN_LOGS_DISPLAY.format(stats=stats, recent=recent))
 
     @bot.command(name="restart")
     async def admin_restart(ctx: commands.Context) -> None:
@@ -225,7 +232,7 @@ def register_admin_commands(bot: commands.Bot) -> None:
         logger.info(
             f"Admin !restart requested by {ctx.author} ({ctx.author.id})"
         )
-        await ctx.send("♻️ Restarting…", delete_after=5)
+        await ctx.send(Strings.ADMIN_RESTARTING, delete_after=5)
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
     @bot.command(name="warninglogs")

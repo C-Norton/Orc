@@ -5,13 +5,16 @@ database session is needed.
 """
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from enums.ruleset_edition import RulesetEdition
 from utils.weapon_utils import (
     WeaponHitModifier,
     calculate_weapon_hit_modifier,
     extract_two_handed_damage,
+    fetch_weapons,
     format_weapon_result_line,
     get_property_names,
 )
@@ -289,3 +292,158 @@ def test_format_line_no_properties_section_when_empty():
     line = format_weapon_result_line(1, weapon)
     # Only one pipe separator (between range_type and damage), not a second one
     assert line.count("|") == 1
+
+
+# ---------------------------------------------------------------------------
+# RulesetEdition
+# ---------------------------------------------------------------------------
+
+
+def test_ruleset_edition_2024_value():
+    """RULES_2024 has the Open5e document key 'srd-2024'."""
+    assert RulesetEdition.RULES_2024.value == "srd-2024"
+
+
+def test_ruleset_edition_2014_value():
+    """RULES_2014 has the Open5e document key 'srd-2014'."""
+    assert RulesetEdition.RULES_2014.value == "srd-2014"
+
+
+def test_ruleset_edition_display_year_2024():
+    """display_year returns '2024' for RULES_2024."""
+    assert RulesetEdition.RULES_2024.display_year == "2024"
+
+
+def test_ruleset_edition_display_year_2014():
+    """display_year returns '2014' for RULES_2014."""
+    assert RulesetEdition.RULES_2014.display_year == "2014"
+
+
+# ---------------------------------------------------------------------------
+# fetch_weapons
+# ---------------------------------------------------------------------------
+
+
+def _weapon(name: str, doc_key: str = "srd-2024", damage_dice: str = "1d8") -> dict:
+    """Build a minimal Open5e weapon dict with a document key field."""
+    return {
+        "name": name,
+        "damage_dice": damage_dice,
+        "properties": [],
+        "document": {"key": doc_key},
+    }
+
+
+# Mixed-edition fixture mirrors the real API response (both editions returned together)
+_ALL_WEAPONS_FIXTURE = [
+    _weapon("Rapier", "srd-2024"),
+    _weapon("Rapier", "srd-2014"),
+    _weapon("Battleaxe", "srd-2024"),
+    _weapon("Battleaxe", "srd-2014"),
+    _weapon("Dart", "srd-2024", "1d4"),
+    _weapon("Longsword", "srd-2024"),
+    _weapon("Longsword", "srd-2014"),
+    _weapon("Shortsword", "srd-2024"),
+    _weapon("Greatsword", "srd-2024"),
+]
+
+
+def _make_mock_http_session(weapons: list[dict]) -> MagicMock:
+    """Return an aiohttp.ClientSession mock that yields *weapons* as API results."""
+    json_response = AsyncMock(return_value={"results": weapons})
+    response_cm = AsyncMock()
+    response_cm.__aenter__ = AsyncMock(
+        return_value=MagicMock(raise_for_status=MagicMock(), json=json_response)
+    )
+    response_cm.__aexit__ = AsyncMock(return_value=False)
+
+    get_cm = MagicMock()
+    get_cm.get = MagicMock(return_value=response_cm)
+
+    session_cm = AsyncMock()
+    session_cm.__aenter__ = AsyncMock(return_value=get_cm)
+    session_cm.__aexit__ = AsyncMock(return_value=False)
+    return session_cm
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_returns_rapier_for_rapier_query(mocker):
+    """Rapier must appear in results when the query is 'rapier'.
+
+    Regression test: the old implementation passed the query string directly
+    to the Open5e ``search`` param, which performs full-text search on
+    descriptions rather than name filtering — causing 'rapier' to return
+    unrelated weapons like Battleaxe and Dart instead.
+    """
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(_ALL_WEAPONS_FIXTURE))
+    results = await fetch_weapons("rapier")
+    names = [w["name"] for w in results]
+    assert "Rapier" in names
+    assert "Battleaxe" not in names
+    assert "Dart" not in names
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_filters_by_name_substring_case_insensitive(mocker):
+    """Query 'sword' returns Longsword, Shortsword, and Greatsword (case-insensitive)."""
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(_ALL_WEAPONS_FIXTURE))
+    results = await fetch_weapons("sword")
+    names = [w["name"] for w in results]
+    assert "Longsword" in names
+    assert "Shortsword" in names
+    assert "Greatsword" in names
+    assert "Rapier" not in names
+    assert "Battleaxe" not in names
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_returns_empty_list_when_no_name_matches(mocker):
+    """Query that matches no weapon name returns an empty list."""
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(_ALL_WEAPONS_FIXTURE))
+    results = await fetch_weapons("xyzzy")
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_caps_results_at_max_search_results(mocker):
+    """At most MAX_SEARCH_RESULTS (5) weapons are returned even when more match."""
+    many_swords = [_weapon(f"Sword{i}", "srd-2024") for i in range(10)]
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(many_swords))
+    results = await fetch_weapons("sword")
+    assert len(results) == 5
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_defaults_to_2024_edition(mocker):
+    """Without explicit ruleset, only srd-2024 weapons are returned."""
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(_ALL_WEAPONS_FIXTURE))
+    results = await fetch_weapons("rapier")
+    assert len(results) == 1
+    assert results[0]["document"]["key"] == "srd-2024"
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_2014_edition_returns_2014_rapier(mocker):
+    """Specifying RULES_2014 returns only the srd-2014 Rapier, not the 2024 one."""
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(_ALL_WEAPONS_FIXTURE))
+    results = await fetch_weapons("rapier", RulesetEdition.RULES_2014)
+    assert len(results) == 1
+    assert results[0]["document"]["key"] == "srd-2014"
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_edition_filter_excludes_other_edition(mocker):
+    """2024 search for 'battleaxe' excludes the srd-2014 Battleaxe entry."""
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(_ALL_WEAPONS_FIXTURE))
+    results_2024 = await fetch_weapons("battleaxe", RulesetEdition.RULES_2024)
+    results_2014 = await fetch_weapons("battleaxe", RulesetEdition.RULES_2014)
+    assert all(w["document"]["key"] == "srd-2024" for w in results_2024)
+    assert all(w["document"]["key"] == "srd-2014" for w in results_2014)
+
+
+@pytest.mark.asyncio
+async def test_fetch_weapons_weapon_only_in_2024_not_found_in_2014(mocker):
+    """Dart exists only in srd-2024 in the fixture; searching 2014 returns empty."""
+    mocker.patch("utils.weapon_utils.aiohttp.ClientSession", return_value=_make_mock_http_session(_ALL_WEAPONS_FIXTURE))
+    results = await fetch_weapons("dart", RulesetEdition.RULES_2014)
+    assert results == []

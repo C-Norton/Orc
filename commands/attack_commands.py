@@ -101,7 +101,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
         except ValueError as e:
             logger.error(f"Error adding attack for user {interaction.user.id}: {e}")
             await interaction.response.send_message(
-                f"Error adding attack: {e}.", ephemeral=True
+                Strings.ERROR_ATTACK_ADD.format(error=e), ephemeral=True
             )
         finally:
             db.close()
@@ -190,7 +190,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
                     f"ValueError in /attack roll (damage formula: {attack_obj.damage_formula}): {error}"
                 )
                 await interaction.response.send_message(
-                    f"❌ Error in damage formula: {str(error)}", ephemeral=True
+                    Strings.ERROR_DAMAGE_FORMULA.format(error=str(error)), ephemeral=True
                 )
                 return
 

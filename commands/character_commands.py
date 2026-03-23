@@ -43,7 +43,7 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
         self.char_id = char_id
         self.char_name = char_name
 
-    @discord.ui.button(label="Delete", emoji="✅", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label=Strings.BUTTON_DELETE, emoji="✅", style=discord.ButtonStyle.danger)
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -53,7 +53,7 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
             char = db.get(Character, self.char_id)
             if not char:
                 await interaction.response.edit_message(
-                    content="Character no longer exists.", view=None
+                    content=Strings.ERROR_CHAR_NO_LONGER_EXISTS, view=None
                 )
                 return
 
@@ -96,7 +96,7 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label="Cancel", emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:

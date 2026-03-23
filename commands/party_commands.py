@@ -67,7 +67,7 @@ class _ConfirmCharacterRemoveView(discord.ui.View):
         self.party_name = party_name
         self.char_name = char_name
 
-    @discord.ui.button(label="Remove", emoji="✅", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label=Strings.BUTTON_REMOVE, emoji="✅", style=discord.ButtonStyle.danger)
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -79,7 +79,7 @@ class _ConfirmCharacterRemoveView(discord.ui.View):
 
             if not party or not char:
                 await interaction.response.edit_message(
-                    content="Character or party no longer exists.", view=None
+                    content=Strings.ERROR_CHAR_OR_PARTY_NO_LONGER_EXISTS, view=None
                 )
                 return
 
@@ -128,7 +128,7 @@ class _ConfirmCharacterRemoveView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label="Cancel", emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -154,7 +154,7 @@ class _ConfirmPartyDeleteView(discord.ui.View):
         self.party_id = party_id
         self.party_name = party_name
 
-    @discord.ui.button(label="Delete", emoji="✅", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label=Strings.BUTTON_DELETE, emoji="✅", style=discord.ButtonStyle.danger)
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -164,7 +164,7 @@ class _ConfirmPartyDeleteView(discord.ui.View):
             party = db.get(Party, self.party_id)
             if not party:
                 await interaction.response.edit_message(
-                    content="Party no longer exists.", view=None
+                    content=Strings.ERROR_PARTY_NO_LONGER_EXISTS, view=None
                 )
                 return
 
@@ -192,7 +192,7 @@ class _ConfirmPartyDeleteView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label="Cancel", emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -217,7 +217,7 @@ class _ConfirmSelfGMRemoveView(discord.ui.View):
         self.user_discord_id = user_discord_id
 
     @discord.ui.button(
-        label="Remove myself", emoji="✅", style=discord.ButtonStyle.danger
+        label=Strings.BUTTON_REMOVE_MYSELF, emoji="✅", style=discord.ButtonStyle.danger
     )
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -230,13 +230,13 @@ class _ConfirmSelfGMRemoveView(discord.ui.View):
 
             if not party or not user:
                 await interaction.response.edit_message(
-                    content="Party or user no longer exists.", view=None
+                    content=Strings.ERROR_PARTY_OR_USER_NO_LONGER_EXISTS, view=None
                 )
                 return
 
             if user not in party.gms:
                 await interaction.response.edit_message(
-                    content="You are no longer a GM of this party.", view=None
+                    content=Strings.ERROR_NO_LONGER_GM, view=None
                 )
                 return
 
@@ -256,7 +256,7 @@ class _ConfirmSelfGMRemoveView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label="Cancel", emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -323,7 +323,7 @@ class PartyListView(discord.ui.View):
         )
         return embed
 
-    @discord.ui.button(label="◀ Previous", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_PREV, style=discord.ButtonStyle.secondary)
     async def prev_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -332,7 +332,7 @@ class PartyListView(discord.ui.View):
         self._update_buttons()
         await interaction.response.edit_message(embed=self.build_embed(), view=self)
 
-    @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_NEXT, style=discord.ButtonStyle.secondary)
     async def next_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -1024,7 +1024,9 @@ def register_party_commands(bot: commands.Bot) -> None:
 
             if not char:
                 await interaction.response.send_message(
-                    f"Character '**{character_name}**' not found in party '**{party_name}**'.",
+                    Strings.ERROR_CHAR_NOT_IN_PARTY.format(
+                        character_name=character_name, party_name=party_name
+                    ),
                     ephemeral=True,
                 )
                 return

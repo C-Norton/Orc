@@ -468,7 +468,7 @@ class EnemyPlacementView(discord.ui.View):
             except (discord.NotFound, discord.HTTPException):
                 pass
 
-    @discord.ui.button(label="Top of Initiative", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label=Strings.BUTTON_TOP_OF_INITIATIVE, style=discord.ButtonStyle.primary)
     async def top_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -476,7 +476,7 @@ class EnemyPlacementView(discord.ui.View):
         await self._place_enemies(interaction, EnemyPlacementMode.TOP)
 
     @discord.ui.button(
-        label="Bottom of Initiative", style=discord.ButtonStyle.secondary
+        label=Strings.BUTTON_BOTTOM_OF_INITIATIVE, style=discord.ButtonStyle.secondary
     )
     async def bottom_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
@@ -484,14 +484,14 @@ class EnemyPlacementView(discord.ui.View):
         """Place the enemy(ies) at the last position in the initiative order."""
         await self._place_enemies(interaction, EnemyPlacementMode.BOTTOM)
 
-    @discord.ui.button(label="After Current Turn", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label=Strings.BUTTON_AFTER_CURRENT_TURN, style=discord.ButtonStyle.secondary)
     async def after_current_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
         """Place the enemy(ies) immediately after the currently active turn."""
         await self._place_enemies(interaction, EnemyPlacementMode.AFTER_CURRENT)
 
-    @discord.ui.button(label="Roll Initiative", style=discord.ButtonStyle.success)
+    @discord.ui.button(label=Strings.BUTTON_ROLL_INITIATIVE, style=discord.ButtonStyle.success)
     async def roll_initiative_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:

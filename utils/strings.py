@@ -75,9 +75,7 @@ class Strings:
 
     HELP_COMBAT_NAME = "⚔️ Combat"
     HELP_COMBAT_VALUE = (
-        "**/weapon search <query>**: Search for weapons in the 2024 SRD (via Open5e). Shows up to 5 results.\n"
-        "**/weapon add <number>**: Import a weapon from your last `/weapon search` results. "
-        "Automatically computes the to-hit modifier from your character's stats.\n"
+        "**/weapon search <query> [ruleset]**: Search for weapons in the SRD (via Open5e). Defaults to 2024 rules; pass `ruleset:2014` for legacy rules. Shows up to 5 results with Add buttons — click to import directly.\n"
         "**/attack add <name> <hit_mod> <damage>**: Manually save an attack (e.g., `/attack add Longsword 5 1d8+3`).\n"
         "**/attack list**: List all your saved attacks.\n"
         "**/attack roll <name> [target]**: Roll a to-hit and damage roll for a saved attack. "
@@ -266,17 +264,14 @@ class Strings:
     PARTY_SETTINGS_INVALID_CRIT_RULE = "❌ Invalid crit rule. Valid options: `double_dice`, `perkins`, `double_damage`, `max_damage`, `none`."
 
     # Weapon Commands
-    WEAPON_SEARCH_HEADER = 'Weapon search results for "{query}":'
+    WEAPON_SEARCH_HEADER = 'Weapon search results for "{query}" ({ruleset} rules):'
     WEAPON_SEARCH_FOOTER = (
-        "\n\nUse `/weapon add <number>` to add one to **{char_name}**.\n"
-        "*(Results expire in 5 minutes)*"
+        "\n\n*Click a button below to add a weapon to **{char_name}**. "
+        "Buttons expire in 5 minutes.*"
     )
     WEAPON_SEARCH_NO_RESULTS = (
-        '❌ No weapons found matching "{query}" in the 2024 SRD. '
+        '❌ No weapons found matching "{query}" in the {ruleset} SRD. '
         "Try a different search term."
-    )
-    WEAPON_SEARCH_SESSION_NOT_FOUND = (
-        "❌ No weapon search results found. Run `/weapon search` first."
     )
     WEAPON_SEARCH_ERROR = "❌ Could not reach the Open5e API. Please try again later."
     WEAPON_ADD_SUCCESS_HEADER = "✅ Added **{name}** to **{char_name}**."
@@ -286,7 +281,6 @@ class Strings:
     WEAPON_ADD_VERSATILE_SUFFIX = " ({two_handed_damage} two-handed)"
     WEAPON_ADD_PROPERTIES_LINE = "**Properties**: {properties}"
     WEAPON_ADD_FOOTER = "\n\nUse `/attack add` to adjust the hit modifier if needed."
-    WEAPON_ADD_INVALID_INDEX = "❌ Please enter a number between 1 and {max_index}."
 
     ERROR_INVALID_DICE = "Invalid dice notation. Use format like '1d20' or '2d6+3'."
     ERROR_DICE_LIMIT = "Too many dice or too many sides! Keep it reasonable."
@@ -608,8 +602,8 @@ class Strings:
         "When rolling a saved attack against an enemy in an active encounter, ORC tracks the HP for you — and removes the enemy from initiative when they drop to 0.",
         "Critical hits aren't just double damage — your GM can configure the crit rule for your party. **Perkins rule** even grants you Inspiration on a nat 20.",
         "Complex expressions like `2d6+perception` or `1d20+strength` work in `/roll`. You can mix dice with stat names and skills to apply situation bonuses, if your table uses them.",
-        "Use `/weapon search` to look up any weapon from the 2024 SRD, then `/weapon add` to import it directly to your character. ORC calculates the hit modifier for you.",
-        "Finesse weapons? ORC figures out whether to use Strength or Dexterity automatically when you import with `/weapon add`.",
+        "Use `/weapon search` to look up any weapon from the SRD. Each result gets an Add button — click it to import straight to your character. ORC calculates the hit modifier for you.",
+        "Finesse weapons? ORC figures out whether to use Strength or Dexterity automatically when you import via `/weapon search`.",
         "Temp HP follows the 5e rule: `/hp temp` replaces your temp HP only if the new amount is higher. It won't overwrite a larger pool.",
         "Damage while at 0 HP adds a death save failure automatically. Your GM doesn't need to track it manually.",
         "Party members can have their HP adjusted by the GM with `/hp damage` and `/hp heal` using the `partymember` field — no need for the player to be present.",
@@ -625,7 +619,7 @@ class Strings:
         "Adding an enemy mid-encounter? ORC gives your GM a menu to place them at the top, bottom, after the current turn, or in initiative order by roll.",
         "The `/encounter view` command shows different information to GMs — they see exact HP, AC, and initiative modifiers that players don't.",
         "Inspiration can be granted by a GM to any party member, or to yourself if you earn it. Check your status with `/inspiration status`.",
-        "Enter the world of [OGRE](https://discord.gg/2cBKmVTpHR), the Opensource Gaming and Roleplaying Environment. A shared 5e setting in the middle of a steampunk industrial revolution!",
+        "Enter the world of [OGRE](https://discord.gg/2cBKmVTpHR), the Opensource Gaming and Roleplaying Environment. A shared 5e setting in the middle of a magipunk industrial revolution!",
     ]
     DEATH_SAVE_DAMAGE_FAILURE = (
         "💀 **{char_name}** took damage while dying — 1 failure recorded "
@@ -641,7 +635,59 @@ class Strings:
     )
     DEATH_SAVE_COUNTER_DISPLAY = "(Dying: {successes}✓ {failures}✗)"
 
+    # Button Labels
+    BUTTON_DELETE = "Delete"  # _ConfirmCharacterDeleteView (/character delete), _ConfirmPartyDeleteView (/party delete)
+    BUTTON_CANCEL = "Cancel"  # _ConfirmCharacterDeleteView (/character delete), _ConfirmCharacterRemoveView (/party remove_member), _ConfirmPartyDeleteView (/party delete), _ConfirmSelfGMRemoveView (/party leave)
+    BUTTON_REMOVE = "Remove"  # _ConfirmCharacterRemoveView (/party remove_member)
+    BUTTON_REMOVE_MYSELF = "Remove myself"  # _ConfirmSelfGMRemoveView (/party leave)
+    BUTTON_PREV = "◀ Previous"  # PartyListView (/party view)
+    BUTTON_NEXT = "Next ▶"  # PartyListView (/party view)
+    BUTTON_PREV_SHORT = "◀ Prev"  # _WarningLogsView (/admin warning_logs)
+    BUTTON_NEXT_SHORT = "Next ▶"  # _WarningLogsView (/admin warning_logs)
+    BUTTON_TOP_OF_INITIATIVE = "Top of Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
+    BUTTON_BOTTOM_OF_INITIATIVE = "Bottom of Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
+    BUTTON_AFTER_CURRENT_TURN = "After Current Turn"  # EnemyPlacementView (/encounter encounter_enemy)
+    BUTTON_ROLL_INITIATIVE = "Roll Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
+    BUTTON_HOME = "Home"  # HelpView (/help)
 
+    # Error Messages — inline / user-facing
+    ERROR_CHAR_NO_LONGER_EXISTS = "Character no longer exists."
+    ERROR_CHAR_OR_PARTY_NO_LONGER_EXISTS = "Character or party no longer exists."
+    ERROR_PARTY_NO_LONGER_EXISTS = "Party no longer exists."
+    ERROR_PARTY_OR_USER_NO_LONGER_EXISTS = "Party or user no longer exists."
+    ERROR_NO_LONGER_GM = "You are no longer a GM of this party."
+    ERROR_CHAR_NOT_IN_PARTY = (
+        "Character '**{character_name}**' not found in party '**{party_name}**'."
+    )
+    ERROR_DAMAGE_FORMULA = "❌ Error in damage formula: {error}"
+    ERROR_ROLL_GENERIC = "❌ Error: {error}"
+    ERROR_ATTACK_ADD = "Error adding attack: {error}."
+
+    # Admin Commands
+    ADMIN_GUILD_NOT_FOUND = (
+        "❌ Guild `{guild_id}` not found (bot may not be in it)."
+    )
+    ADMIN_NO_WRITABLE_CHANNEL = (
+        "❌ No writable text channel found in **{guild_name}**."
+    )
+    ADMIN_MESSAGE_SENT = (
+        "✅ Message sent to **#{channel_name}** in **{guild_name}**."
+    )
+    ADMIN_LOGS_DISPLAY = "**Recent logs** ({stats}):\n```\n{recent}\n```"
+    ADMIN_RESTARTING = "♻️ Restarting…"
+    ADMIN_WARNING_LOGS_DISPLAY = (
+        "**Warning logs** (page {page}/{total_pages}, most recent first):\n"
+        "```\n{body}\n```"
+    )
+
+    # Rate Limiting
+    RATE_LIMIT_ALERT = (
+        "⚠️ Rate limit alert: {user} (`{user_id}`) in guild `{guild_id}` "
+        "exceeded 8 commands in 10s."
+    )
+
+    # Help Embed Field Names
+    HELP_TIP_FIELD_NAME = "💡 Tip"
 
 
 

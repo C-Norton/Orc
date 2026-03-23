@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Optional
 
 import aiohttp
 
+from enums.ruleset_edition import RulesetEdition
 from utils.dnd_logic import get_proficiency_bonus, get_stat_modifier
 from utils.logging_config import get_logger
 
@@ -27,6 +28,7 @@ logger = get_logger(__name__)
 OPEN5E_WEAPONS_URL = "https://api.open5e.com/v2/weapons/"
 OPEN5E_SRD_2024_KEY = "srd-2024"
 MAX_SEARCH_RESULTS = 5
+OPEN5E_ALL_WEAPONS_LIMIT = 200  # Fetch full catalogue in one request; srd-2024 has ~75
 REQUEST_TIMEOUT_SECONDS = 10
 
 
@@ -206,28 +208,53 @@ def format_weapon_result_line(index: int, weapon: dict) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def fetch_weapons(query: str) -> list[dict]:
-    """Fetch up to 5 weapons from the Open5e v2 API matching *query*.
+async def fetch_weapons(
+    query: str,
+    ruleset_edition: RulesetEdition = RulesetEdition.RULES_2024,
+) -> list[dict]:
+    """Fetch up to 5 weapons from the Open5e v2 API whose name contains *query*.
 
-    Searches the 2024 SRD only (``document__key=srd-2024``).  Returns an
-    empty list when no results are found.
+    The Open5e v2 ``search`` parameter performs full-text search across
+    description text rather than filtering by name, so it returns unrelated
+    results (e.g. searching "rapier" returns all weapons alphabetically).
+    Additionally, the ``document__key`` filter on the API is broken and always
+    returns weapons from both editions regardless of the value passed.
+
+    Instead, this function fetches the full weapon catalogue in one request
+    and filters client-side by:
+
+    1. Case-insensitive name substring match against *query*.
+    2. Exact ``document.key`` match against *ruleset_edition*.
+
+    Returns an empty list when no weapons match.
 
     Raises :class:`aiohttp.ClientError` on network failures so callers can
     surface a user-friendly error message.
     """
     params = {
-        "search": query,
-        "document__key": OPEN5E_SRD_2024_KEY,
-        "limit": MAX_SEARCH_RESULTS,
+        "limit": OPEN5E_ALL_WEAPONS_LIMIT,
     }
     timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT_SECONDS)
-    logger.debug(f"fetch_weapons: querying Open5e for {query!r}")
+    logger.debug(
+        f"fetch_weapons: fetching all weapons to filter for "
+        f"{query!r} in {ruleset_edition.value!r}"
+    )
     async with aiohttp.ClientSession(timeout=timeout) as http_session:
         async with http_session.get(OPEN5E_WEAPONS_URL, params=params) as response:
             response.raise_for_status()
             data = await response.json()
-            results = data.get("results", [])
-            logger.debug(
-                f"fetch_weapons: received {len(results)} result(s) for {query!r}"
-            )
-            return results
+            all_weapons = data.get("results", [])
+
+    query_lower = query.lower()
+    matches = [
+        weapon
+        for weapon in all_weapons
+        if query_lower in weapon.get("name", "").lower()
+        and weapon.get("document", {}).get("key") == ruleset_edition.value
+    ]
+    results = matches[:MAX_SEARCH_RESULTS]
+    logger.debug(
+        f"fetch_weapons: {len(matches)} match(es) for {query!r} "
+        f"in {ruleset_edition.value!r}, returning {len(results)}"
+    )
+    return results

@@ -293,7 +293,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
 
         except ValueError as exc:
             logger.warning(f"ValueError in /gmroll (notation={notation!r}): {exc}")
-            await interaction.response.send_message(f"❌ Error: {exc}", ephemeral=True)
+            await interaction.response.send_message(
+                Strings.ERROR_ROLL_GENERIC.format(error=exc), ephemeral=True
+            )
         except Exception as exc:
             logger.error(
                 f"Unexpected error in /gmroll (notation={notation!r}): {exc}",
@@ -377,7 +379,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
 
         except ValueError as e:
             logger.warning(f"ValueError in /roll (notation={notation!r}): {e}")
-            await interaction.response.send_message(f"❌ Error: {e}", ephemeral=True)
+            await interaction.response.send_message(
+                Strings.ERROR_ROLL_GENERIC.format(error=e), ephemeral=True
+            )
         except Exception as e:
             logger.error(
                 f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True

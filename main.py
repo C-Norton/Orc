@@ -158,8 +158,11 @@ class DnDBot(commands.Bot):
                 try:
                     app_info = await self.application_info()
                     await app_info.owner.send(
-                        f"\u26a0\ufe0f Rate limit alert: {interaction.user} (`{interaction.user.id}`) "
-                        f"in guild `{interaction.guild_id}` exceeded 8 commands in 10s."
+                        Strings.RATE_LIMIT_ALERT.format(
+                            user=interaction.user,
+                            user_id=interaction.user.id,
+                            guild_id=interaction.guild_id,
+                        )
                     )
                     logger.debug(
                         f"Rate limit DM sent to owner for user {interaction.user.id}"
