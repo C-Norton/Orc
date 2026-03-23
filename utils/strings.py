@@ -3,6 +3,9 @@ import random
 
 class Strings:
         # Common
+    ERROR_GUILD_ONLY = (
+        "❌ ORC commands can only be used inside a server, not in DMs."
+    )
     CHARACTER_NOT_FOUND = (
         "You don't have a character in this server. Use `/character create` first."
     )

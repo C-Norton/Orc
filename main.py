@@ -139,8 +139,14 @@ class DnDBot(commands.Bot):
         logger.info(f"Synced slash commands for {self.user}")
 
     async def on_interaction(self, interaction: discord.Interaction) -> None:
-        """Check rate limits before every slash command."""
+        """Enforce guild-only access and rate limits before every slash command."""
         if interaction.type == discord.InteractionType.application_command:
+            if interaction.guild_id is None:
+                await interaction.response.send_message(
+                    Strings.ERROR_GUILD_ONLY, ephemeral=True
+                )
+                return
+
             if check_rate_limit(str(interaction.user.id), str(interaction.guild_id)):
                 logger.warning(
                     f"Rate limit exceeded: user {interaction.user.id} "
@@ -165,7 +171,7 @@ class DnDBot(commands.Bot):
         logger.debug("Bot is ready and running")
         set_discord_client(self)
         record_start_time()
-        await notify_startup()
+        await notify_startup(applied_migrations=getattr(self, "_applied_migrations", None))
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Update the database when the bot joins a new server."""

@@ -129,3 +129,49 @@ def test_run_migrations_partial_applies_only_remaining_revisions(
     # After upgrade("head"), the DB is at the final head — not the initial revision.
     assert current_revisions != ["a59f4e37528b"]
 
+
+# ---------------------------------------------------------------------------
+# on_interaction — DM guard
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def bot(mocker):
+    """A minimal DnDBot instance for testing on_interaction."""
+    instance = DnDBot()
+    # Prevent setup_hook from doing real network work during tests.
+    mocker.patch.object(instance.tree, "sync", return_value=None)
+    return instance
+
+
+@pytest.mark.asyncio
+async def test_dm_interaction_is_rejected_with_guild_only_message(mocker, bot):
+    """Commands invoked outside a guild (DMs) must return an ephemeral error.
+
+    Regression test for AttributeError: 'NoneType' has no attribute 'name'
+    when interaction.guild is None.
+    """
+    interaction = mocker.Mock(spec=discord.Interaction)
+    interaction.type = discord.InteractionType.application_command
+    interaction.guild_id = None
+    interaction.response = mocker.AsyncMock()
+
+    await bot.on_interaction(interaction)
+
+    interaction.response.send_message.assert_called_once_with(
+        Strings.ERROR_GUILD_ONLY, ephemeral=True
+    )
+
+
+@pytest.mark.asyncio
+async def test_dm_interaction_does_not_proceed_to_command(mocker, bot):
+    """on_interaction must return early for DM interactions — no further processing."""
+    mock_check_rate = mocker.patch("main.check_rate_limit")
+    interaction = mocker.Mock(spec=discord.Interaction)
+    interaction.type = discord.InteractionType.application_command
+    interaction.guild_id = None
+    interaction.response = mocker.AsyncMock()
+
+    await bot.on_interaction(interaction)
+
+    mock_check_rate.assert_not_called()

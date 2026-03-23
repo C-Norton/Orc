@@ -123,10 +123,21 @@ async def notify_startup(applied_migrations: Optional[list[str]] = None) -> None
     else:
         db_type = "SQLite"
 
+    if applied_migrations is None:
+        migration_line = "Migrations: (info unavailable)"
+    elif not applied_migrations:
+        migration_line = "Migrations: ran 0 migrations"
+    else:
+        bullet_list = "\n".join(f"  • {m}" for m in applied_migrations)
+        migration_line = (
+            f"Migrations: ran {len(applied_migrations)} migration(s):\n{bullet_list}"
+        )
+
     recent = get_recent_logs()
     message = (
         f"**ORC Bot Started**\n"
         f"Database: `{db_type}`\n"
+        f"{migration_line}\n"
         f"**Recent logs:**\n```\n{recent}\n```"
     )
     await _send_developer_dm(message)
@@ -181,9 +192,27 @@ async def notify_command_error(
                 Strings.DEVELOPER_NOTIFIED_ERROR, ephemeral=True
             )
     except Exception as exc:
-        _dev_logger.error(
-            f"Failed to send error response to user: {type(exc).__name__}: {exc}"
+        print(
+            f"[dev_notifications] Failed to send error response to user: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
         )
+
+
+async def notify_guild_join(guild_name: str, guild_id: int, member_count: int) -> None:
+    """Notify the developer when the bot joins a new guild.
+
+    Args:
+        guild_name: The human-readable name of the guild.
+        guild_id: The guild's Discord snowflake ID.
+        member_count: Approximate number of members in the guild.
+    """
+    message = (
+        f"**ORC joined a new guild**\n"
+        f"Name: `{guild_name}`\n"
+        f"ID: `{guild_id}`\n"
+        f"Members: `{member_count}`"
+    )
+    await _send_developer_dm(message)
 
 
 async def notify_background_error(error: Exception, context: str = "") -> None:
