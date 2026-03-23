@@ -1,26 +1,52 @@
-"""Tests for startup behaviour in main.py — specifically run_migrations()."""
+"""Tests for startup behaviour in main.py — specifically run_migrations()
+and the on_interaction gate (DM guard, rate limiting).
+"""
 
+import os
 import pytest
-from main import run_migrations
+import discord
+from main import run_migrations, _ALEMBIC_INI, DnDBot
+from utils.strings import Strings
 
 
-def test_run_migrations_applies_pending_migrations(mocker):
-    """run_migrations() calls alembic upgrade with 'head' on a fresh database."""
-    mock_upgrade = mocker.patch("main.alembic_command.upgrade")
+def _patch_migration_infrastructure(mocker, current_rev=None, pending_scripts=None):
+    """Patch ScriptDirectory, MigrationContext, and the DB engine for unit tests.
+
+    Returns the mocked upgrade function and Config instance so callers can add
+    their own assertions.
+    """
+    if pending_scripts is None:
+        pending_scripts = []
+
     mock_config = mocker.patch("main.Config")
     mock_config_instance = mocker.Mock()
     mock_config.return_value = mock_config_instance
 
+    mock_sd = mocker.patch("main.ScriptDirectory")
+    mock_sd.from_config.return_value.walk_revisions.return_value = iter(pending_scripts)
+
+    mock_mc = mocker.patch("main.MigrationContext")
+    mock_mc.configure.return_value.get_current_revision.return_value = current_rev
+
+    mocker.patch("database.engine")  # MagicMock supports the context-manager protocol
+
+    mock_upgrade = mocker.patch("main.alembic_command.upgrade")
+    return mock_upgrade, mock_config, mock_config_instance
+
+
+def test_run_migrations_applies_pending_migrations(mocker):
+    """run_migrations() calls alembic upgrade with 'head' on a fresh database."""
+    mock_upgrade, mock_config, mock_config_instance = _patch_migration_infrastructure(mocker)
+
     run_migrations()
 
-    mock_config.assert_called_once_with("alembic.ini")
+    mock_config.assert_called_once_with(_ALEMBIC_INI)
     mock_upgrade.assert_called_once_with(mock_config_instance, "head")
 
 
 def test_run_migrations_does_not_call_upgrade_more_than_once_per_invocation(mocker):
     """run_migrations() calls alembic upgrade exactly once — no redundant runs."""
-    mock_upgrade = mocker.patch("main.alembic_command.upgrade")
-    mocker.patch("main.Config")
+    mock_upgrade, _, _ = _patch_migration_infrastructure(mocker)
 
     run_migrations()
 
@@ -35,14 +61,10 @@ def test_run_migrations_on_partially_migrated_database(mocker):
     revisions.  run_migrations() must always call upgrade('head') so that both
     cases are handled without any conditional logic on our side.
     """
-    mock_upgrade = mocker.patch("main.alembic_command.upgrade")
-    mock_config = mocker.patch("main.Config")
-    mock_config_instance = mocker.Mock()
-    mock_config.return_value = mock_config_instance
+    mock_upgrade, mock_config, mock_config_instance = _patch_migration_infrastructure(
+        mocker, current_rev="abc123"
+    )
 
-    # Simulate Alembic knowing the DB is at an intermediate revision by having
-    # upgrade() succeed (it would internally detect and apply only the remaining
-    # migrations).  From run_migrations()'s perspective the call is identical.
     run_migrations()
 
     mock_upgrade.assert_called_once_with(mock_config_instance, "head")
@@ -69,7 +91,7 @@ def test_run_migrations_partial_applies_only_remaining_revisions(
     monkeypatch.setenv("DATABASE_URL", db_url)
 
     # Apply only the initial migration — simulates a partially migrated database.
-    _alembic.upgrade(Config("alembic.ini"), "a59f4e37528b")
+    _alembic.upgrade(Config(_ALEMBIC_INI), "a59f4e37528b")
 
     # Confirm only the first revision is stamped.
     engine = create_engine(db_url)
@@ -88,7 +110,7 @@ def test_run_migrations_partial_applies_only_remaining_revisions(
 
     def _intercepting_upgrade(cfg_obj, target):
         upgrade_targets.append(target)
-        real_upgrade(Config("alembic.ini"), target)
+        real_upgrade(Config(_ALEMBIC_INI), target)
 
     mocker.patch("main.alembic_command.upgrade", side_effect=_intercepting_upgrade)
 
@@ -106,3 +128,4 @@ def test_run_migrations_partial_applies_only_remaining_revisions(
     engine.dispose()
     # After upgrade("head"), the DB is at the final head — not the initial revision.
     assert current_revisions != ["a59f4e37528b"]
+

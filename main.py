@@ -4,6 +4,8 @@ from discord.ext import commands
 import dotenv
 from alembic.config import Config
 from alembic import command as alembic_command
+from alembic.runtime.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from database import SessionLocal
 from models import Server
 from commands.meta_commands import register_meta_commands
@@ -17,9 +19,10 @@ from commands.inspiration_commands import register_inspiration_commands
 from commands.admin_commands import record_start_time, register_admin_commands
 from commands.weapon_commands import register_weapon_commands
 from utils.db_helpers import purge_server_data
-from utils.dev_notifications import notify_background_error, notify_command_error, notify_startup, set_discord_client
+from utils.dev_notifications import notify_background_error, notify_command_error, notify_guild_join, notify_startup, set_discord_client
 from utils.logging_config import setup_logging, get_logger, set_guild_context
 from utils.rate_limiter import check_rate_limit
+from utils.strings import Strings
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -30,15 +33,46 @@ setup_logging()
 logger = get_logger(__name__)
 
 
-def run_migrations() -> None:
-    """Apply any pending Alembic migrations.
+_PROJECT_ROOT: str = os.path.dirname(os.path.abspath(__file__))
+_ALEMBIC_INI: str = os.path.join(_PROJECT_ROOT, "alembic.ini")
+
+
+def run_migrations() -> list[str]:
+    """Apply any pending Alembic migrations and return their descriptions.
 
     Safe to call unconditionally — Alembic is idempotent and will no-op when
     the database is already at head.  Works with both SQLite and PostgreSQL.
+    Uses an absolute path to alembic.ini so the call succeeds regardless of
+    the current working directory (e.g. when invoked from a test runner).
+
+    Returns:
+        List of migration doc strings (or short revision IDs) for every
+        migration applied during this call.  Empty when already at head.
     """
-    alembic_cfg = Config("alembic.ini")
+    alembic_cfg = Config(_ALEMBIC_INI)
+    script_dir = ScriptDirectory.from_config(alembic_cfg)
+
+    from database import engine as db_engine
+
+    with db_engine.connect() as conn:
+        migration_context = MigrationContext.configure(conn)
+        current_rev = migration_context.get_current_revision()
+
+    lower_bound = current_rev if current_rev is not None else "base"
+    # walk_revisions(base, head) is INCLUSIVE of base, so filter out current_rev
+    # to get only the migrations that have not yet been applied.
+    pending_scripts = [
+        script
+        for script in reversed(list(script_dir.walk_revisions(base=lower_bound, head="head")))
+        if script.revision != current_rev
+    ]
+    pending_descriptions = [
+        script.doc or script.revision[:8] for script in pending_scripts
+    ]
+
     alembic_command.upgrade(alembic_cfg, "head")
     logger.info("Database migrations applied (or already at head)")
+    return pending_descriptions
 
 
 # Define bot intents
@@ -68,7 +102,7 @@ class DnDBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         """Called by the bot to perform asynchronous setup tasks."""
-        run_migrations()
+        self._applied_migrations: list[str] = run_migrations()
         # Register commands
         register_meta_commands(self)
         register_roll_commands(self)

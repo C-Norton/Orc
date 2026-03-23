@@ -91,9 +91,12 @@ async def _send_developer_dm(message: str) -> None:
         if len(message) > 1950:
             message = message[:1950] + "\n… (truncated)"
         await developer_user.send(message)
+    except asyncio.CancelledError:
+        raise
     except Exception as exc:
-        _dev_logger.error(
-            f"Failed to send developer DM: {type(exc).__name__}: {exc}"
+        print(
+            f"[dev_notifications] Failed to send developer DM: {type(exc).__name__}: {exc}",
+            file=sys.stderr,
         )
 
 
@@ -106,8 +109,14 @@ def schedule_developer_dm(message: str) -> None:
         pass  # No running event loop — bot not yet connected
 
 
-async def notify_startup() -> None:
-    """Send a startup DM to the developer including DB type and recent logs."""
+async def notify_startup(applied_migrations: Optional[list[str]] = None) -> None:
+    """Send a startup DM to the developer including DB type, migrations, and recent logs.
+
+    Args:
+        applied_migrations: List of migration descriptions applied during this
+            boot.  Pass an empty list when the DB was already at head, or
+            ``None`` when migration info is unavailable.
+    """
     database_url = os.environ.get("DATABASE_URL", "sqlite:///dnd_bot.db")
     if "postgresql" in database_url.lower() or "postgres" in database_url.lower():
         db_type = "PostgreSQL"
