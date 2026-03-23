@@ -1,7 +1,9 @@
 """Integration tests for HP-related commands (/damage, /heal, /add_temp_hp).
 
 Tests focus on edge cases not covered in test_death_save_commands.py:
-- Massive damage instant-death (≥ 2× max HP from positive HP)
+- Massive damage instant-death (single hit >= max HP from positive HP)
+- Downed message when reaching 0 HP without triggering massive damage
+- HP clamped to 0 — never goes negative
 - Dying-character interactions with damage and slain threshold
 - Temp HP replacement logic via /add_temp_hp
 - Damage absorption through temp HP
@@ -35,20 +37,24 @@ def _set_hp(db_session, character, current_hp, max_hp=20, temp_hp=0):
 async def test_damage_massive_instant_death_at_double_max_hp(
     health_bot, sample_character, db_session, interaction
 ):
-    """Damage bringing HP to ≤ -max_hp triggers instant-death message."""
+    """A single hit equal to or greater than max HP triggers instant-death (massive damage rule).
+
+    Per 5e 2024: if a single hit's damage >= the character's HP maximum while the
+    character is above 0 HP, they die instantly rather than entering the dying state.
+    """
     _set_hp(db_session, sample_character, current_hp=10, max_hp=10)
 
     cb = get_callback(health_bot, "hp", "damage")
-    # 10 current HP, 10 max HP → need > 20 total damage for current_hp ≤ -10
-    await cb(interaction, amount="21")
+    # damage (10) == max_hp (10) → massive damage threshold met exactly
+    await cb(interaction, amount="10")
 
     msg = _sent_message(interaction)
-    # current_hp = 10 - 21 = -11, which is ≤ -10 (max_hp) → instant death
     assert (
         "died" in msg.lower()
         or "slain" in msg.lower()
         or "death" in msg.lower()
         or "killed" in msg.lower()
+        or "massive" in msg.lower()
     )
 
 
@@ -59,7 +65,7 @@ async def test_damage_massive_does_not_add_death_save_failure(
     _set_hp(db_session, sample_character, current_hp=10, max_hp=10)
 
     cb = get_callback(health_bot, "hp", "damage")
-    await cb(interaction, amount="21")
+    await cb(interaction, amount="10")
 
     db_session.refresh(sample_character)
     # was_dying_before was False (HP=10 > 0), so no death save failure added
@@ -151,17 +157,16 @@ async def test_temp_hp_set_keeps_higher_existing(
 async def test_damage_exceeding_current_plus_temp_hp(
     health_bot, sample_character, db_session, interaction
 ):
-    """Damage > temp + current HP: temp = 0, current_hp clamped by application."""
+    """Damage > temp + current HP: temp = 0, current_hp clamped to 0."""
     _set_hp(db_session, sample_character, current_hp=3, max_hp=10, temp_hp=5)
 
     cb = get_callback(health_bot, "hp", "damage")
-    # 5 temp absorbs first, then 10 more damage hits current_hp (3 - 10 = -7)
+    # 5 temp absorbs first, then 10 more damage vs current_hp (3) → clamped to 0
     await cb(interaction, amount="15")
 
     db_session.refresh(sample_character)
     assert sample_character.temp_hp == 0
-    # current_hp = 3 - (15 - 5) = 3 - 10 = -7
-    assert sample_character.current_hp == -7
+    assert sample_character.current_hp == 0
 
 
 async def test_damage_absorbed_entirely_by_temp_hp(
@@ -196,3 +201,88 @@ async def test_gm_can_damage_party_member(
 
     db_session.refresh(sample_character)
     assert sample_character.current_hp == 7
+
+
+# ---------------------------------------------------------------------------
+# /damage — downed message and HP floor
+# ---------------------------------------------------------------------------
+
+
+async def test_damage_to_zero_shows_downed_message(
+    health_bot, sample_character, db_session, interaction
+):
+    """A hit that reduces HP to 0 with damage < max HP shows the downed message,
+    not the instant-death message.  HP is clamped to 0."""
+    # max_hp=15, current_hp=10, damage=10 → HP reaches 0, but damage (10) < max_hp (15)
+    _set_hp(db_session, sample_character, current_hp=10, max_hp=15)
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="10")
+
+    db_session.refresh(sample_character)
+    assert sample_character.current_hp == 0
+
+    msg = _sent_message(interaction)
+    assert "died" not in msg.lower() and "massive" not in msg.lower()
+    assert "downed" in msg.lower() or "death saving" in msg.lower()
+
+
+async def test_hp_never_goes_below_zero(
+    health_bot, sample_character, db_session, interaction
+):
+    """Overkill damage clamps current HP to 0, never negative."""
+    _set_hp(db_session, sample_character, current_hp=5, max_hp=20)
+
+    cb = get_callback(health_bot, "hp", "damage")
+    # 5 damage == current HP; result should be 0, not negative
+    await cb(interaction, amount="5")
+
+    db_session.refresh(sample_character)
+    assert sample_character.current_hp == 0
+
+
+async def test_massive_damage_threshold_exactly_max_hp(
+    health_bot, sample_character, db_session, interaction
+):
+    """A hit exactly equal to max HP triggers massive damage (>= threshold)."""
+    _set_hp(db_session, sample_character, current_hp=10, max_hp=10)
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="10")  # exactly max_hp
+
+    msg = _sent_message(interaction)
+    assert "died" in msg.lower() or "massive" in msg.lower()
+    db_session.refresh(sample_character)
+    assert sample_character.death_save_failures == 0  # no failure added — instant kill
+
+
+async def test_massive_damage_one_below_threshold_gives_downed(
+    health_bot, sample_character, db_session, interaction
+):
+    """A hit one point below max HP drops to 0 HP but does NOT trigger massive damage."""
+    # current_hp=9, max_hp=10, damage=9 → HP=0, damage (9) < max_hp (10) → downed only
+    _set_hp(db_session, sample_character, current_hp=9, max_hp=10)
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="9")  # max_hp - 1 → downed only
+
+    msg = _sent_message(interaction)
+    assert "died" not in msg.lower() and "massive" not in msg.lower()
+    assert "downed" in msg.lower() or "death saving" in msg.lower()
+
+
+async def test_massive_damage_not_triggered_when_already_dying(
+    health_bot, sample_character, db_session, interaction
+):
+    """Taking massive damage while already at 0 HP (dying) adds a failure counter
+    rather than showing the instant-death message — the character is already down."""
+    _set_hp(db_session, sample_character, current_hp=0, max_hp=10)
+
+    cb = get_callback(health_bot, "hp", "damage")
+    # 20 damage >= max_hp but character is already dying — just adds a failure
+    await cb(interaction, amount="20")
+
+    db_session.refresh(sample_character)
+    assert sample_character.death_save_failures == 1
+    msg = _sent_message(interaction)
+    assert "massive" not in msg.lower()

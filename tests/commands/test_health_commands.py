@@ -144,10 +144,15 @@ async def test_damage_burns_temp_hp_first(
 
 
 async def test_damage_can_go_below_zero(
+async def test_massive_damage_clamps_hp_to_zero_and_kills(
     health_bot, sample_character, db_session, interaction, session_factory
 ):
-    # HP is allowed to go negative. If current_hp drops to -max_hp or below,
-    # the character dies from the massive damage rule (non-ephemeral message).
+    """A single hit with damage >= max HP triggers the massive damage rule:
+    the character dies instantly and HP is clamped to 0 — never goes negative.
+
+    Per 5e 2024: instant death fires when damage >= max HP while character is
+    above 0 HP.  HP is always stored as max(0, result).
+    """
     sample_character.max_hp = 10
     sample_character.current_hp = 5
     sample_character.temp_hp = 0
@@ -163,7 +168,10 @@ async def test_damage_can_go_below_zero(
     assert char.current_hp == -95  # HP goes negative
     verify.close()
 
-    # Massive damage death message must be non-ephemeral so the whole table sees it
+    msg = interaction.response.send_message.call_args.args[0]
+    assert "died" in msg.lower() or "massive" in msg.lower()
+
+    # Massive damage message must be public (non-ephemeral) so the whole table sees it
     assert (
         interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
     )

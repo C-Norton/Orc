@@ -201,7 +201,10 @@ class Strings:
     HP_VIEW_TEMP = " (+{temp} temp)"
     HP_DAMAGE_MSG = "**{char_name}** took {amount} damage! HP: {current}/{max}"
     HP_DEATH_MSG = (
-        "\n**{char_name} has died from massive damage!**\nMay they rest in peace."
+        "\n☠️ **{char_name} has died from massive damage!**\nMay they rest in peace."
+    )
+    HP_DOWNED_MSG = (
+        "\n⚔️ **{char_name} has been downed!** They must make Death Saving Throws on their turn."
     )
     HP_HEAL_MSG = "**{char_name}** healed {amount} HP! HP: {current}/{max}"
     HP_TEMP_MSG = "**{char_name}** now has {temp} temporary HP."

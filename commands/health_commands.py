@@ -114,17 +114,27 @@ def register_health_commands(bot: commands.Bot) -> None:
             char.current_hp = new_hp
             char.temp_hp = new_temp
 
-            death_save_msg = ""
-            if was_dying_before:
+            # Determine the HP-state suffix message.
+            # just_downed: character was alive and this hit dropped them to 0.
+            # Massive damage (5e 2024): a single hit equal to or greater than
+            # max HP while the character was above 0 HP kills them instantly.
+            suffix = ""
+            just_downed = not was_dying_before and new_hp == 0
+            if just_downed:
+                if dmg >= char.max_hp:
+                    suffix = Strings.HP_DEATH_MSG.format(char_name=char.name)
+                else:
+                    suffix = Strings.HP_DOWNED_MSG.format(char_name=char.name)
+            elif was_dying_before:
                 char.death_save_failures = min(char.death_save_failures + 1, 3)
                 if char.death_save_failures >= 3:
                     char.death_save_failures = 0
                     char.death_save_successes = 0
-                    death_save_msg = "\n" + Strings.DEATH_SAVE_DAMAGE_SLAIN.format(
+                    suffix = "\n" + Strings.DEATH_SAVE_DAMAGE_SLAIN.format(
                         char_name=char.name
                     )
                 else:
-                    death_save_msg = "\n" + Strings.DEATH_SAVE_DAMAGE_FAILURE.format(
+                    suffix = "\n" + Strings.DEATH_SAVE_DAMAGE_FAILURE.format(
                         char_name=char.name, failures=char.death_save_failures
                     )
 
@@ -139,14 +149,7 @@ def register_health_commands(bot: commands.Bot) -> None:
             if char.temp_hp > 0:
                 msg += Strings.HP_VIEW_TEMP.format(temp=char.temp_hp)
 
-            if char.current_hp <= -char.max_hp:
-                await interaction.response.send_message(
-                    f"{msg}{Strings.HP_DEATH_MSG.format(char_name=char.name)}"
-                )
-            elif death_save_msg:
-                await interaction.response.send_message(f"{msg}{death_save_msg}")
-            else:
-                await interaction.response.send_message(msg)
+            await interaction.response.send_message(f"{msg}{suffix}")
 
             logger.info(
                 f"/hp damage: {char.name} took {dmg} damage, HP now {char.current_hp}/{char.max_hp}"

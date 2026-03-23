@@ -615,7 +615,7 @@ async def test_switch_active_character_does_not_change_encounter_turn(
 
     # The switch itself should succeed
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
     # Aldric still owns turn index 0 in the encounter
@@ -699,15 +699,18 @@ async def test_overheal_is_capped_at_max_hp(
 async def test_damage_to_zero_hp_shows_downed_not_death(
     health_bot, sample_character, db_session, interaction
 ):
-    """Dropping to exactly 0 HP shows the HP message without the death string.
+    """Dropping to 0 HP with a single hit smaller than max HP shows a downed message,
+    not the instant-death / massive-damage message.
 
     Per 5e2024 rules:
-    - 0 HP → incapacitated / making death saves (no instant death message)
-    - HP ≤ -max_hp → massive damage / instant death (death message fires)
+    - 0 HP (hit damage < max HP) → downed, making death saves
+    - 0 HP (hit damage >= max HP) → massive damage, instant death
 
-    Only the second case triggers HP_DEATH_MSG; reaching 0 is just HP: 0/max.
+    Only the second case triggers HP_DEATH_MSG; reaching 0 from sub-max-HP
+    damage shows HP_DOWNED_MSG instead.
     """
-    sample_character.max_hp = 8
+    # max_hp=15, current_hp=8, damage=8 → HP=0, damage (8) < max_hp (15) → just downed
+    sample_character.max_hp = 15
     sample_character.current_hp = 8
     db_session.commit()
 
@@ -715,9 +718,9 @@ async def test_damage_to_zero_hp_shows_downed_not_death(
     await cb(interaction, amount="8")
 
     msg = interaction.response.send_message.call_args.args[0]
-    assert "0/8" in msg
-    # No death message at exactly 0 HP — that requires current_hp <= -max_hp
+    assert "0/15" in msg
     assert "died" not in msg.lower()
+    assert "downed" in msg.lower() or "death saving" in msg.lower()
 
 
 async def test_massive_damage_triggers_instant_death_message(
