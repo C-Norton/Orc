@@ -71,6 +71,7 @@ async def test_create_character_new_char_becomes_active(
     char_bot, sample_character, interaction, session_factory
 ):
     """Creating a second character should deactivate the first."""
+    assert sample_character.is_active is True, "Precondition: sample_character must be active"
     cb = get_callback(char_bot, "character", "create")
     await cb(interaction, name="Beren", character_class="Rogue", level=1)
 

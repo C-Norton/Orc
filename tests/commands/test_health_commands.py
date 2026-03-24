@@ -1,6 +1,8 @@
 import pytest
+import discord
 from models import Character
 from tests.commands.conftest import get_callback
+from commands.health_commands import _NegativeAmountConfirmView
 
 # HOW THE FIXTURES CONNECT
 # ─────────────────────────────────────────────────────────────────────────────
@@ -291,3 +293,152 @@ async def test_hp_view_no_character(
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 edge cases — negative amount confirmation (4a.1 / 4a.2)
+# ---------------------------------------------------------------------------
+
+
+async def test_damage_negative_amount_shows_confirmation(
+    health_bot, sample_character, db_session, interaction
+):
+    """A negative damage input shows a confirmation view instead of applying damage."""
+    sample_character.max_hp = 30
+    sample_character.current_hp = 20
+    sample_character.temp_hp = 0
+    db_session.commit()
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="-5")
+
+    call_kwargs = interaction.response.send_message.call_args.kwargs
+    assert call_kwargs.get("ephemeral") is True
+    assert isinstance(call_kwargs.get("view"), _NegativeAmountConfirmView)
+
+
+async def test_damage_negative_amount_no_hp_change(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
+    """HP must not change when the user is shown the confirmation prompt."""
+    sample_character.max_hp = 30
+    sample_character.current_hp = 20
+    sample_character.temp_hp = 0
+    db_session.commit()
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="-5")
+
+    verify = session_factory()
+    char = verify.query(Character).filter_by(name="Aldric").first()
+    assert char.current_hp == 20  # unchanged
+    verify.close()
+
+
+async def test_damage_negative_confirm_applies_damage(
+    health_bot, sample_character, db_session, interaction, session_factory, mocker
+):
+    """Clicking Apply in the negative-damage confirmation applies |amount| as damage."""
+    sample_character.max_hp = 30
+    sample_character.current_hp = 20
+    sample_character.temp_hp = 0
+    db_session.commit()
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="-5")
+
+    view = interaction.response.send_message.call_args.kwargs["view"]
+    button_interaction = mocker.Mock(spec=discord.Interaction)
+    button_interaction.response = mocker.AsyncMock()
+    await view.apply_button.callback(button_interaction)
+
+    verify = session_factory()
+    char = verify.query(Character).filter_by(name="Aldric").first()
+    assert char.current_hp == 15  # 20 - 5
+    verify.close()
+
+
+async def test_damage_negative_discard_leaves_hp_unchanged(
+    health_bot, sample_character, db_session, interaction, session_factory, mocker
+):
+    """Clicking Discard cancels without modifying HP."""
+    sample_character.max_hp = 30
+    sample_character.current_hp = 20
+    sample_character.temp_hp = 0
+    db_session.commit()
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="-5")
+
+    view = interaction.response.send_message.call_args.kwargs["view"]
+    button_interaction = mocker.Mock(spec=discord.Interaction)
+    button_interaction.response = mocker.AsyncMock()
+    await view.discard_button.callback(button_interaction)
+
+    verify = session_factory()
+    char = verify.query(Character).filter_by(name="Aldric").first()
+    assert char.current_hp == 20  # unchanged
+    verify.close()
+
+    button_interaction.response.edit_message.assert_called_once()
+
+
+async def test_heal_negative_amount_shows_confirmation(
+    health_bot, sample_character, db_session, interaction
+):
+    """A negative healing input shows a confirmation view instead of applying healing."""
+    sample_character.max_hp = 30
+    sample_character.current_hp = 10
+    sample_character.temp_hp = 0
+    db_session.commit()
+
+    cb = get_callback(health_bot, "hp", "heal")
+    await cb(interaction, amount="-8")
+
+    call_kwargs = interaction.response.send_message.call_args.kwargs
+    assert call_kwargs.get("ephemeral") is True
+    assert isinstance(call_kwargs.get("view"), _NegativeAmountConfirmView)
+
+
+async def test_heal_negative_confirm_applies_healing(
+    health_bot, sample_character, db_session, interaction, session_factory, mocker
+):
+    """Clicking Apply in the negative-heal confirmation applies |amount| as healing."""
+    sample_character.max_hp = 30
+    sample_character.current_hp = 10
+    sample_character.temp_hp = 0
+    db_session.commit()
+
+    cb = get_callback(health_bot, "hp", "heal")
+    await cb(interaction, amount="-8")
+
+    view = interaction.response.send_message.call_args.kwargs["view"]
+    button_interaction = mocker.Mock(spec=discord.Interaction)
+    button_interaction.response = mocker.AsyncMock()
+    await view.apply_button.callback(button_interaction)
+
+    verify = session_factory()
+    char = verify.query(Character).filter_by(name="Aldric").first()
+    assert char.current_hp == 18  # 10 + 8
+    verify.close()
+
+
+async def test_damage_zero_amount_applies_normally(
+    health_bot, sample_character, db_session, interaction, session_factory
+):
+    """Zero damage is not negative and applies without a confirmation prompt."""
+    sample_character.max_hp = 30
+    sample_character.current_hp = 20
+    sample_character.temp_hp = 0
+    db_session.commit()
+
+    cb = get_callback(health_bot, "hp", "damage")
+    await cb(interaction, amount="0")
+
+    call_kwargs = interaction.response.send_message.call_args.kwargs
+    assert call_kwargs.get("view") is None  # no confirmation view
+
+    verify = session_factory()
+    char = verify.query(Character).filter_by(name="Aldric").first()
+    assert char.current_hp == 20  # 0 damage leaves HP unchanged
+    verify.close()

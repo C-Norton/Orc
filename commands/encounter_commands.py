@@ -75,11 +75,15 @@ def _validate_hp_format(value: str) -> None:
         raise ValueError(stripped_value)
 
 
-def _parse_hp_input(value: str) -> int:
+def _parse_hp_input(value: str) -> tuple[int, bool]:
     """Parse a max_hp input string into a resolved integer HP value.
 
     Accepts a flat integer string (e.g. ``"15"``) or a dice notation formula
     (e.g. ``"2d8+4"``).  The dice formula is rolled once to produce the value.
+
+    Returns:
+        A ``(resolved_hp, was_clamped)`` tuple where ``was_clamped`` is
+        ``True`` when the rolled total was below 1 and was raised to 1.
 
     Raises:
         ValueError: If the string is neither a valid integer nor valid dice
@@ -91,10 +95,11 @@ def _parse_hp_input(value: str) -> int:
         resolved_hp = int(stripped_value)
         if resolved_hp <= 0:
             raise ValueError(stripped_value)
-        return resolved_hp
+        return resolved_hp, False
     try:
         _rolls, _modifier, total = roll_dice(stripped_value)
-        return max(total, 1)
+        was_clamped = total < 1
+        return max(total, 1), was_clamped
     except ValueError:
         raise ValueError(stripped_value)
 
@@ -107,7 +112,7 @@ def _create_enemies_for_encounter(
     max_hp_str: str,
     count: int,
     ac: Optional[int],
-) -> List[Enemy]:
+) -> tuple[List[Enemy], bool]:
     """Persist Enemy rows for an encounter and return them.
 
     Handles both single (``count == 1``) and bulk (``count > 1``) creation.
@@ -124,11 +129,14 @@ def _create_enemies_for_encounter(
         ac: Optional armor class value.
 
     Returns:
-        The list of newly created and flushed ``Enemy`` instances.
+        A ``(enemies, any_clamped)`` tuple.  ``any_clamped`` is ``True`` when
+        at least one enemy's rolled HP was below 1 and was raised to 1.
     """
     enemies: List[Enemy] = []
+    any_clamped = False
     if count == 1:
-        resolved_hp = _parse_hp_input(max_hp_str)
+        resolved_hp, was_clamped = _parse_hp_input(max_hp_str)
+        any_clamped = was_clamped
         enemy = Enemy(
             encounter_id=encounter.id,
             name=enemy_name,
@@ -142,7 +150,8 @@ def _create_enemies_for_encounter(
         enemies.append(enemy)
     else:
         for enemy_index in range(1, count + 1):
-            resolved_hp = _parse_hp_input(max_hp_str)
+            resolved_hp, was_clamped = _parse_hp_input(max_hp_str)
+            any_clamped = any_clamped or was_clamped
             enemy = Enemy(
                 encounter_id=encounter.id,
                 name=f"{enemy_name} {enemy_index}",
@@ -155,7 +164,7 @@ def _create_enemies_for_encounter(
             db.add(enemy)
             enemies.append(enemy)
     db.flush()
-    return enemies
+    return enemies, any_clamped
 
 
 def _open_encounter(db, party: Party) -> Optional[Encounter]:
@@ -327,12 +336,16 @@ class EnemyPlacementView(discord.ui.View):
             return f"**{self.enemy_name}**"
         return f"**{self.count}× {self.enemy_name}**"
 
-    def _create_enemies(self, db, encounter: "Encounter") -> List[Enemy]:
+    def _create_enemies(self, db, encounter: "Encounter") -> tuple[List[Enemy], bool]:
         """Persist Enemy rows for this placement and return them.
 
         Delegates to the module-level ``_create_enemies_for_encounter`` using
         this view's stored parameters.  Called inside the button callback after
         the encounter has been re-verified as ACTIVE.
+
+        Returns:
+            A ``(enemies, any_clamped)`` tuple forwarded from
+            ``_create_enemies_for_encounter``.
         """
         return _create_enemies_for_encounter(
             db,
@@ -392,7 +405,7 @@ class EnemyPlacementView(discord.ui.View):
             encounter_settings = _get_or_create_party_settings(db, party)
             initiative_mode = encounter_settings.initiative_mode
 
-            enemies = self._create_enemies(db, encounter)
+            enemies, hp_clamped = self._create_enemies(db, encounter)
             all_turns_count = len([t for t in encounter.turns])
 
             if placement == EnemyPlacementMode.TOP:
@@ -448,6 +461,10 @@ class EnemyPlacementView(discord.ui.View):
                     encounter_name=encounter.name,
                 )
             )
+            if hp_clamped:
+                await interaction.followup.send(
+                    Strings.ENCOUNTER_HP_CLAMPED, ephemeral=True
+                )
             logger.info(
                 f"EnemyPlacementView: {enemy_description} added to "
                 f"'{encounter.name}' via {placement.value}"
@@ -667,7 +684,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 return
 
             try:
-                created_enemies = _create_enemies_for_encounter(
+                created_enemies, hp_clamped = _create_enemies_for_encounter(
                     db, encounter, name, initiative_modifier, max_hp, count, ac
                 )
             except ValueError:
@@ -717,6 +734,10 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                         enemy_lines=enemy_lines,
                     ),
                     ephemeral=True,
+                )
+            if hp_clamped:
+                await interaction.followup.send(
+                    Strings.ENCOUNTER_HP_CLAMPED, ephemeral=True
                 )
         finally:
             db.close()

@@ -13,6 +13,173 @@ from utils.strings import Strings
 logger = get_logger(__name__)
 
 
+async def _execute_damage(
+    interaction: discord.Interaction,
+    char: Character,
+    db,
+    dmg: int,
+    *,
+    respond_by_editing: bool = False,
+) -> None:
+    """Apply damage to a character and send the result message.
+
+    Args:
+        interaction: The Discord interaction to respond to.
+        char: The character receiving damage (already loaded in ``db``).
+        db: An open SQLAlchemy session.
+        dmg: The positive damage amount to apply.
+        respond_by_editing: If ``True``, use ``edit_message`` instead of
+            ``send_message`` — used when responding from a button callback.
+    """
+    was_dying_before = character_is_dying(char)
+    new_hp, new_temp = apply_damage(char.current_hp, char.temp_hp, dmg)
+    char.current_hp = new_hp
+    char.temp_hp = new_temp
+
+    suffix = ""
+    just_downed = not was_dying_before and new_hp == 0
+    if just_downed:
+        if dmg >= char.max_hp:
+            suffix = Strings.HP_DEATH_MSG.format(char_name=char.name)
+        else:
+            suffix = Strings.HP_DOWNED_MSG.format(char_name=char.name)
+    elif was_dying_before:
+        char.death_save_failures = min(char.death_save_failures + 1, 3)
+        if char.death_save_failures >= 3:
+            char.death_save_failures = 0
+            char.death_save_successes = 0
+            suffix = "\n" + Strings.DEATH_SAVE_DAMAGE_SLAIN.format(char_name=char.name)
+        else:
+            suffix = "\n" + Strings.DEATH_SAVE_DAMAGE_FAILURE.format(
+                char_name=char.name, failures=char.death_save_failures
+            )
+
+    db.commit()
+    logger.info(
+        f"/hp damage: {char.name} took {dmg} damage, HP now {char.current_hp}/{char.max_hp}"
+    )
+
+    msg = Strings.HP_DAMAGE_MSG.format(
+        char_name=char.name,
+        amount=dmg,
+        current=char.current_hp,
+        max=char.max_hp,
+    )
+    if char.temp_hp > 0:
+        msg += Strings.HP_VIEW_TEMP.format(temp=char.temp_hp)
+    full_msg = f"{msg}{suffix}"
+
+    if respond_by_editing:
+        await interaction.response.edit_message(content=full_msg, view=None)
+    else:
+        await interaction.response.send_message(full_msg)
+
+
+async def _execute_healing(
+    interaction: discord.Interaction,
+    char: Character,
+    db,
+    healing: int,
+    *,
+    respond_by_editing: bool = False,
+) -> None:
+    """Apply healing to a character and send the result message.
+
+    Args:
+        interaction: The Discord interaction to respond to.
+        char: The character receiving healing (already loaded in ``db``).
+        db: An open SQLAlchemy session.
+        healing: The positive healing amount to apply.
+        respond_by_editing: If ``True``, use ``edit_message`` instead of
+            ``send_message`` — used when responding from a button callback.
+    """
+    was_dying = character_is_dying(char)
+    char.current_hp = apply_healing(char.current_hp, char.max_hp, healing)
+
+    death_save_reset_msg = ""
+    if was_dying:
+        char.death_save_successes = 0
+        char.death_save_failures = 0
+        death_save_reset_msg = "\n" + Strings.DEATH_SAVE_HEAL_RESET.format(
+            char_name=char.name
+        )
+
+    db.commit()
+    logger.info(
+        f"/hp heal: {char.name} healed {healing}, HP now {char.current_hp}/{char.max_hp}"
+    )
+
+    full_msg = (
+        Strings.HP_HEAL_MSG.format(
+            char_name=char.name,
+            amount=healing,
+            current=char.current_hp,
+            max=char.max_hp,
+        )
+        + death_save_reset_msg
+    )
+
+    if respond_by_editing:
+        await interaction.response.edit_message(content=full_msg, view=None)
+    else:
+        await interaction.response.send_message(full_msg)
+
+
+class _NegativeAmountConfirmView(discord.ui.View):
+    """Ephemeral confirmation shown when /hp damage or /hp heal receives a negative amount.
+
+    Presents the absolute value and asks whether to apply it (✓ Apply) or
+    discard the command (✗ Discard).
+
+    ✓ Apply   — applies ``abs_amount`` as the intended operation.
+    ✗ Discard — aborts with no changes.
+    """
+
+    def __init__(
+        self, char_id: int, char_name: str, abs_amount: int, apply_as: str
+    ) -> None:
+        super().__init__(timeout=30)
+        self.char_id = char_id
+        self.char_name = char_name
+        self.abs_amount = abs_amount
+        self.apply_as = apply_as  # "damage" or "heal"
+
+    @discord.ui.button(label=Strings.BUTTON_APPLY, emoji="✅", style=discord.ButtonStyle.primary)
+    async def apply_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Apply the absolute amount as the intended operation."""
+        db = SessionLocal()
+        try:
+            char = db.get(Character, self.char_id)
+            if not char:
+                await interaction.response.edit_message(
+                    content=Strings.ERROR_CHAR_NO_LONGER_EXISTS, view=None
+                )
+                return
+            if self.apply_as == "damage":
+                await _execute_damage(
+                    interaction, char, db, self.abs_amount, respond_by_editing=True
+                )
+            else:
+                await _execute_healing(
+                    interaction, char, db, self.abs_amount, respond_by_editing=True
+                )
+        finally:
+            db.close()
+        self.stop()
+
+    @discord.ui.button(label=Strings.BUTTON_DISCARD, emoji="❌", style=discord.ButtonStyle.secondary)
+    async def discard_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ) -> None:
+        """Abort — no changes made."""
+        await interaction.response.edit_message(
+            content=Strings.HP_NEGATIVE_CANCELLED, view=None
+        )
+        self.stop()
+
+
 def register_health_commands(bot: commands.Bot) -> None:
     """Register the /hp command group."""
 
@@ -108,52 +275,24 @@ def register_health_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(str(e), ephemeral=True)
                 return
 
-            was_dying_before = character_is_dying(char)
+            if dmg < 0:
+                abs_amount = abs(dmg)
+                view = _NegativeAmountConfirmView(
+                    char_id=char.id,
+                    char_name=char.name,
+                    abs_amount=abs_amount,
+                    apply_as="damage",
+                )
+                await interaction.response.send_message(
+                    Strings.HP_NEGATIVE_DAMAGE_CONFIRM.format(
+                        abs_amount=abs_amount, char_name=char.name
+                    ),
+                    view=view,
+                    ephemeral=True,
+                )
+                return
 
-            new_hp, new_temp = apply_damage(char.current_hp, char.temp_hp, dmg)
-            char.current_hp = new_hp
-            char.temp_hp = new_temp
-
-            # Determine the HP-state suffix message.
-            # just_downed: character was alive and this hit dropped them to 0.
-            # Massive damage (5e 2024): a single hit equal to or greater than
-            # max HP while the character was above 0 HP kills them instantly.
-            suffix = ""
-            just_downed = not was_dying_before and new_hp == 0
-            if just_downed:
-                if dmg >= char.max_hp:
-                    suffix = Strings.HP_DEATH_MSG.format(char_name=char.name)
-                else:
-                    suffix = Strings.HP_DOWNED_MSG.format(char_name=char.name)
-            elif was_dying_before:
-                char.death_save_failures = min(char.death_save_failures + 1, 3)
-                if char.death_save_failures >= 3:
-                    char.death_save_failures = 0
-                    char.death_save_successes = 0
-                    suffix = "\n" + Strings.DEATH_SAVE_DAMAGE_SLAIN.format(
-                        char_name=char.name
-                    )
-                else:
-                    suffix = "\n" + Strings.DEATH_SAVE_DAMAGE_FAILURE.format(
-                        char_name=char.name, failures=char.death_save_failures
-                    )
-
-            db.commit()
-
-            msg = Strings.HP_DAMAGE_MSG.format(
-                char_name=char.name,
-                amount=dmg,
-                current=char.current_hp,
-                max=char.max_hp,
-            )
-            if char.temp_hp > 0:
-                msg += Strings.HP_VIEW_TEMP.format(temp=char.temp_hp)
-
-            await interaction.response.send_message(f"{msg}{suffix}")
-
-            logger.info(
-                f"/hp damage: {char.name} took {dmg} damage, HP now {char.current_hp}/{char.max_hp}"
-            )
+            await _execute_damage(interaction, char, db, dmg)
         finally:
             db.close()
 
@@ -207,31 +346,24 @@ def register_health_commands(bot: commands.Bot) -> None:
                 await interaction.response.send_message(str(e), ephemeral=True)
                 return
 
-            was_dying = character_is_dying(char)
-            char.current_hp = apply_healing(char.current_hp, char.max_hp, healing)
-
-            death_save_reset_msg = ""
-            if was_dying:
-                char.death_save_successes = 0
-                char.death_save_failures = 0
-                death_save_reset_msg = "\n" + Strings.DEATH_SAVE_HEAL_RESET.format(
-                    char_name=char.name
-                )
-
-            db.commit()
-
-            await interaction.response.send_message(
-                Strings.HP_HEAL_MSG.format(
+            if healing < 0:
+                abs_amount = abs(healing)
+                view = _NegativeAmountConfirmView(
+                    char_id=char.id,
                     char_name=char.name,
-                    amount=healing,
-                    current=char.current_hp,
-                    max=char.max_hp,
+                    abs_amount=abs_amount,
+                    apply_as="heal",
                 )
-                + death_save_reset_msg
-            )
-            logger.info(
-                f"/hp heal: {char.name} healed {healing}, HP now {char.current_hp}/{char.max_hp}"
-            )
+                await interaction.response.send_message(
+                    Strings.HP_NEGATIVE_HEAL_CONFIRM.format(
+                        abs_amount=abs_amount, char_name=char.name
+                    ),
+                    view=view,
+                    ephemeral=True,
+                )
+                return
+
+            await _execute_healing(interaction, char, db, healing)
         finally:
             db.close()
 

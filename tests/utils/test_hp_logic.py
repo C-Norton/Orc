@@ -127,3 +127,43 @@ def test_parse_amount_invalid_raises():
     """Invalid expression raises ValueError."""
     with pytest.raises((ValueError, Exception)):
         parse_amount("notanumber")
+
+
+# ---------------------------------------------------------------------------
+# apply_temp_hp — negative new_temp is a no-op (5e has no negative temp HP)
+# ---------------------------------------------------------------------------
+
+
+def test_apply_temp_hp_cannot_be_negative():
+    """Negative new temp HP is ignored; current value is retained."""
+    assert apply_temp_hp(current_temp=0, new_temp=-1) == 0
+    assert apply_temp_hp(current_temp=5, new_temp=-1) == 5
+
+
+# ---------------------------------------------------------------------------
+# set_max_hp — must be at least 1
+# ---------------------------------------------------------------------------
+
+
+def test_set_max_hp_valid():
+    """Positive max HP is accepted and returned unchanged."""
+    from utils.hp_logic import set_max_hp
+
+    assert set_max_hp(10) == 10
+    assert set_max_hp(1) == 1
+
+
+def test_set_max_hp_zero_raises():
+    """Zero max HP raises ValueError."""
+    from utils.hp_logic import set_max_hp
+
+    with pytest.raises(ValueError):
+        set_max_hp(0)
+
+
+def test_set_max_hp_negative_raises():
+    """Negative max HP raises ValueError."""
+    from utils.hp_logic import set_max_hp
+
+    with pytest.raises(ValueError):
+        set_max_hp(-1)

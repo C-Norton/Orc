@@ -23,6 +23,13 @@ def roll_initiative_for_character(char: "Character") -> tuple[int, int]:
 
 
 def get_proficiency_bonus(level: int) -> int:
+    """Return the proficiency bonus for a given character level (1–20).
+
+    Raises:
+        ValueError: If level is outside the valid range of 1–20.
+    """
+    if level < 1 or level > 20:
+        raise ValueError(Strings.ERROR_INVALID_LEVEL)
     return (level - 1) // 4 + 2
 
 
@@ -41,7 +48,7 @@ def resolve_named_modifier(
     Raises ValueError for unknown names.
     """
     clean = name.lower().strip()
-    prof_bonus = get_proficiency_bonus(char.level)
+    prof_bonus = get_proficiency_bonus(max(char.level, 1))
 
     # Skill modifier
     skill_name = next((s for s in SKILL_TO_STAT.keys() if s.lower() == clean), None)
@@ -149,7 +156,7 @@ async def perform_roll(
     is_initiative = clean in ("initiative", "init")
 
     if matched_skill or is_save or matched_stat or is_initiative:
-        prof_bonus = get_proficiency_bonus(char.level)
+        prof_bonus = get_proficiency_bonus(max(char.level, 1))
         d20_roll, discarded = _roll_d20_with_advantage(advantage)
         d20_str = _format_d20_roll(d20_roll, discarded, advantage)
 

@@ -5,6 +5,7 @@ from enums.enemy_initiative_mode import EnemyInitiativeMode
 from enums.enemy_placement_mode import EnemyPlacementMode
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
+from commands.encounter_commands import _parse_hp_input
 
 
 # ---------------------------------------------------------------------------
@@ -2056,3 +2057,80 @@ async def test_encounter_next_gm_can_advance_other_players_turn(
     # Confirm the turn index advanced from 2 (wraps to 0 since pos=2 is last)
     db_session.refresh(sample_active_encounter)
     # turn advanced = index moved (either wrapped or incremented)
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 edge cases — _parse_hp_input unit tests (4d.2)
+# ---------------------------------------------------------------------------
+
+
+def test_parse_hp_input_flat_integer():
+    """Flat positive integers are returned as-is with no clamping."""
+    resolved, was_clamped = _parse_hp_input("15")
+    assert resolved == 15
+    assert was_clamped is False
+
+
+def test_parse_hp_input_dice_expression_positive(mocker):
+    """A dice expression that rolls positive returns the value without clamping."""
+    mocker.patch("commands.encounter_commands.roll_dice", return_value=([8], 2, 10))
+    resolved, was_clamped = _parse_hp_input("2d4+2")
+    assert resolved == 10
+    assert was_clamped is False
+
+
+def test_parse_hp_input_dice_expression_clamped(mocker):
+    """A dice expression that rolls ≤ 0 is clamped to 1 and flags was_clamped."""
+    mocker.patch("commands.encounter_commands.roll_dice", return_value=([1], -5, -4))
+    resolved, was_clamped = _parse_hp_input("1d4-5")
+    assert resolved == 1
+    assert was_clamped is True
+
+
+def test_parse_hp_input_dice_rolls_zero_is_clamped(mocker):
+    """A dice expression that totals exactly 0 is clamped to 1."""
+    mocker.patch("commands.encounter_commands.roll_dice", return_value=([1], -1, 0))
+    resolved, was_clamped = _parse_hp_input("1d2-1")
+    assert resolved == 1
+    assert was_clamped is True
+
+
+def test_parse_hp_input_flat_zero_raises():
+    """An input of '0' is rejected (not positive)."""
+    with pytest.raises(ValueError):
+        _parse_hp_input("0")
+
+
+def test_parse_hp_input_invalid_raises():
+    """Non-numeric, non-dice input raises ValueError."""
+    with pytest.raises(ValueError):
+        _parse_hp_input("notvalid")
+
+
+async def test_encounter_enemy_hp_clamped_sends_ephemeral_notice(
+    mocker, encounter_bot, sample_active_party, sample_pending_encounter, session_factory
+):
+    """When a dice HP roll comes up ≤ 0 and is clamped to 1, an ephemeral
+    notice must be sent to inform the GM."""
+    # Patch roll_dice inside encounter_commands so HP always rolls 0
+    mocker.patch(
+        "commands.encounter_commands.roll_dice", return_value=([1], -5, 0)
+    )
+    interaction = make_interaction(mocker)
+    cb = get_callback(encounter_bot, "encounter", "enemy")
+    await cb(interaction, name="Goblin", initiative_modifier=0, max_hp="1d6-5")
+
+    # The primary response was the enemy-added success message
+    assert interaction.response.send_message.called
+    # The HP-clamped notice must be sent as an ephemeral followup
+    followup_calls = interaction.followup.send.call_args_list
+    clamped_calls = [
+        call for call in followup_calls
+        if call.kwargs.get("ephemeral") is True
+    ]
+    assert len(clamped_calls) >= 1
+    from utils.strings import Strings
+    assert any(
+        Strings.ENCOUNTER_HP_CLAMPED in (call.args[0] if call.args else "")
+        for call in clamped_calls
+    )

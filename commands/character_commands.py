@@ -141,7 +141,7 @@ def _class_summary(char: Character) -> str:
 
 def _build_sheet_page0(char: Character) -> discord.Embed:
     """Page 0 (🏠): intro/overview — identity, HP, initiative, proficiency bonus."""
-    prof_bonus = get_proficiency_bonus(char.level)
+    prof_bonus = get_proficiency_bonus(max(char.level, 1))
     cls_summary = _class_summary(char)
 
     dex_mod = get_stat_modifier(char.dexterity)
@@ -192,7 +192,7 @@ def _build_sheet_page0(char: Character) -> discord.Embed:
 
 def _build_sheet_page1(char: Character) -> discord.Embed:
     """Page 1 (📊): ability scores and saving throws."""
-    prof_bonus = get_proficiency_bonus(char.level)
+    prof_bonus = get_proficiency_bonus(max(char.level, 1))
     cls_summary = _class_summary(char)
 
     embed = discord.Embed(
@@ -250,7 +250,7 @@ def _build_sheet_page1(char: Character) -> discord.Embed:
 
 def _build_sheet_page2(char: Character) -> discord.Embed:
     """Page 2 (🎯): skill proficiencies and modifiers."""
-    prof_bonus = get_proficiency_bonus(char.level)
+    prof_bonus = get_proficiency_bonus(max(char.level, 1))
 
     embed = discord.Embed(
         title=Strings.CHAR_VIEW_TITLE.format(char_name=char.name),

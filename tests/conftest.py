@@ -76,8 +76,22 @@ def make_interaction(
     interaction.channel = channel
 
     interaction.response = mocker.AsyncMock()
+    # is_done() is a synchronous method on discord.InteractionResponse.  Start it
+    # returning False, and flip it to True once defer() or send_message() is called —
+    # matching real Discord behaviour where the response is "done" after the first use.
+    interaction.response.is_done = mocker.Mock(return_value=False)
+
+    def _mark_response_done(*_args, **_kwargs):
+        interaction.response.is_done.return_value = True
+
+    interaction.response.defer.side_effect = _mark_response_done
+    interaction.response.send_message.side_effect = _mark_response_done
+
     interaction.followup = mocker.AsyncMock()
     interaction.followup.send = mocker.AsyncMock(return_value=mock_message)
+    # original_response() is an async method; spec=discord.Interaction picks it up
+    # automatically, but we set an explicit return value for clarity.
+    interaction.original_response = mocker.AsyncMock(return_value=mock_message)
     interaction.namespace = mocker.Mock()
 
     return interaction

@@ -208,8 +208,18 @@ class Strings:
     HP_TEMP_MSG = "**{char_name}** now has {temp} temporary HP."
     HP_TEMP_PARTY_HEADER = "Temporary HP updated for the party:\n"
     HP_TEMP_PARTY_LINE = "**{char_name}**: {temp} temp HP"
+    HP_NEGATIVE_DAMAGE_CONFIRM = (
+        "⚠️ You entered a negative damage value. "
+        "Apply **{abs_amount}** damage to **{char_name}**?"
+    )
+    HP_NEGATIVE_HEAL_CONFIRM = (
+        "⚠️ You entered a negative healing value. "
+        "Apply **{abs_amount}** healing to **{char_name}**?"
+    )
+    HP_NEGATIVE_CANCELLED = "❌ Cancelled — no changes made."
 
     ERROR_INVALID_MAX_HP = "Max HP must be at least 1."
+    ERROR_INVALID_LEVEL = "Character level must be between 1 and 20."
     ERROR_NO_ACTIVE_PARTY = "No active party set."
     ERROR_GM_ONLY_DAMAGE = "Only the GM can apply damage to other party members."
     ERROR_PARTY_MEMBER_NOT_FOUND = "Party member '**{name}**' not found."
@@ -516,6 +526,7 @@ class Strings:
         "❌ No placement selected — no enemies were added."
     )
     ENCOUNTER_ENEMY_JOINED_PUBLIC = "⚔️ {enemy_description} joins **{encounter_name}**!"
+    ENCOUNTER_HP_CLAMPED = "⚠️ HP rolled below 1 and was clamped to 1."
     ENCOUNTER_DAMAGE_INVALID_POSITION = "❌ Position {position} is not valid. The initiative order has {count} position(s)."
     ENCOUNTER_DAMAGE_NOT_ENEMY = "❌ Position {position} is a player character. Use `/hp damage` for player characters."
     ENCOUNTER_DAMAGE_MUST_BE_POSITIVE = "❌ Damage must be greater than zero."
@@ -636,6 +647,8 @@ class Strings:
     DEATH_SAVE_COUNTER_DISPLAY = "(Dying: {successes}✓ {failures}✗)"
 
     # Button Labels
+    BUTTON_APPLY = "Apply"  # _NegativeAmountConfirmView (/hp damage, /hp heal)
+    BUTTON_DISCARD = "Discard"  # _NegativeAmountConfirmView (/hp damage, /hp heal)
     BUTTON_DELETE = "Delete"  # _ConfirmCharacterDeleteView (/character delete), _ConfirmPartyDeleteView (/party delete)
     BUTTON_CANCEL = "Cancel"  # _ConfirmCharacterDeleteView (/character delete), _ConfirmCharacterRemoveView (/party remove_member), _ConfirmPartyDeleteView (/party delete), _ConfirmSelfGMRemoveView (/party leave)
     BUTTON_REMOVE = "Remove"  # _ConfirmCharacterRemoveView (/party remove_member)
@@ -695,7 +708,7 @@ class Strings:
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]
     NAT_1_ATTACK = [
         "That'll be a miss",
-        "Oops; did you intend to hit an ally? Or was that just happenstance?",
+        "Oops; did a.ayou intend to hit an ally? Or was that just happenstance?",
     ]
     NAT_20_SKILLCHECK = []
     NAT_1_SKILLCHECK = []
