@@ -568,7 +568,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 f"/encounter create completed for user {interaction.user.id}: '{name}'"
             )
             await interaction.response.send_message(
-                Strings.ENCOUNTER_CREATED.format(name=name)
+                Strings.ENCOUNTER_CREATED.format(name=name), ephemeral=True
             )
         finally:
             db.close()

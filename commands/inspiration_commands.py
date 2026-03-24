@@ -224,7 +224,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
             else:
                 msg = Strings.INSPIRATION_STATUS_NONE.format(char_name=char.name)
 
-            await interaction.response.send_message(msg, ephemeral=True)
+            await interaction.response.send_message(msg)
             logger.info(
                 f"/inspiration status for {char.name}: inspiration={char.inspiration}"
             )

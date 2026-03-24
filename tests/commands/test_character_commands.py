@@ -359,7 +359,7 @@ async def test_view_character_by_own_name(char_bot, sample_character, interactio
     assert embed is not None
     assert "Aldric" in embed.title
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
     )
 
 
@@ -413,7 +413,7 @@ async def test_view_character_by_party_member_name(
     assert embed is not None
     assert "Morgath" in embed.title
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
     )
 
 

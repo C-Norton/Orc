@@ -282,7 +282,7 @@ async def test_hp_view_sends_message(
     assert "Aldric" in msg
     assert "22" in msg
     assert "30" in msg
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
 
 
 async def test_hp_view_no_character(

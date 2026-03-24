@@ -872,7 +872,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             embed = _build_sheet_page0(char)
             char_id = char.id
             view = CharacterSheetView(owner_id=interaction.user.id, char_id=char_id)
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            await interaction.response.send_message(embed=embed, view=view)
             view.message = await interaction.original_response()
 
             logger.info(

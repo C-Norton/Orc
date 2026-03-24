@@ -295,10 +295,10 @@ async def test_button_damage_formula_set_from_damage_dice(
     verify.close()
 
 
-async def test_button_sends_public_confirmation(
+async def test_button_sends_ephemeral_confirmation(
     weapon_bot, sample_character, mocker, db_session
 ):
-    """Button sends a public (non-ephemeral) confirmation via followup."""
+    """Button sends an ephemeral confirmation via followup."""
     button_interaction = make_interaction(mocker)
     view = WeaponSearchView([LONGSWORD_DATA])
 
@@ -306,7 +306,7 @@ async def test_button_sends_public_confirmation(
 
     button_interaction.followup.send.assert_called_once()
     kwargs = button_interaction.followup.send.call_args.kwargs
-    assert kwargs.get("ephemeral") is not True
+    assert kwargs.get("ephemeral") is True
 
 
 async def test_button_confirmation_contains_name_and_hit_modifier(

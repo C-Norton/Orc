@@ -229,7 +229,7 @@ async def test_add_attack_update_existing_ignores_limit(
     await cb(interaction, name="Longsword", hit_mod=5, damage_formula="1d8+5")
 
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 

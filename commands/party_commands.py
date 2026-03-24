@@ -513,7 +513,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 f"/party create completed for user {interaction.user.id}: "
                 f"created '{party_name}' with {len(found_chars)} members"
             )
-            await interaction.followup.send(msg)
+            await interaction.followup.send(msg, ephemeral=True)
         finally:
             db.close()
 
@@ -558,7 +558,8 @@ def register_party_commands(bot: commands.Bot) -> None:
                     f"set active party to '{party_name}'"
                 )
                 await interaction.response.send_message(
-                    Strings.PARTY_ACTIVE_SET.format(party_name=party_name)
+                    Strings.PARTY_ACTIVE_SET.format(party_name=party_name),
+                    ephemeral=True,
                 )
             else:
                 stmt = select(user_server_association.c.active_party_id).where(
@@ -576,7 +577,8 @@ def register_party_commands(bot: commands.Bot) -> None:
                     await interaction.response.send_message(
                         Strings.PARTY_ACTIVE_VIEW.format(
                             party_name=party.name, char_names=char_names
-                        )
+                        ),
+                        ephemeral=True,
                     )
                 else:
                     await interaction.response.send_message(
@@ -651,7 +653,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                     inline=False,
                 )
 
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             logger.info(
                 f"/party view completed for user {interaction.user.id}: viewed '{party_name}'"
             )

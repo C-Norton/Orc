@@ -220,7 +220,7 @@ class WeaponAddButton(discord.ui.Button):
         self.disabled = True
         self.style = discord.ButtonStyle.success
         await interaction.response.edit_message(view=self.view)
-        await interaction.followup.send(confirmation)
+        await interaction.followup.send(confirmation, ephemeral=True)
         logger.info(
             f"WeaponAddButton: {'added' if is_new else 'updated'} "
             f"{weapon_name!r} for user {interaction.user.id}"

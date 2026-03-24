@@ -214,6 +214,7 @@ def register_meta_commands(bot: commands.Bot) -> None:
         await interaction.response.send_message(
             Strings.TIP_COMMAND_RESPONSE.format(tip=random.choice(Strings.TIPS)),
             suppress_embeds=True,
+            ephemeral=True,
         )
         logger.info(f"/tip served to user {interaction.user.id}")
 
@@ -225,7 +226,9 @@ def register_meta_commands(bot: commands.Bot) -> None:
         )
 
         view = HelpView(owner_id=interaction.user.id)
-        await interaction.response.send_message(embed=_toc_embed(_random_tip()), view=view)
+        await interaction.response.send_message(
+            embed=_toc_embed(_random_tip()), view=view, ephemeral=True
+        )
         view.message = await interaction.original_response()
         logger.info(f"/help served to user {interaction.user.id}")
 

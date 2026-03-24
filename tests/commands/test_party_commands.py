@@ -224,7 +224,7 @@ async def test_active_party_set_success(party_bot, sample_party, interaction):
     msg = interaction.response.send_message.call_args.args[0]
     assert "The Fellowship" in msg
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 

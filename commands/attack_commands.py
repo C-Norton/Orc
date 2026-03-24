@@ -97,7 +97,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
 
             db.commit()
             logger.info(f"/attack add completed for user {interaction.user.id}: {msg}")
-            await interaction.response.send_message(msg)
+            await interaction.response.send_message(msg, ephemeral=True)
         except ValueError as e:
             logger.error(f"Error adding attack for user {interaction.user.id}: {e}")
             await interaction.response.send_message(
@@ -464,7 +464,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
                     inline=False,
                 )
 
-            await interaction.response.send_message(embed=embed)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             logger.info(
                 f"/attack list completed for user {interaction.user.id}: "
                 f"listed {len(char.attacks)} attacks"

@@ -444,10 +444,10 @@ async def test_tip_command_chooses_from_tips_list(meta_bot, interaction, mocker)
     mock_choice.assert_called_once_with(Strings.TIPS)
 
 
-async def test_tip_command_not_ephemeral(meta_bot, interaction, mocker):
-    """Tips are public — posted to the channel, not ephemeral."""
+async def test_tip_command_ephemeral(meta_bot, interaction, mocker):
+    """Tips are ephemeral — visible only to the invoking user."""
     mocker.patch("commands.meta_commands.random.choice", return_value="tip")
     cb = get_callback(meta_bot, "tip")
     await cb(interaction)
     kwargs = interaction.response.send_message.call_args.kwargs
-    assert not kwargs.get("ephemeral", False)
+    assert kwargs.get("ephemeral") is True

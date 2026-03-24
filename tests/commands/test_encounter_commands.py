@@ -36,7 +36,7 @@ async def test_create_encounter_success_message(
     msg = interaction.response.send_message.call_args.args[0]
     assert "Dragon's Lair" in msg
     assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is not True
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
 
 
