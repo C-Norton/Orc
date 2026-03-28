@@ -81,187 +81,253 @@ _WHITESPACE_ONLY = "   "
 
 
 # ===========================================================================
-# 1.  /character create — name validation
+# 1.  Character name validation — via save_character_from_wizard
 # ===========================================================================
 
 
 async def test_character_create_name_at_limit_accepted(
-    mocker, char_bot, sample_user, sample_server
+    mocker, db_session, sample_user, sample_server
 ):
     """A 100-character name is exactly at the limit and must be accepted."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_NAME_AT_LIMIT, character_class="Fighter", level=1)
+    from commands.character_wizard import WizardState, save_character_from_wizard
 
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    interaction = make_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_NAME_AT_LIMIT,
     )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    assert error is None
+    assert char is not None
 
 
 async def test_character_create_name_over_limit_rejected(
-    mocker, char_bot, sample_user, sample_server
+    mocker, db_session
 ):
     """A 101-character name exceeds the limit and must be rejected."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_NAME_OVER_LIMIT, character_class="Fighter", level=1)
+    from commands.character_wizard import WizardState, save_character_from_wizard
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.CHAR_CREATE_NAME_LIMIT in msg
+    interaction = make_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_NAME_OVER_LIMIT,
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    assert char is None
+    assert error == Strings.CHAR_CREATE_NAME_LIMIT
 
 
 async def test_character_create_sql_injection_name_stored_safely(
-    mocker, char_bot, sample_user, sample_server, session_factory
+    mocker, db_session, sample_user, sample_server
 ):
-    """A SQL-injection name must be stored verbatim (not interpreted) and the
-    command must succeed without any database error."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_SQL_INJECTION, character_class="Rogue", level=1)
+    """A SQL-injection name must be stored verbatim (not interpreted) and succeed."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
 
-    # Verify stored literally — no DB corruption
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name=_SQL_INJECTION).first()
-    assert char is not None
-    verify.close()
+    interaction = make_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_SQL_INJECTION,
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+    assert error is None
+    stored = db_session.query(Character).filter_by(name=_SQL_INJECTION).first()
+    assert stored is not None
 
 
 async def test_character_create_sql_injection_2_name_stored_safely(
-    mocker, char_bot, sample_user, sample_server, session_factory
+    mocker, db_session, sample_user, sample_server
 ):
     """A second SQL-injection pattern must also be stored safely."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_SQL_INJECTION_2, character_class="Wizard", level=1)
+    from commands.character_wizard import WizardState, save_character_from_wizard
 
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name=_SQL_INJECTION_2).first()
-    assert char is not None
-    verify.close()
+    interaction = make_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_SQL_INJECTION_2,
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+    assert error is None
+    stored = db_session.query(Character).filter_by(name=_SQL_INJECTION_2).first()
+    assert stored is not None
 
 
 async def test_character_create_discord_mention_in_name(
-    mocker, char_bot, sample_user, sample_server, session_factory
+    mocker, db_session, sample_user, sample_server
 ):
-    """@everyone in a character name must not trigger a real Discord mention —
-    it must be stored and returned as plain text."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_DISCORD_EVERYONE, character_class="Bard", level=1)
+    """@everyone in a character name is stored as plain text."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
 
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name=_DISCORD_EVERYONE).first()
-    assert char is not None
-    verify.close()
+    interaction = make_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_DISCORD_EVERYONE,
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+    assert error is None
+    stored = db_session.query(Character).filter_by(name=_DISCORD_EVERYONE).first()
+    assert stored is not None
 
 
 async def test_character_create_markdown_in_name_stored_safely(
-    mocker, char_bot, sample_user, sample_server, session_factory
+    mocker, db_session, sample_user, sample_server
 ):
-    """Markdown characters in a character name must be stored verbatim."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_MARKDOWN_BOLD, character_class="Paladin", level=1)
+    """Markdown characters in a character name are stored verbatim."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
 
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name=_MARKDOWN_BOLD).first()
-    assert char is not None
-    verify.close()
+    interaction = make_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_MARKDOWN_BOLD,
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+    assert error is None
+    stored = db_session.query(Character).filter_by(name=_MARKDOWN_BOLD).first()
+    assert stored is not None
 
 
 async def test_character_create_emoji_name_stored_safely(
-    mocker, char_bot, sample_user, sample_server, session_factory
+    mocker, db_session, sample_user, sample_server
 ):
-    """Emoji in a character name must be stored and retrieved correctly."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_EMOJI_NAME, character_class="Fighter", level=1)
+    """Emoji in a character name are stored and retrieved correctly."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
 
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name=_EMOJI_NAME).first()
-    assert char is not None
-    verify.close()
+    interaction = make_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_EMOJI_NAME,
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+    assert error is None
+    stored = db_session.query(Character).filter_by(name=_EMOJI_NAME).first()
+    assert stored is not None
 
 
 async def test_character_create_newline_in_name_stored_safely(
-    mocker, char_bot, sample_user, sample_server, session_factory
+    mocker, db_session, sample_user, sample_server
 ):
-    """A newline embedded in a name must not crash the bot."""
+    """A newline embedded in a name does not crash the wizard commit."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
+
     interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name=_NEWLINE, character_class="Druid", level=1)
-
-    # Either stored or rejected — must not raise an unhandled exception
-    assert interaction.response.send_message.called
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name=_NEWLINE,
+    )
+    # Must not raise — either succeeds or returns a validation error
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    assert char is not None or error is not None
 
 
 # ===========================================================================
-# 2.  /character create — level boundary
+# 2.  Level validation — via _LevelModal
 # ===========================================================================
 
 
-async def test_character_create_level_zero_rejected(
-    mocker, char_bot, sample_user, sample_server
-):
+async def test_character_create_level_zero_rejected(mocker):
     """Level 0 is below the minimum of 1 and must be rejected."""
+    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from enums.character_class import CharacterClass
+
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name="LowLevel",
+    )
+    parent_view = _ClassLevelView(state, step_number=2)
+    modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
+    modal.level_input._value = "0"
+
     interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="LowLevel", character_class="Fighter", level=0)
+    await modal.on_submit(interaction)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.CHAR_LEVEL_LIMIT in msg
+    interaction.response.send_message.assert_called_once()
+    assert Strings.CHAR_LEVEL_LIMIT in interaction.response.send_message.call_args.args[0]
+    assert state.level is None
 
 
-async def test_character_create_level_21_rejected(
-    mocker, char_bot, sample_user, sample_server
-):
+async def test_character_create_level_21_rejected(mocker):
     """Level 21 is above the maximum of 20 and must be rejected."""
+    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from enums.character_class import CharacterClass
+
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name="OverLevel",
+    )
+    parent_view = _ClassLevelView(state, step_number=2)
+    modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
+    modal.level_input._value = "21"
+
     interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="OverLevel", character_class="Fighter", level=21)
+    await modal.on_submit(interaction)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.CHAR_LEVEL_LIMIT in msg
+    interaction.response.send_message.assert_called_once()
+    assert Strings.CHAR_LEVEL_LIMIT in interaction.response.send_message.call_args.args[0]
+    assert state.level is None
 
 
-async def test_character_create_level_negative_rejected(
-    mocker, char_bot, sample_user, sample_server
-):
+async def test_character_create_level_negative_rejected(mocker):
     """A negative level must be rejected."""
+    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from enums.character_class import CharacterClass
+
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name="NegLevel",
+    )
+    parent_view = _ClassLevelView(state, step_number=2)
+    modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
+    modal.level_input._value = "-1"
+
     interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="NegLevel", character_class="Fighter", level=-1)
+    await modal.on_submit(interaction)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    interaction.response.send_message.assert_called_once()
+    assert state.level is None
 
 
-async def test_character_create_level_1_accepted(
-    mocker, char_bot, sample_user, sample_server
-):
+async def test_character_create_level_1_accepted(mocker):
     """Level 1 is the minimum and must be accepted."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Min Level", character_class="Fighter", level=1)
+    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from enums.character_class import CharacterClass
 
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name="MinLevel",
     )
+    parent_view = _ClassLevelView(state, step_number=2)
+    modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
+    modal.level_input._value = "1"
+
+    interaction = make_interaction(mocker)
+    await modal.on_submit(interaction)
+
+    assert state.level == 1
+    interaction.response.edit_message.assert_called_once()
 
 
-async def test_character_create_level_20_accepted(
-    mocker, char_bot, sample_user, sample_server
-):
+async def test_character_create_level_20_accepted(mocker):
     """Level 20 is the maximum and must be accepted."""
-    interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Max Level", character_class="Fighter", level=20)
+    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from enums.character_class import CharacterClass
 
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name="MaxLevel",
     )
+    parent_view = _ClassLevelView(state, step_number=2)
+    modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
+    modal.level_input._value = "20"
+
+    interaction = make_interaction(mocker)
+    await modal.on_submit(interaction)
+
+    assert state.level == 20
+    interaction.response.edit_message.assert_called_once()
 
 
 # ===========================================================================
@@ -1327,10 +1393,12 @@ async def test_encounter_create_rtl_override_in_name_stored_safely(
 
 
 async def test_character_create_at_user_limit_rejected(
-    mocker, char_bot, sample_user, sample_server, db_session
+    mocker, db_session, sample_user, sample_server
 ):
     """Creating a character when the user already has MAX_CHARACTERS_PER_USER
-    characters must be rejected."""
+    characters must be rejected by save_character_from_wizard."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
+
     # Fill up to the limit
     for i in range(MAX_CHARACTERS_PER_USER):
         char = Character(
@@ -1342,12 +1410,14 @@ async def test_character_create_at_user_limit_rejected(
     db_session.commit()
 
     interaction = make_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="OneMore", character_class="Fighter", level=1)
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222",
+        guild_name="Test Server", name="OneMore",
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
-    assert Strings.ERROR_LIMIT_CHARACTERS.format(limit=MAX_CHARACTERS_PER_USER) in msg
+    assert char is None
+    assert error == Strings.ERROR_LIMIT_CHARACTERS.format(limit=MAX_CHARACTERS_PER_USER)
 
 
 async def test_attack_add_at_character_attack_limit_rejected(

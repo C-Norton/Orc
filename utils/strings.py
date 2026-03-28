@@ -1,4 +1,3 @@
-import random
 
 
 class Strings:
@@ -60,7 +59,9 @@ class Strings:
 
     HELP_CHAR_MGMT_NAME = "👤 Character Management"
     HELP_CHAR_MGMT_VALUE = (
-        "**/character create <name> <class> <level>**: Create a new character for this server. Class save proficiencies are set automatically.\n"
+        "**/character create**: Launch the 8-step guided wizard (name → class & level → stats → AC → saves → skills → HP → weapons). "
+        "Supports multiclassing (up to 5 classes, total level ≤ 20). Every step has Back, Skip, and Finish buttons. "
+        "Or choose Manual Setup for a quick single-form entry.\n"
         "**/character class_add <class> <level>**: Add or update a class on your active character (for levelling up or multiclassing).\n"
         "**/character class_remove <class>**: Remove a class from your active character.\n"
         "**/character list**: View all your characters in this server.\n"
@@ -69,7 +70,7 @@ class Strings:
         "**/character delete <name>**: Permanently delete one of your characters.\n"
         "**/character stats**: Set your active character's 6 core ability scores, and initiative bonus.\n"
         "**/character ac <ac>**: Set your active character's Armor Class (1-30).\n"
-        "**/character saves**: Mark which saves your active character is proficient in.\n"
+        "**/character saves**: Toggle your active character's saving throw proficiencies.\n"
         "**/character skill <skill> <status>**: Set proficiency for your active character."
     )
 
@@ -382,6 +383,166 @@ class Strings:
     CHAR_NOT_FOUND_NAME = "You don't have a character named **{name}** in this server."
     CHAR_DELETE_SUCCESS = "Character **{name}** has been deleted."
 
+    # Character Creation Wizard
+    WIZARD_INTRO_TITLE = "🧙 Character Creation"
+    WIZARD_INTRO_DESC = "How would you like to create your character?"
+    WIZARD_BUTTON_WIZARD = "🧙 Start Wizard"
+    WIZARD_BUTTON_MANUAL = "📝 Set Up Manually"
+
+    WIZARD_NAME_MODAL_TITLE = "Character Name"
+    WIZARD_NAME_LABEL = "Character Name"
+    WIZARD_NAME_PLACEHOLDER = "e.g. Thalindra Moonwhisper"
+    WIZARD_NAME_REQUIRED = "Please enter a character name."
+
+    WIZARD_STEP_HEADER = "Step {step} of {total}: {step_name}"
+
+    WIZARD_BUTTON_BACK = "⬅️ Back"
+
+    WIZARD_CLASS_LEVEL_DESC = (
+        "Select a class from the dropdown to add it (you'll set the level immediately).\n\n"
+        "You can add up to 5 classes for multiclassing. Total level across all classes "
+        "cannot exceed 20.\n\n"
+        "*Saving throw proficiencies are pre-filled from your first class.*"
+    )
+    WIZARD_CLASS_SELECT_PLACEHOLDER = "Choose a class to add or edit…"
+    WIZARD_LEVEL_FOR_CLASS_TITLE = "Level for {class_name}"
+    WIZARD_LEVEL_LABEL = "Level (1–20)"
+    WIZARD_LEVEL_PLACEHOLDER = "e.g. 5"
+    WIZARD_LEVEL_INVALID = "Level must be a whole number between 1 and 20."
+    WIZARD_CLASS_INVALID = "**{value}** is not a valid class. Valid options: {valid_classes}"
+    WIZARD_CLASS_TOTAL_LEVEL = "Classes (Total Lv {total}/{max})"
+    WIZARD_CLASS_REMOVE_BUTTON = "✕ {class_name}"
+    WIZARD_CLASS_MAX_REACHED = "You can add at most {max} classes to a character."
+    WIZARD_TOTAL_LEVEL_EXCEEDED = (
+        "Adding {added} level(s) to {class_name} would bring the total to {new_total}, "
+        "exceeding the maximum of 20. Reduce other class levels first."
+    )
+
+    WIZARD_STATS_DESC = (
+        "Enter your character's ability scores (1–30 each).\n\n"
+        "Use the three buttons below — STR/DEX/CON/INT first, then WIS/CHA, "
+        "then optionally override Initiative."
+    )
+    WIZARD_PHYSICAL_STATS_BUTTON = "✏️ STR / DEX / CON"
+    WIZARD_MENTAL_STATS_BUTTON = "✏️INT / WIS / CHA"
+    WIZARD_INIT_BUTTON = "✏️ Initiative Override"
+    WIZARD_PRIMARY_STATS_MODAL_TITLE = "Ability Scores (Part 1 of 3)"
+    WIZARD_WIS_CHA_MODAL_TITLE = "Wisdom & Charisma (Part 2 of 3)"
+    WIZARD_INIT_MODAL_TITLE = "Initiative Override (Part 3 of 3)"
+    WIZARD_STR_LABEL = "Strength (1–30)"
+    WIZARD_DEX_LABEL = "Dexterity (1–30)"
+    WIZARD_CON_LABEL = "Constitution (1–30)"
+    WIZARD_INT_LABEL = "Intelligence (1–30)"
+    WIZARD_WIS_LABEL = "Wisdom (1–30)"
+    WIZARD_CHA_LABEL = "Charisma (1–30)"
+    WIZARD_INIT_LABEL = "Initiative Bonus (blank = use Dex mod)"
+    WIZARD_STAT_NOT_NUMBER = "{stat} must be a whole number between 1 and 30."
+
+    WIZARD_AC_DESC = "Set your character's Armor Class (1–30)."
+    WIZARD_AC_BUTTON = "✏️ Enter AC"
+    WIZARD_AC_MODAL_TITLE = "Armor Class"
+    WIZARD_AC_LABEL = "AC (1–30)"
+    WIZARD_AC_PLACEHOLDER = "e.g. 16"
+    WIZARD_AC_INVALID = "AC must be a whole number between 1 and 30."
+
+    WIZARD_SAVES_DESC_CLASS = (
+        "Proficiencies from **{char_class}** have been pre-applied. Toggle to adjust.\n\n"
+        "🟢 Proficient   ⬜ Not Proficient"
+    )
+    WIZARD_SAVES_DESC_NO_CLASS = (
+        "Toggle which saving throws your character is proficient in.\n\n"
+        "🟢 Proficient   ⬜ Not Proficient"
+    )
+
+    WIZARD_SKILLS_DESC = (
+        "Toggle each skill your character is proficient in.\n\n"
+        "🟢 Proficient   ⬜ Not Proficient"
+    )
+
+    WIZARD_HP_STEP_DESC = (
+        "Set a custom max HP, or skip to auto-calculate from your class and Constitution."
+    )
+    WIZARD_HP_BUTTON = "✏️ Set Max HP"
+    WIZARD_HP_MODAL_TITLE = "Maximum Hit Points"
+    WIZARD_HP_LABEL = "Max HP (1–999)"
+    WIZARD_HP_PLACEHOLDER = "e.g. 45"
+    WIZARD_HP_INVALID = "Max HP must be a whole number between 1 and 999."
+    WIZARD_HP_SET = "Max HP set to **{hp}**."
+    WIZARD_HP_WILL_AUTO_CALC = "HP will be auto-calculated from your class and Constitution at creation."
+    WIZARD_HP_CANNOT_AUTO_CALC = (
+        "HP cannot be auto-calculated until a class and Constitution are both set. "
+        "You can set max HP manually above, or use `/hp set_max` after creation."
+    )
+
+    WIZARD_WEAPONS_STEP_DESC = (
+        "Search the SRD for weapons to add to your character.\n\n"
+        "Hit modifiers are calculated automatically from your stats. "
+        "You can also add weapons later with `/weapon search`."
+    )
+    WIZARD_WEAPONS_SEARCH_BUTTON = "🔍 Search SRD Weapon"
+    WIZARD_WEAPONS_SEARCH_MODAL_TITLE = "Search SRD Weapons"
+    WIZARD_WEAPONS_SEARCH_LABEL = "Weapon name"
+    WIZARD_WEAPONS_SEARCH_PLACEHOLDER = "e.g. longsword, shortbow, dagger"
+    WIZARD_WEAPONS_SEARCH_ERROR = (
+        "Could not reach the weapon database. Try again, or add weapons later "
+        "with `/weapon search`."
+    )
+    WIZARD_WEAPONS_NO_RESULTS_TITLE = "No Results"
+    WIZARD_WEAPONS_NO_RESULTS = 'No weapons found for "{query}". Try a different name.'
+    WIZARD_WEAPONS_RESULTS_DESC = "Click a weapon to add it to your character."
+    WIZARD_WEAPONS_RESULT_SELECT = "Search results:"
+    WIZARD_WEAPONS_QUEUED = "Queued Weapons ({count})"
+    WIZARD_WEAPONS_BACK_TO_SEARCH = "↩️ Cancel"
+    WIZARD_WEAPONS_ALREADY_QUEUED = "**{name}** is already queued."
+
+    WIZARD_TIP_MULTICLASS = (
+        "💡 **Tip:** You can add up to 5 classes. Total level across all classes cannot exceed 20."
+    )
+    WIZARD_TIP_WEAPONS = (
+        "💡 **Tip:** Weapons can be added at any time using `/weapon search`."
+    )
+
+    WIZARD_BUTTON_CONTINUE = "▶️ Continue"
+    WIZARD_BUTTON_SKIP = "⏭️ Skip Step"
+    WIZARD_BUTTON_FINISH = "✅ Finish"
+
+    WIZARD_COMPLETE_TITLE = "✅ {name} is ready to adventure!"
+    WIZARD_COMPLETE_DESC = "Here's a summary of what was configured during setup."
+    WIZARD_COMPLETE_SET = "✅ {label}"
+    WIZARD_COMPLETE_SKIPPED = "⏭️ {label} — use `{command}`"
+    WIZARD_COMPLETE_FOOTER = "View your character any time with `/character view`."
+    WIZARD_COMPLETE_TIP_HP = "💡 Max HP is auto-calculated when both a class and Constitution are set."
+    WIZARD_COMPLETE_HP_OVERRIDE = "manual"
+    WIZARD_COMPLETE_HP_AUTO = "auto-calculated"
+
+    WIZARD_MANUAL_MODAL_TITLE = "Create Character"
+    WIZARD_MANUAL_NAME_LABEL = "Character Name"
+    WIZARD_MANUAL_CLASS_LABEL = "Class (optional)"
+    WIZARD_MANUAL_CLASS_PLACEHOLDER = "e.g. Fighter, Wizard, Rogue"
+    WIZARD_MANUAL_LEVEL_LABEL = "Starting Level (optional)"
+    WIZARD_MANUAL_LEVEL_PLACEHOLDER = "e.g. 5 (defaults to 1 if class is set)"
+    WIZARD_MANUAL_SETUP_CMDS = (
+        "**{name}** created!\n\n"
+        "Use these commands to complete your setup:\n"
+        "• `/character class_add` — Add your class (sets save proficiencies automatically)\n"
+        "• `/character stats` — Set your 6 ability scores\n"
+        "• `/character saves` — Adjust saving throw proficiencies\n"
+        "• `/character skill` — Set individual skill proficiencies\n"
+        "• `/character ac` — Set your Armor Class\n"
+        "• `/hp set_max` — Override the auto-calculated max HP\n\n"
+        "View your character at any time with `/character view`."
+    )
+
+    # Saves button view (used by /character saves command)
+    SAVES_VIEW_TITLE = "🛡 Saving Throw Proficiencies"
+    SAVES_VIEW_DESC = (
+        "Toggle each save your character is proficient in, then click **Save Changes**.\n\n"
+        "🟢 Proficient   ⬜ Not Proficient"
+    )
+    SAVES_VIEW_SAVED = "Saving throw proficiencies updated for **{char_name}**!"
+    SAVES_VIEW_CANCELLED = "No changes made."
+    BUTTON_SAVE_CHANGES = "💾 Save Changes"
+
     # Party Commands
     PARTY_CREATE_SUCCESS_EMPTY = "Empty party '**{party_name}**' created successfully!"
     PARTY_CREATE_SUCCESS_MEMBERS = (
@@ -430,6 +591,8 @@ class Strings:
     ERROR_USER_SERVER_NOT_INIT = "User or Server not initialized."
     ERROR_PARTY_CHAR_NOT_FOUND = "\nCharacters not found: {names}"
     ERROR_PARTY_SET_ACTIVE_FIRST = "Set an active party first with `/party active`."
+    ERROR_CHARACTER_OWNER_NO_CHARACTERS = "User **{display_name}** has no characters."
+    ERROR_MULTIPLE_CHARACTERS_FOUND = "Multiple characters named '**{character_name}**' found. Please specify the owner."
 
     # Character deletion confirmations
     CHAR_DELETE_CONFIRM = "⚠️ Are you sure you want to permanently delete **{name}**? This cannot be undone."
@@ -675,6 +838,7 @@ class Strings:
     ERROR_DAMAGE_FORMULA = "❌ Error in damage formula: {error}"
     ERROR_ROLL_GENERIC = "❌ Error: {error}"
     ERROR_ATTACK_ADD = "Error adding attack: {error}."
+    ERROR_GENERIC = "❌ An unexpected error occurred. Please try again."
 
     # Admin Commands
     ADMIN_GUILD_NOT_FOUND = (

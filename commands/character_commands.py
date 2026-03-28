@@ -392,6 +392,142 @@ class CharacterSheetView(discord.ui.View):
                 pass
 
 
+_SAVE_STATS: list[str] = [
+    "strength",
+    "dexterity",
+    "constitution",
+    "intelligence",
+    "wisdom",
+    "charisma",
+]
+_SAVE_STAT_ABBR: dict[str, str] = {
+    "strength": "STR",
+    "dexterity": "DEX",
+    "constitution": "CON",
+    "intelligence": "INT",
+    "wisdom": "WIS",
+    "charisma": "CHA",
+}
+
+
+class _SaveEditToggleButton(discord.ui.Button):
+    """Toggle button for a single saving throw inside CharacterSavesEditView."""
+
+    def __init__(
+        self,
+        stat: str,
+        is_proficient: bool,
+        parent_view: "CharacterSavesEditView",
+    ) -> None:
+        style = (
+            discord.ButtonStyle.success if is_proficient else discord.ButtonStyle.secondary
+        )
+        row = 0 if stat in ("strength", "dexterity", "constitution") else 1
+        super().__init__(
+            label=f"{_SAVE_STAT_ABBR[stat]} Save",
+            style=style,
+            custom_id=f"saves_edit_{stat}",
+            row=row,
+        )
+        self.stat = stat
+        self.parent_view = parent_view
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        """Toggle the save and refresh the view."""
+        self.parent_view.saves[self.stat] = not self.parent_view.saves.get(self.stat, False)
+        await self.parent_view._refresh(interaction)
+
+
+class CharacterSavesEditView(discord.ui.View):
+    """Button-based view for toggling saving throw proficiencies on an existing character.
+
+    Shows six toggle buttons (one per ability), plus Save Changes and Cancel.
+    """
+
+    def __init__(self, char_id: int, char_name: str, current_saves: dict[str, bool]) -> None:
+        super().__init__(timeout=120)
+        self.char_id = char_id
+        self.char_name = char_name
+        self.saves: dict[str, bool] = dict(current_saves)
+        self._add_buttons()
+
+    def _add_buttons(self) -> None:
+        for stat in _SAVE_STATS:
+            self.add_item(_SaveEditToggleButton(stat, self.saves.get(stat, False), self))
+        self.add_item(_SaveChangesButton(row=2))
+        self.add_item(_CancelSavesButton(row=2))
+
+    async def _refresh(self, interaction: discord.Interaction) -> None:
+        """Rebuild buttons to reflect updated toggle state."""
+        self.clear_items()
+        self._add_buttons()
+        await interaction.response.edit_message(embed=self._build_embed(), view=self)
+
+    def _build_embed(self) -> discord.Embed:
+        return discord.Embed(
+            title=Strings.SAVES_VIEW_TITLE,
+            description=Strings.SAVES_VIEW_DESC,
+            color=discord.Color.blurple(),
+        )
+
+
+class _SaveChangesButton(discord.ui.Button):
+    """Commits the current save toggle state to the database."""
+
+    def __init__(self, row: int) -> None:
+        super().__init__(
+            label=Strings.BUTTON_SAVE_CHANGES,
+            style=discord.ButtonStyle.success,
+            custom_id="saves_commit",
+            row=row,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        """Write saves to DB and confirm."""
+        view: CharacterSavesEditView = self.view  # type: ignore[assignment]
+        db = SessionLocal()
+        try:
+            char = db.get(Character, view.char_id)
+            if not char:
+                await interaction.response.edit_message(
+                    content=Strings.ERROR_CHAR_NO_LONGER_EXISTS, view=None, embed=None
+                )
+                return
+            for stat in _SAVE_STATS:
+                setattr(char, f"st_prof_{stat}", view.saves.get(stat, False))
+            db.commit()
+            logger.info(
+                f"/character saves updated for char id={view.char_id} '{view.char_name}'"
+            )
+            await interaction.response.edit_message(
+                content=Strings.SAVES_VIEW_SAVED.format(char_name=view.char_name),
+                embed=None,
+                view=None,
+            )
+        finally:
+            db.close()
+        view.stop()
+
+
+class _CancelSavesButton(discord.ui.Button):
+    """Discards all toggle changes."""
+
+    def __init__(self, row: int) -> None:
+        super().__init__(
+            label=Strings.BUTTON_CANCEL,
+            style=discord.ButtonStyle.secondary,
+            custom_id="saves_cancel",
+            row=row,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        """Abort with no changes."""
+        await interaction.response.edit_message(
+            content=Strings.SAVES_VIEW_CANCELLED, embed=None, view=None
+        )
+        self.view.stop()  # type: ignore[union-attr]
+
+
 def register_character_commands(bot: commands.Bot) -> None:
     """Register the /character command group."""
     character_group = app_commands.Group(
@@ -399,111 +535,18 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
 
     # ------------------------------------------------------------------
-    # /character create
+    # /character create  (wizard entry point)
     # ------------------------------------------------------------------
 
     @character_group.command(
-        name="create", description="Create a new D&D character for this server"
+        name="create",
+        description="Create a new D&D character — guided wizard or manual setup",
     )
-    @app_commands.describe(
-        name="The name of your character",
-        character_class="Your character's starting class",
-        level="Starting level in that class (1-20)",
-    )
-    @app_commands.choices(
-        character_class=[
-            app_commands.Choice(name=cls.value, value=cls.value)
-            for cls in CharacterClass
-        ]
-    )
-    async def character_create(
-        interaction: discord.Interaction, name: str, character_class: str, level: int
-    ) -> None:
-        logger.debug(
-            f"Command /character create called by {interaction.user} (ID: {interaction.user.id}) "
-            f"in guild {interaction.guild_id} with name: {name}, class: {character_class}, level: {level}"
-        )
-        db = SessionLocal()
+    async def character_create(interaction: discord.Interaction) -> None:
+        """Launch the character creation wizard."""
+        from commands.character_wizard import start_character_creation
 
-        if len(name) > 100:
-            await interaction.response.send_message(
-                Strings.CHAR_CREATE_NAME_LIMIT, ephemeral=True
-            )
-            return
-        try:
-            user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-            if not user:
-                user = User(discord_id=str(interaction.user.id))
-                db.add(user)
-                db.flush()
-
-            server = (
-                db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-            )
-            if not server:
-                server = Server(
-                    discord_id=str(interaction.guild_id), name=interaction.guild.name
-                )
-                db.add(server)
-                db.flush()
-
-            char_count = db.query(Character).filter_by(user_id=user.id).count()
-            if char_count >= MAX_CHARACTERS_PER_USER:
-                await interaction.response.send_message(
-                    Strings.ERROR_LIMIT_CHARACTERS.format(
-                        limit=MAX_CHARACTERS_PER_USER
-                    ),
-                    ephemeral=True,
-                )
-                return
-
-            existing_char = (
-                db.query(Character)
-                .filter_by(user=user, server=server, name=name)
-                .first()
-            )
-            if existing_char:
-                await interaction.response.send_message(
-                    Strings.CHAR_EXISTS.format(name=name), ephemeral=True
-                )
-                return
-            if level < 1 or level > 20:
-                await interaction.response.send_message(
-                    Strings.CHAR_LEVEL_LIMIT, ephemeral=True
-                )
-                return
-
-            db.query(Character).filter_by(user=user, server=server).update(
-                {"is_active": False}
-            )
-
-            new_char = Character(name=name, user=user, server=server, is_active=True)
-            db.add(new_char)
-            db.flush()
-
-            cls_enum = CharacterClass(character_class)
-            db.add(
-                ClassLevel(
-                    character_id=new_char.id, class_name=cls_enum.value, level=level
-                )
-            )
-            db.flush()
-            db.refresh(new_char)
-
-            apply_class_save_profs(new_char, cls_enum)
-            db.commit()
-            logger.info(
-                f"/character create completed for user {interaction.user.id}: "
-                f"created '{name}' as level {level} {character_class}"
-            )
-            await interaction.response.send_message(
-                Strings.CHAR_CREATED_ACTIVE.format(
-                    name=name, level=level, char_class=character_class
-                ),
-                ephemeral=True,
-            )
-        finally:
-            db.close()
+        await start_character_creation(interaction)
 
     # ------------------------------------------------------------------
     # /character stats
@@ -620,29 +663,14 @@ def register_character_commands(bot: commands.Bot) -> None:
             db.close()
 
     # ------------------------------------------------------------------
-    # /character saves
+    # /character saves  (button-based toggle view)
     # ------------------------------------------------------------------
 
     @character_group.command(
-        name="saves", description="Set your character's saving throw proficiencies"
+        name="saves",
+        description="Toggle your active character's saving throw proficiencies",
     )
-    @app_commands.describe(
-        strength="Proficient in Strength saving throws?",
-        dexterity="Proficient in Dexterity saving throws?",
-        constitution="Proficient in Constitution saving throws?",
-        intelligence="Proficient in Intelligence saving throws?",
-        wisdom="Proficient in Wisdom saving throws?",
-        charisma="Proficient in Charisma saving throws?",
-    )
-    async def character_saves(
-        interaction: discord.Interaction,
-        strength: bool = False,
-        dexterity: bool = False,
-        constitution: bool = False,
-        intelligence: bool = False,
-        wisdom: bool = False,
-        charisma: bool = False,
-    ) -> None:
+    async def character_saves(interaction: discord.Interaction) -> None:
         logger.debug(
             f"Command /character saves called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
@@ -662,21 +690,20 @@ def register_character_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            char.st_prof_strength = strength
-            char.st_prof_dexterity = dexterity
-            char.st_prof_constitution = constitution
-            char.st_prof_intelligence = intelligence
-            char.st_prof_wisdom = wisdom
-            char.st_prof_charisma = charisma
-
-            db.commit()
-            logger.info(
-                f"/character saves completed for user {interaction.user.id}: "
-                f"updated saves for '{char.name}'"
+            current_saves = {
+                stat: getattr(char, f"st_prof_{stat}", False)
+                for stat in _SAVE_STATS
+            }
+            view = CharacterSavesEditView(
+                char_id=char.id,
+                char_name=char.name,
+                current_saves=current_saves,
             )
             await interaction.response.send_message(
-                Strings.CHAR_SAVES_UPDATED.format(char_name=char.name),
-                ephemeral=True,
+                embed=view._build_embed(), view=view, ephemeral=True
+            )
+            logger.info(
+                f"/character saves view sent for user {interaction.user.id}: '{char.name}'"
             )
         finally:
             db.close()

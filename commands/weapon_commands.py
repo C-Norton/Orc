@@ -15,8 +15,6 @@ for its lifetime and is cleaned up automatically on timeout.
 
 from __future__ import annotations
 
-import json
-
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -32,10 +30,9 @@ from utils.strings import Strings
 from utils.weapon_utils import (
     WeaponHitModifier,
     calculate_weapon_hit_modifier,
-    extract_two_handed_damage,
     fetch_weapons,
     format_weapon_result_line,
-    get_property_names,
+    parse_weapon_fields,
 )
 
 logger = get_logger(__name__)
@@ -57,46 +54,39 @@ def _import_weapon_to_character(
     when a new Attack was created and ``False`` when an existing one was
     updated.  The caller is responsible for calling ``db.commit()``.
     """
-    weapon_name = weapon_data.get("name", "Unknown")
-    damage_dice = weapon_data.get("damage_dice", "1d4")
-    damage_type_object = weapon_data.get("damage_type") or {}
-    damage_type_name = damage_type_object.get("name", "")
-    is_simple = weapon_data.get("is_simple", True)
-    weapon_category = "Simple" if is_simple else "Martial"
-    range_normal_float = weapon_data.get("range", 0) or 0
-    properties = weapon_data.get("properties", [])
-    property_names = get_property_names(properties)
-    two_handed_damage = extract_two_handed_damage(properties)
-    properties_json = json.dumps(property_names) if property_names else None
-
+    # Parse all weapon fields from the API dict in one place
+    fields = parse_weapon_fields(weapon_data)
     hit_modifier_result = calculate_weapon_hit_modifier(
-        character, properties, range_normal_float
+        character, fields.properties, fields.range_normal_float
     )
 
+    # Check for an existing attack with the same name (upsert)
     existing_attack = (
-        db.query(Attack).filter_by(character_id=character.id, name=weapon_name).first()
+        db.query(Attack).filter_by(character_id=character.id, name=fields.name).first()
     )
 
     if existing_attack:
+        # Update all fields on the existing record
         existing_attack.hit_modifier = hit_modifier_result.total
-        existing_attack.damage_formula = damage_dice
-        existing_attack.damage_type = damage_type_name
-        existing_attack.weapon_category = weapon_category
-        existing_attack.two_handed_damage = two_handed_damage
-        existing_attack.properties_json = properties_json
+        existing_attack.damage_formula = fields.damage_dice
+        existing_attack.damage_type = fields.damage_type_name
+        existing_attack.weapon_category = fields.weapon_category
+        existing_attack.two_handed_damage = fields.two_handed_damage
+        existing_attack.properties_json = fields.properties_json
         existing_attack.is_imported = True
         return False, hit_modifier_result
 
+    # No existing record — create a new Attack
     db.add(
         Attack(
             character_id=character.id,
-            name=weapon_name,
+            name=fields.name,
             hit_modifier=hit_modifier_result.total,
-            damage_formula=damage_dice,
-            damage_type=damage_type_name,
-            weapon_category=weapon_category,
-            two_handed_damage=two_handed_damage,
-            properties_json=properties_json,
+            damage_formula=fields.damage_dice,
+            damage_type=fields.damage_type_name,
+            weapon_category=fields.weapon_category,
+            two_handed_damage=fields.two_handed_damage,
+            properties_json=fields.properties_json,
             is_imported=True,
         )
     )
@@ -110,39 +100,36 @@ def _build_weapon_add_message(
     hit_modifier_result: WeaponHitModifier,
 ) -> str:
     """Build the public confirmation message shown after a weapon is added."""
-    weapon_name = weapon_data.get("name", "Unknown")
-    damage_dice = weapon_data.get("damage_dice", "1d4")
-    damage_type_object = weapon_data.get("damage_type") or {}
-    damage_type_name = damage_type_object.get("name", "")
-    properties = weapon_data.get("properties", [])
-    property_names = get_property_names(properties)
-    two_handed_damage = extract_two_handed_damage(properties)
+    # Re-use field parser to avoid duplicating extraction logic
+    fields = parse_weapon_fields(weapon_data)
 
     header = (
         Strings.WEAPON_ADD_SUCCESS_HEADER if is_new else Strings.WEAPON_ADD_UPDATED_HEADER
-    ).format(name=weapon_name, char_name=character.name)
+    ).format(name=fields.name, char_name=character.name)
 
     hit_line = Strings.WEAPON_ADD_HIT_LINE.format(
         hit_modifier=hit_modifier_result.total,
         breakdown=hit_modifier_result.breakdown,
     )
 
+    # Append versatile (two-handed) damage when the weapon has it
     versatile_suffix = (
-        Strings.WEAPON_ADD_VERSATILE_SUFFIX.format(two_handed_damage=two_handed_damage)
-        if two_handed_damage
+        Strings.WEAPON_ADD_VERSATILE_SUFFIX.format(two_handed_damage=fields.two_handed_damage)
+        if fields.two_handed_damage
         else ""
     )
     damage_line = (
         Strings.WEAPON_ADD_DAMAGE_LINE.format(
-            damage_dice=damage_dice, damage_type=damage_type_name
+            damage_dice=fields.damage_dice, damage_type=fields.damage_type_name
         )
         + versatile_suffix
     )
 
+    # Only show the properties line when the weapon has named properties
     properties_line = ""
-    if property_names:
+    if fields.property_names:
         properties_line = "\n" + Strings.WEAPON_ADD_PROPERTIES_LINE.format(
-            properties=", ".join(property_names)
+            properties=", ".join(fields.property_names)
         )
 
     return f"{header}\n{hit_line}\n{damage_line}{properties_line}{Strings.WEAPON_ADD_FOOTER}"

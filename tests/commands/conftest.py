@@ -95,6 +95,7 @@ def roll_bot(session_factory, mocker):
 def party_bot(session_factory, mocker):
     bot = make_bot()
     mocker.patch("commands.party_commands.SessionLocal", new=session_factory)
+    mocker.patch("commands.party_views.SessionLocal", new=session_factory)
     from commands.party_commands import register_party_commands
 
     register_party_commands(bot)
@@ -137,6 +138,19 @@ def weapon_bot(session_factory, mocker):
     from commands.weapon_commands import register_weapon_commands
 
     register_weapon_commands(bot)
+    yield bot
+
+
+@pytest.fixture
+def wizard_bot(session_factory, mocker):
+    """Bot fixture that patches SessionLocal in both character_commands and
+    character_wizard so wizard commit tests write to the in-memory DB."""
+    bot = make_bot()
+    mocker.patch("commands.character_commands.SessionLocal", new=session_factory)
+    mocker.patch("commands.character_wizard.SessionLocal", new=session_factory)
+    from commands.character_commands import register_character_commands
+
+    register_character_commands(bot)
     yield bot
 
 

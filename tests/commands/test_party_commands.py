@@ -12,6 +12,92 @@ from models import (
 )
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
+from commands.party_commands import _lookup_party, _is_gm
+
+
+# ---------------------------------------------------------------------------
+# _lookup_party helper
+# ---------------------------------------------------------------------------
+
+
+def test_lookup_party_returns_party_when_it_exists(db_session, sample_party, sample_server):
+    """_lookup_party finds a party by name and server_id."""
+    result = _lookup_party(db_session, "The Fellowship", sample_server.id)
+    assert result is not None
+    assert result.id == sample_party.id
+
+
+def test_lookup_party_returns_none_when_name_does_not_match(db_session, sample_party, sample_server):
+    """_lookup_party returns None when no party has the given name."""
+    result = _lookup_party(db_session, "Nonexistent Party", sample_server.id)
+    assert result is None
+
+
+def test_lookup_party_returns_none_when_server_does_not_match(db_session, sample_party):
+    """_lookup_party returns None when the party exists in a different server."""
+    wrong_server_id = sample_party.server_id + 999
+    result = _lookup_party(db_session, "The Fellowship", wrong_server_id)
+    assert result is None
+
+
+def test_lookup_party_returns_correct_party_among_multiple(db_session, sample_party, sample_server, sample_user):
+    """_lookup_party returns the right party when multiple parties exist with different names."""
+    other_party = Party(name="The Order", gms=[sample_user], server=sample_server)
+    db_session.add(other_party)
+    db_session.commit()
+
+    result = _lookup_party(db_session, "The Order", sample_server.id)
+    assert result is not None
+    assert result.name == "The Order"
+    assert result.id != sample_party.id
+
+
+# ---------------------------------------------------------------------------
+# _is_gm helper
+# ---------------------------------------------------------------------------
+
+
+def test_is_gm_returns_true_when_user_is_a_gm(sample_user, sample_party):
+    """_is_gm returns True when the user is in party.gms."""
+    # sample_party fixture sets sample_user as a GM
+    assert _is_gm(sample_user, sample_party) is True
+
+
+def test_is_gm_returns_false_when_user_is_not_in_gms(db_session, sample_party, sample_server):
+    """_is_gm returns False when the user is not a GM of the party."""
+    non_gm = User(discord_id="999")
+    db_session.add(non_gm)
+    db_session.commit()
+    assert _is_gm(non_gm, sample_party) is False
+
+
+def test_is_gm_returns_false_when_user_is_none(sample_party):
+    """_is_gm returns False when None is passed as the user."""
+    assert _is_gm(None, sample_party) is False
+
+
+def test_is_gm_returns_false_when_user_is_member_but_not_gm(db_session, sample_party, sample_server, sample_character):
+    """_is_gm returns False for a user who is a party member but not listed as GM."""
+    # sample_character belongs to sample_user; add character to party but not as GM
+    sample_party.characters.append(sample_character)
+    db_session.commit()
+    db_session.refresh(sample_party)
+
+    # Create a separate user who is only a member via their character, not a GM
+    member_only_user = User(discord_id="888")
+    db_session.add(member_only_user)
+    member_char = Character(
+        name="Bard",
+        user=member_only_user,
+        server=sample_server,
+        is_active=True,
+    )
+    db_session.add(member_char)
+    sample_party.characters.append(member_char)
+    db_session.commit()
+    db_session.refresh(sample_party)
+
+    assert _is_gm(member_only_user, sample_party) is False
 
 
 # ---------------------------------------------------------------------------
@@ -920,7 +1006,7 @@ async def test_party_list_single_page_buttons_disabled(
     party_bot, sample_party, sample_server, interaction
 ):
     """With only 1 party (< page size), both pagination buttons are disabled."""
-    from commands.party_commands import PartyListView
+    from commands.party_views import PartyListView
 
     cb = get_callback(party_bot, "party", "list")
     await cb(interaction)
@@ -941,7 +1027,7 @@ async def test_party_list_multi_page_next_button_enabled(
     mocker, party_bot, sample_user, sample_server, db_session, interaction
 ):
     """With more parties than PARTIES_PER_PAGE, the Next button is enabled."""
-    from commands.party_commands import PartyListView
+    from commands.party_views import PartyListView
 
     for i in range(PartyListView.PARTIES_PER_PAGE + 1):
         db_session.add(Party(name=f"Party{i}", gms=[sample_user], server=sample_server))
@@ -961,7 +1047,7 @@ async def test_party_list_next_button_advances_page(
     mocker, party_bot, sample_user, sample_server, db_session, interaction
 ):
     """Clicking Next on a multi-page list edits the message to show the next page."""
-    from commands.party_commands import PartyListView
+    from commands.party_views import PartyListView
 
     for i in range(PartyListView.PARTIES_PER_PAGE + 2):
         db_session.add(

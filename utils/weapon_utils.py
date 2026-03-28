@@ -7,6 +7,7 @@ stats following 5e 2024 rules.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
@@ -35,6 +36,61 @@ REQUEST_TIMEOUT_SECONDS = 10
 # ---------------------------------------------------------------------------
 # Data classes
 # ---------------------------------------------------------------------------
+
+
+@dataclass
+class ParsedWeaponFields:
+    """All fields extracted from a raw Open5e weapon API dict.
+
+    Used to avoid re-parsing the same weapon dict in multiple places
+    (import, upsert, and confirmation message building).
+    """
+
+    name: str
+    damage_dice: str
+    damage_type_name: str
+    weapon_category: str
+    range_normal_float: float
+    properties: list
+    property_names: list
+    two_handed_damage: Optional[str]
+    properties_json: Optional[str]
+
+
+def parse_weapon_fields(weapon_data: dict) -> "ParsedWeaponFields":
+    """Extract and normalise all fields from a raw Open5e weapon API dict.
+
+    Centralises the repeated field-extraction pattern used when importing
+    weapons and building confirmation messages.
+    """
+    # Basic identity fields
+    name = weapon_data.get("name", "Unknown")
+    damage_dice = weapon_data.get("damage_dice", "1d4")
+    # damage_type is a nested object: {"name": "Slashing", ...}
+    damage_type_object = weapon_data.get("damage_type") or {}
+    damage_type_name = damage_type_object.get("name", "")
+    # Derive display category from the is_simple flag
+    is_simple = weapon_data.get("is_simple", True)
+    weapon_category = "Simple" if is_simple else "Martial"
+    range_normal_float = float(weapon_data.get("range", 0) or 0)
+    # Properties are a list of dicts; extract names and versatile damage separately
+    properties = weapon_data.get("properties", [])
+    property_names = get_property_names(properties)
+    two_handed_damage = extract_two_handed_damage(properties)
+    # Serialise property names for DB storage; None when empty
+    properties_json = json.dumps(property_names) if property_names else None
+
+    return ParsedWeaponFields(
+        name=name,
+        damage_dice=damage_dice,
+        damage_type_name=damage_type_name,
+        weapon_category=weapon_category,
+        range_normal_float=range_normal_float,
+        properties=properties,
+        property_names=property_names,
+        two_handed_damage=two_handed_damage,
+        properties_json=properties_json,
+    )
 
 
 @dataclass

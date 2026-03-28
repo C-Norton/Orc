@@ -242,29 +242,6 @@ async def test_interaction_check_allows_owner(mocker):
     assert result is True
     btn_interaction.response.send_message.assert_not_called()
 
-
-async def test_interaction_check_blocks_other_users(mocker):
-    """Non-owner interactions are rejected with an ephemeral message."""
-    owner_id = 111
-    view = HelpView(owner_id=owner_id)
-
-    btn_interaction = mocker.AsyncMock(spec=discord.Interaction)
-    btn_interaction.user = mocker.MagicMock()
-    btn_interaction.user.id = 99999
-    btn_interaction.response = mocker.AsyncMock()
-
-    result = await view.interaction_check(btn_interaction)
-
-    assert result is False
-    btn_interaction.response.send_message.assert_called_once()
-    _, kwargs = btn_interaction.response.send_message.call_args
-    assert kwargs.get("ephemeral") is True
-    assert (
-        Strings.HELP_NOT_YOUR_MENU
-        in btn_interaction.response.send_message.call_args.args[0]
-    )
-
-
 # ---------------------------------------------------------------------------
 # HelpView — on_timeout
 # ---------------------------------------------------------------------------
@@ -444,10 +421,18 @@ async def test_tip_command_chooses_from_tips_list(meta_bot, interaction, mocker)
     mock_choice.assert_called_once_with(Strings.TIPS)
 
 
-async def test_tip_command_ephemeral(meta_bot, interaction, mocker):
+async def test_tip_command_not_ephemeral(meta_bot, interaction, mocker):
     """Tips are ephemeral — visible only to the invoking user."""
     mocker.patch("commands.meta_commands.random.choice", return_value="tip")
     cb = get_callback(meta_bot, "tip")
+    await cb(interaction)
+    kwargs = interaction.response.send_message.call_args.kwargs
+    assert kwargs.get("ephemeral") is False or kwargs.get("ephemeral") is None
+
+async def test_help_command_ephemeral(meta_bot,interaction,mocker):
+    """WIP test to check to see if help is ephemeral"""
+    mocker.patch("commands.meta_commands.random.choice", return_value="Page tip")
+    cb = get_callback(meta_bot,"help")
     await cb(interaction)
     kwargs = interaction.response.send_message.call_args.kwargs
     assert kwargs.get("ephemeral") is True

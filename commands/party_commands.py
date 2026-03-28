@@ -1,5 +1,3 @@
-import math
-
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -29,6 +27,12 @@ from utils.limits import (
 )
 from utils.logging_config import get_logger
 from utils.strings import Strings
+from commands.party_views import (
+    ConfirmCharacterRemoveView,
+    ConfirmPartyDeleteView,
+    ConfirmSelfGMRemoveView,
+    PartyListView,
+)
 
 logger = get_logger(__name__)
 
@@ -51,295 +55,46 @@ def _get_or_create_party_settings(db, party: Party) -> PartySettings:
     return settings
 
 
-class _ConfirmCharacterRemoveView(discord.ui.View):
-    """Ephemeral confirmation shown when removing a character who is in an active encounter.
+def _lookup_party(db, party_name: str, server_id: int) -> Optional[Party]:
+    """Return the Party with the given name in the given server, or None."""
+    return db.query(Party).filter_by(name=party_name, server_id=server_id).first()
 
-    ✅ Remove — deletes their EncounterTurn and removes them from the party.
-    ❌ Cancel  — aborts with no changes.
+
+def _is_gm(user: Optional[User], party: Party) -> bool:
+    """Return True if user is a GM of the party."""
+    return user is not None and user in party.gms
+
+
+async def _get_party_or_error(
+    db, interaction: discord.Interaction, party_name: str, server_id: int
+) -> Optional[Party]:
+    """Look up the party; if absent, send the not-found error and return None.
+
+    Callers must check `if party is None: return` immediately after awaiting this.
     """
-
-    def __init__(
-        self, party_id: int, char_id: int, party_name: str, char_name: str
-    ) -> None:
-        super().__init__(timeout=30)
-        self.party_id = party_id
-        self.char_id = char_id
-        self.party_name = party_name
-        self.char_name = char_name
-
-    @discord.ui.button(label=Strings.BUTTON_REMOVE, emoji="✅", style=discord.ButtonStyle.danger)
-    async def confirm(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Cascade-delete the character's EncounterTurn, then remove from party."""
-        db = SessionLocal()
-        try:
-            party = db.get(Party, self.party_id)
-            char = db.get(Character, self.char_id)
-
-            if not party or not char:
-                await interaction.response.edit_message(
-                    content=Strings.ERROR_CHAR_OR_PARTY_NO_LONGER_EXISTS, view=None
-                )
-                return
-
-            active_turn = (
-                db.query(EncounterTurn)
-                .filter_by(character_id=char.id)
-                .join(EncounterTurn.encounter)
-                .filter(Encounter.status == EncounterStatus.ACTIVE)
-                .first()
-            )
-
-            if active_turn:
-                encounter = active_turn.encounter
-                sorted_turns = sorted(encounter.turns, key=lambda t: t.order_position)
-                deleted_index = sorted_turns.index(active_turn)
-                turn_count_after = len(sorted_turns) - 1
-
-                db.delete(active_turn)
-                db.flush()
-
-                # Keep current_turn_index valid after removal
-                if turn_count_after == 0:
-                    encounter.current_turn_index = 0
-                elif deleted_index < encounter.current_turn_index:
-                    encounter.current_turn_index -= 1
-                elif deleted_index == encounter.current_turn_index:
-                    if encounter.current_turn_index >= turn_count_after:
-                        encounter.current_turn_index = 0
-                        encounter.round_number += 1
-
-            if char in party.characters:
-                party.characters.remove(char)
-
-            db.commit()
-            logger.info(
-                f"Confirmed removal of '{self.char_name}' from '{self.party_name}' "
-                "including EncounterTurn cascade"
-            )
-            await interaction.response.edit_message(
-                content=Strings.PARTY_REMOVE_ENCOUNTER_CONFIRMED.format(
-                    char_name=self.char_name, party_name=self.party_name
-                ),
-                view=None,
-            )
-        finally:
-            db.close()
-        self.stop()
-
-    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
-    async def cancel(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Abort — no changes made."""
-        await interaction.response.edit_message(
-            content=Strings.PARTY_REMOVE_CANCELLED, view=None
+    party = _lookup_party(db, party_name, server_id)
+    if not party:
+        await interaction.response.send_message(
+            Strings.PARTY_NOT_FOUND.format(party_name=party_name),
+            ephemeral=True,
         )
-        self.stop()
+    return party
 
 
-class _ConfirmPartyDeleteView(discord.ui.View):
-    """Ephemeral confirmation before permanently deleting a party.
+async def _require_gm_or_error(
+    interaction: discord.Interaction,
+    user: Optional[User],
+    party: Party,
+    error_string: str,
+) -> bool:
+    """Send an error and return False if the user is not a GM of the party.
 
-    If the party has open encounters the initial message lists them; the
-    confirm handler auto-completes them before deleting.
-
-    ✅ Delete — auto-completes open encounters, then cascade-deletes the party.
-    ❌ Cancel  — aborts with no changes.
+    Callers must check `if not result: return` immediately after awaiting this.
     """
-
-    def __init__(self, party_id: int, party_name: str) -> None:
-        super().__init__(timeout=30)
-        self.party_id = party_id
-        self.party_name = party_name
-
-    @discord.ui.button(label=Strings.BUTTON_DELETE, emoji="✅", style=discord.ButtonStyle.danger)
-    async def confirm(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Auto-complete open encounters, then delete the party."""
-        db = SessionLocal()
-        try:
-            party = db.get(Party, self.party_id)
-            if not party:
-                await interaction.response.edit_message(
-                    content=Strings.ERROR_PARTY_NO_LONGER_EXISTS, view=None
-                )
-                return
-
-            completed_names: list[str] = []
-            for enc in party.encounters:
-                if enc.status in (EncounterStatus.PENDING, EncounterStatus.ACTIVE):
-                    enc.status = EncounterStatus.COMPLETE
-                    completed_names.append(enc.name)
-            if completed_names:
-                db.flush()
-
-            db.delete(party)
-            db.commit()
-            logger.info(
-                f"Confirmed deletion of party '{self.party_name}' (id={self.party_id})"
-            )
-            msg = Strings.PARTY_DELETE_SUCCESS.format(party_name=self.party_name)
-            if completed_names:
-                for enc_name in completed_names:
-                    msg += "\n" + Strings.PARTY_DELETE_ENCOUNTER_COMPLETED.format(
-                        encounter_name=enc_name
-                    )
-            await interaction.response.edit_message(content=msg, view=None)
-        finally:
-            db.close()
-        self.stop()
-
-    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
-    async def cancel(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Abort — no changes made."""
-        await interaction.response.edit_message(
-            content=Strings.PARTY_DELETE_CANCELLED, view=None
-        )
-        self.stop()
-
-
-class _ConfirmSelfGMRemoveView(discord.ui.View):
-    """Ephemeral confirmation shown when a GM tries to remove themselves.
-
-    ✅ Remove  — removes the user from the party's GM list.
-    ❌ Cancel  — aborts with no changes.
-    """
-
-    def __init__(self, party_id: int, party_name: str, user_discord_id: str) -> None:
-        super().__init__(timeout=30)
-        self.party_id = party_id
-        self.party_name = party_name
-        self.user_discord_id = user_discord_id
-
-    @discord.ui.button(
-        label=Strings.BUTTON_REMOVE_MYSELF, emoji="✅", style=discord.ButtonStyle.danger
-    )
-    async def confirm(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Remove the user from the party's GM list."""
-        db = SessionLocal()
-        try:
-            party = db.get(Party, self.party_id)
-            user = db.query(User).filter_by(discord_id=self.user_discord_id).first()
-
-            if not party or not user:
-                await interaction.response.edit_message(
-                    content=Strings.ERROR_PARTY_OR_USER_NO_LONGER_EXISTS, view=None
-                )
-                return
-
-            if user not in party.gms:
-                await interaction.response.edit_message(
-                    content=Strings.ERROR_NO_LONGER_GM, view=None
-                )
-                return
-
-            party.gms.remove(user)
-            db.commit()
-            logger.info(
-                f"Confirmed self-GM-removal: user {self.user_discord_id} "
-                f"left GMs of '{self.party_name}'"
-            )
-            await interaction.response.edit_message(
-                content=Strings.GM_REMOVED.format(
-                    discord_id=self.user_discord_id, party_name=self.party_name
-                ),
-                view=None,
-            )
-        finally:
-            db.close()
-        self.stop()
-
-    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
-    async def cancel(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Abort — no changes made."""
-        await interaction.response.edit_message(
-            content=Strings.PARTY_GM_REMOVE_SELF_CANCELLED, view=None
-        )
-        self.stop()
-
-
-class PartyListView(discord.ui.View):
-    """Paginated embed view for /party list.
-
-    Displays all parties on the server with their member counts, split into
-    pages of :attr:`PARTIES_PER_PAGE` entries each.  Previous/Next buttons
-    navigate between pages; both are disabled when only one page exists.
-    """
-
-    PARTIES_PER_PAGE: int = 10
-
-    def __init__(self, parties: List[tuple], server_name: str) -> None:
-        """Initialise the view with pre-loaded party data.
-
-        Args:
-            parties: Ordered list of ``(party_name, member_count)`` tuples.
-            server_name: Display name of the Discord server (used in embed title).
-        """
-        super().__init__(timeout=120)
-        self.parties = parties
-        self.server_name = server_name
-        self.current_page: int = 0
-        self.total_pages: int = max(1, math.ceil(len(parties) / self.PARTIES_PER_PAGE))
-        self._update_buttons()
-
-    def _update_buttons(self) -> None:
-        """Enable or disable navigation buttons based on the current page."""
-        self.prev_button.disabled = self.current_page == 0
-        self.next_button.disabled = self.current_page >= self.total_pages - 1
-
-    def build_embed(self) -> discord.Embed:
-        """Build and return the Discord Embed for the current page."""
-        start = self.current_page * self.PARTIES_PER_PAGE
-        page_parties = self.parties[start : start + self.PARTIES_PER_PAGE]
-
-        embed = discord.Embed(
-            title=Strings.PARTY_LIST_EMBED_TITLE.format(server_name=self.server_name),
-            color=discord.Color.blue(),
-        )
-        for name, count in page_parties:
-            plural = "s" if count != 1 else ""
-            embed.add_field(
-                name=name,
-                value=Strings.PARTY_LIST_MEMBER_COUNT.format(
-                    count=count, plural=plural
-                ),
-                inline=False,
-            )
-        embed.set_footer(
-            text=Strings.PARTY_LIST_EMBED_FOOTER.format(
-                page=self.current_page + 1,
-                total_pages=self.total_pages,
-                total_parties=len(self.parties),
-            )
-        )
-        return embed
-
-    @discord.ui.button(label=Strings.BUTTON_PREV, style=discord.ButtonStyle.secondary)
-    async def prev_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Navigate to the previous page."""
-        self.current_page -= 1
-        self._update_buttons()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
-
-    @discord.ui.button(label=Strings.BUTTON_NEXT, style=discord.ButtonStyle.secondary)
-    async def next_button(
-        self, interaction: discord.Interaction, button: discord.ui.Button
-    ) -> None:
-        """Navigate to the next page."""
-        self.current_page += 1
-        self._update_buttons()
-        await interaction.response.edit_message(embed=self.build_embed(), view=self)
+    if not _is_gm(user, party):
+        await interaction.response.send_message(error_string, ephemeral=True)
+        return False
+    return True
 
 
 def register_party_commands(bot: commands.Bot) -> None:
@@ -355,6 +110,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     async def _party_name_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
+        """Return autocomplete choices for party names in the current server."""
         db = SessionLocal()
         try:
             server = (
@@ -374,6 +130,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     async def _character_name_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
+        """Return autocomplete choices for character names in the current server."""
         db = SessionLocal()
         try:
             server = (
@@ -381,11 +138,11 @@ def register_party_commands(bot: commands.Bot) -> None:
             )
             if not server:
                 return []
-            chars = db.query(Character).filter_by(server_id=server.id).all()
+            characters = db.query(Character).filter_by(server_id=server.id).all()
             return [
-                app_commands.Choice(name=c.name, value=c.name)
-                for c in chars
-                if current.lower() in c.name.lower()
+                app_commands.Choice(name=character.name, value=character.name)
+                for character in characters
+                if current.lower() in character.name.lower()
             ][:25]
         finally:
             db.close()
@@ -398,6 +155,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         assoc = db.execute(stmt).fetchone()
         if assoc:
+            # Row already exists — update the active_party_id in place
             db.execute(
                 update(user_server_association)
                 .where(
@@ -407,6 +165,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 .values(active_party_id=party.id)
             )
         else:
+            # No association row yet — create one with the chosen party
             db.execute(
                 insert(user_server_association).values(
                     user_id=user.id,
@@ -414,6 +173,41 @@ def register_party_commands(bot: commands.Bot) -> None:
                     active_party_id=party.id,
                 )
             )
+
+    async def _apply_validated_enum_setting(
+        db,
+        interaction: discord.Interaction,
+        party: Party,
+        value: str,
+        enum_class: type,
+        invalid_msg: str,
+        attribute_name: str,
+        success_msg: str,
+        log_msg: str,
+    ) -> None:
+        """Validate a string against an enum, write it to party settings, and reply.
+
+        Args:
+            db: Active SQLAlchemy session.
+            interaction: The Discord interaction to reply to.
+            party: The party whose settings should be updated.
+            value: The raw string value supplied by the user.
+            enum_class: The enum type to validate and cast the value against.
+            invalid_msg: The error string to send if the value is not in the enum.
+            attribute_name: The PartySettings attribute to set (e.g. "crit_rule").
+            success_msg: The string to send on success.
+            log_msg: The message to pass to logger.info on success.
+        """
+        # Build the set of accepted string values from the enum for validation
+        valid_values = {member.value for member in enum_class}
+        if value not in valid_values:
+            await interaction.response.send_message(invalid_msg, ephemeral=True)
+            return
+        party_settings = _get_or_create_party_settings(db, party)
+        setattr(party_settings, attribute_name, enum_class(value))
+        db.commit()
+        logger.info(log_msg)
+        await interaction.response.send_message(success_msg)
 
     # ------------------------------------------------------------------
     # /party create
@@ -433,6 +227,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party create called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
         )
+        # Defer immediately — character lookups may push past the 3-second response window
         await interaction.response.defer()
         db = SessionLocal()
         try:
@@ -444,6 +239,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
+            # Enforce the per-user GM-party cap before doing any more work
             if len(user.gm_parties) >= MAX_GM_PARTIES_PER_USER:
                 await interaction.followup.send(
                     Strings.ERROR_LIMIT_GM_PARTIES.format(
@@ -453,6 +249,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
+            # Enforce the server-wide party count limit
             server_party_count = db.query(Party).filter_by(server_id=server.id).count()
             if server_party_count >= MAX_PARTIES_PER_SERVER:
                 await interaction.followup.send(
@@ -463,9 +260,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            existing_party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
+            existing_party = _lookup_party(db, party_name, server.id)
             if existing_party:
                 await interaction.followup.send(
                     Strings.PARTY_ALREADY_EXISTS.format(party_name=party_name),
@@ -475,45 +270,48 @@ def register_party_commands(bot: commands.Bot) -> None:
 
             new_party = Party(name=party_name, gms=[user], server=server)
 
-            found_chars = []
+            # Walk the comma-separated list and resolve each name against this server's
+            # characters; collect matches and misses separately to report both at the end
+            found_characters = []
             not_found = []
             if characters_list.strip():
-                char_names = [n.strip() for n in characters_list.split(",")]
-                for n in char_names:
-                    char = (
+                character_names = [character_name.strip() for character_name in characters_list.split(",")]
+                for character_name in character_names:
+                    character = (
                         db.query(Character)
-                        .filter_by(name=n, server_id=server.id)
+                        .filter_by(name=character_name, server_id=server.id)
                         .first()
                     )
-                    if char:
-                        found_chars.append(char)
+                    if character:
+                        found_characters.append(character)
                     else:
-                        not_found.append(n)
+                        not_found.append(character_name)
 
-            new_party.characters = found_chars
+            new_party.characters = found_characters
             db.add(new_party)
+            # Commit the party first so it has an id before the active-party upsert
             db.commit()
 
             _set_active_party(db, user, server, new_party)
             db.commit()
 
-            if not found_chars:
-                msg = Strings.PARTY_CREATE_SUCCESS_EMPTY.format(party_name=party_name)
+            if not found_characters:
+                message = Strings.PARTY_CREATE_SUCCESS_EMPTY.format(party_name=party_name)
             else:
-                msg = Strings.PARTY_CREATE_SUCCESS_MEMBERS.format(
-                    party_name=party_name, count=len(found_chars)
+                message = Strings.PARTY_CREATE_SUCCESS_MEMBERS.format(
+                    party_name=party_name, count=len(found_characters)
                 )
 
             if not_found:
-                msg += Strings.ERROR_PARTY_CHAR_NOT_FOUND.format(
+                message += Strings.ERROR_PARTY_CHAR_NOT_FOUND.format(
                     names=", ".join(not_found)
                 )
 
             logger.info(
                 f"/party create completed for user {interaction.user.id}: "
-                f"created '{party_name}' with {len(found_chars)} members"
+                f"created '{party_name}' with {len(found_characters)} members"
             )
-            await interaction.followup.send(msg, ephemeral=True)
+            await interaction.followup.send(message, ephemeral=True)
         finally:
             db.close()
 
@@ -539,16 +337,9 @@ def register_party_commands(bot: commands.Bot) -> None:
             user, server = get_or_create_user_server(db, interaction)
 
             if party_name:
-                party = (
-                    db.query(Party)
-                    .filter_by(name=party_name, server_id=server.id)
-                    .first()
-                )
-                if not party:
-                    await interaction.response.send_message(
-                        Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                        ephemeral=True,
-                    )
+                # Setting mode: point the user's active-party slot at the named party
+                party = await _get_party_or_error(db, interaction, party_name, server.id)
+                if party is None:
                     return
 
                 _set_active_party(db, user, server, party)
@@ -562,6 +353,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                     ephemeral=True,
                 )
             else:
+                # View mode: read the active_party_id from the user-server association table
                 stmt = select(user_server_association.c.active_party_id).where(
                     user_server_association.c.user_id == user.id,
                     user_server_association.c.server_id == server.id,
@@ -569,7 +361,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 result = db.execute(stmt).fetchone()
                 if result and result[0]:
                     party = db.get(Party, result[0])
-                    char_names = ", ".join([c.name for c in party.characters])
+                    char_names = ", ".join([character.name for character in party.characters])
                     logger.info(
                         f"/party active completed for user {interaction.user.id}: "
                         f"viewed active party '{party.name}'"
@@ -606,6 +398,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         db = SessionLocal()
         try:
+            # party_view doesn't create the server — if it doesn't exist no parties do either
             server = (
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             )
@@ -615,15 +408,8 @@ def register_party_commands(bot: commands.Bot) -> None:
                     ephemeral=True,
                 )
                 return
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
             embed = discord.Embed(
@@ -631,6 +417,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 color=discord.Color.blue(),
             )
             gm_mentions = " ".join(f"<@{gm.discord_id}>" for gm in party.gms)
+            # Fall back to "None" if the party somehow has no GMs
             embed.add_field(
                 name=Strings.PARTY_VIEW_GM, value=gm_mentions or "None", inline=False
             )
@@ -639,12 +426,12 @@ def register_party_commands(bot: commands.Bot) -> None:
                 embed.description = Strings.PARTY_VIEW_EMPTY
             else:
                 members_info = []
-                for char in party.characters:
+                for character in party.characters:
                     members_info.append(
                         Strings.PARTY_VIEW_MEMBER_LINE.format(
-                            char_name=char.name,
-                            char_level=char.level,
-                            discord_id=char.user.discord_id,
+                            char_name=character.name,
+                            char_level=character.level,
+                            discord_id=character.user.discord_id,
                         )
                     )
                 embed.add_field(
@@ -680,29 +467,24 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_PARTY_DELETE, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_PARTY_DELETE
+            ):
                 return
 
+            # Collect open encounters so the confirmation message can warn the GM;
+            # the view will auto-complete them before cascading the delete
             open_encounter_names = [
                 enc.name
                 for enc in party.encounters
                 if enc.status in (EncounterStatus.PENDING, EncounterStatus.ACTIVE)
             ]
             if open_encounter_names:
+                # List the encounters that will be force-completed on confirmation
                 confirm_msg = Strings.PARTY_DELETE_ENCOUNTER_CONFIRM.format(
                     party_name=party_name,
                     encounter_names=", ".join(f"**{n}**" for n in open_encounter_names),
@@ -710,7 +492,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             else:
                 confirm_msg = Strings.PARTY_DELETE_CONFIRM.format(party_name=party_name)
 
-            view = _ConfirmPartyDeleteView(party_id=party.id, party_name=party_name)
+            view = ConfirmPartyDeleteView(party_id=party.id, party_name=party_name)
             logger.debug(
                 f"/party delete showing confirmation for user {interaction.user.id}: '{party_name}'"
             )
@@ -756,15 +538,17 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
+            # Rolling for every member can take longer than 3 seconds — defer first
             await interaction.response.defer()
             results = []
-            for char in party.characters:
-                res = await perform_roll(char, notation, db)
-                results.append(res)
+            for character in party.characters:
+                roll_result = await perform_roll(character, notation, db)
+                results.append(roll_result)
 
             response = Strings.PARTY_ROLL_HEADER.format(
                 notation=notation, party_name=party.name
             ) + "\n".join(results)
+            # Discord caps messages at 2000 characters; truncate with an ellipsis if needed
             if len(response) > 2000:
                 await interaction.followup.send(
                     response[:1997] + "...", suppress_embeds=True
@@ -807,12 +591,12 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            char = next((c for c in party.characters if c.name == member_name), None)
+            character = next((c for c in party.characters if c.name == member_name), None)
             logger.debug(
                 f"Member lookup for /party roll_as: "
-                f"{'found: ' + char.name if char else 'not found'} in party '{party.name}'"
+                f"{'found: ' + character.name if character else 'not found'} in party '{party.name}'"
             )
-            if not char:
+            if not character:
                 await interaction.response.send_message(
                     Strings.PARTY_ACTIVE_MEMBER_NOT_FOUND.format(
                         member_name=member_name
@@ -821,7 +605,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            response = await perform_roll(char, notation, db)
+            response = await perform_roll(character, notation, db)
             await interaction.response.send_message(response, suppress_embeds=True)
             logger.info(
                 f"/party roll_as completed for user {interaction.user.id}: "
@@ -843,9 +627,9 @@ def register_party_commands(bot: commands.Bot) -> None:
             if not party:
                 return []
             return [
-                app_commands.Choice(name=c.name, value=c.name)
-                for c in party.characters
-                if current.lower() in c.name.lower()
+                app_commands.Choice(name=character.name, value=character.name)
+                for character in party.characters
+                if current.lower() in character.name.lower()
             ][:25]
         finally:
             db.close()
@@ -873,56 +657,54 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_PARTY_ADD, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_PARTY_ADD
+            ):
                 return
 
+            # Start broad: all characters with this name in the server
             query = db.query(Character).filter_by(
                 name=character_name, server_id=server.id
             )
             if character_owner:
+                # Narrow to the specified owner to resolve ambiguity
                 owner = (
                     db.query(User).filter_by(discord_id=str(character_owner.id)).first()
                 )
                 if not owner:
                     await interaction.response.send_message(
-                        f"User **{character_owner.display_name}** has no characters.",
+                        Strings.ERROR_CHARACTER_OWNER_NO_CHARACTERS.format(
+                            display_name=character_owner.display_name
+                        ),
                         ephemeral=True,
                     )
                     return
                 query = query.filter_by(user_id=owner.id)
 
-            chars = query.all()
-            if not chars:
+            characters = query.all()
+            if not characters:
                 await interaction.response.send_message(
                     Strings.CHAR_NOT_FOUND_NAME.format(name=character_name),
                     ephemeral=True,
                 )
                 return
 
-            if len(chars) > 1:
+            # Multiple characters share the name — the caller must specify an owner
+            if len(characters) > 1:
                 await interaction.response.send_message(
-                    f"Multiple characters named '**{character_name}**' found. "
-                    "Please specify the owner.",
+                    Strings.ERROR_MULTIPLE_CHARACTERS_FOUND.format(
+                        character_name=character_name
+                    ),
                     ephemeral=True,
                 )
                 return
 
-            char = chars[0]
-            if char in party.characters:
+            character = characters[0]
+            if character in party.characters:
                 await interaction.response.send_message(
                     Strings.PARTY_MEMBER_ALREADY_IN.format(
                         character_name=character_name
@@ -940,7 +722,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            party.characters.append(char)
+            party.characters.append(character)
             db.commit()
             logger.info(
                 f"/party character_add completed for user {interaction.user.id}: "
@@ -949,7 +731,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.PARTY_MEMBER_ADDED.format(
                     character_name=character_name,
-                    discord_id=char.user.discord_id,
+                    discord_id=character.user.discord_id,
                     party_name=party_name,
                 )
             )
@@ -994,24 +776,17 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_PARTY_REMOVE, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_PARTY_REMOVE
+            ):
                 return
 
-            char = next(
+            # Search the party's in-memory member list, optionally filtered by owner
+            character = next(
                 (
                     c
                     for c in party.characters
@@ -1024,7 +799,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 None,
             )
 
-            if not char:
+            if not character:
                 await interaction.response.send_message(
                     Strings.ERROR_CHAR_NOT_IN_PARTY.format(
                         character_name=character_name, party_name=party_name
@@ -1033,10 +808,10 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            # Check whether this character is in an active encounter for this party
+            # Mid-combat removal needs special handling — check for an active turn first
             active_turn = (
                 db.query(EncounterTurn)
-                .filter_by(character_id=char.id)
+                .filter_by(character_id=character.id)
                 .join(EncounterTurn.encounter)
                 .filter(
                     Encounter.party_id == party.id,
@@ -1046,6 +821,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             )
 
             if active_turn:
+                # Warn the GM that the character's encounter turn will be deleted
                 confirm_msg = Strings.PARTY_REMOVE_ENCOUNTER_WARNING.format(
                     char_name=character_name,
                     encounter_name=active_turn.encounter.name,
@@ -1055,9 +831,9 @@ def register_party_commands(bot: commands.Bot) -> None:
                     char_name=character_name, party_name=party_name
                 )
 
-            view = _ConfirmCharacterRemoveView(
+            view = ConfirmCharacterRemoveView(
                 party_id=party.id,
-                char_id=char.id,
+                char_id=character.id,
                 party_name=party_name,
                 char_name=character_name,
             )
@@ -1083,15 +859,13 @@ def register_party_commands(bot: commands.Bot) -> None:
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             )
             party_name = interaction.namespace.party_name
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
+            party = _lookup_party(db, party_name, server.id)
             if not party:
                 return []
             return [
-                app_commands.Choice(name=c.name, value=c.name)
-                for c in party.characters
-                if current.lower() in c.name.lower()
+                app_commands.Choice(name=character.name, value=character.name)
+                for character in party.characters
+                if current.lower() in character.name.lower()
             ][:25]
         finally:
             db.close()
@@ -1118,23 +892,16 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_ADD_GM, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_ADD_GM
+            ):
                 return
 
+            # Ensure the target has a User row even if they've never run a bot command
             target = get_or_create_user(db, str(new_gm.id))
 
             if target in party.gms:
@@ -1186,21 +953,13 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_REMOVE_GM, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_REMOVE_GM
+            ):
                 return
 
             target = db.query(User).filter_by(discord_id=str(target_gm.id)).first()
@@ -1213,15 +972,17 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
+            # Prevent orphaning the party by removing its last GM
             if len(party.gms) == 1:
                 await interaction.response.send_message(
                     Strings.ERROR_GM_LAST, ephemeral=True
                 )
                 return
 
+            # Removing yourself requires an extra confirmation step
             is_self_removal = str(target.discord_id) == str(interaction.user.id)
             if is_self_removal:
-                view = _ConfirmSelfGMRemoveView(
+                view = ConfirmSelfGMRemoveView(
                     party_id=party.id,
                     party_name=party_name,
                     user_discord_id=str(interaction.user.id),
@@ -1289,11 +1050,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             user, server = get_or_create_user_server(db, interaction)
 
             if party_name:
-                party = (
-                    db.query(Party)
-                    .filter_by(name=party_name, server_id=server.id)
-                    .first()
-                )
+                party = _lookup_party(db, party_name, server.id)
             else:
                 party = get_active_party(db, user, server)
 
@@ -1356,44 +1113,30 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_PARTY_SETTINGS
+            ):
                 return
 
-            valid_modes = {member.value for member in EnemyInitiativeMode}
-            if mode not in valid_modes:
-                await interaction.response.send_message(
-                    Strings.PARTY_SETTINGS_INVALID_MODE, ephemeral=True
-                )
-                return
-
-            party_settings = _get_or_create_party_settings(db, party)
-            party_settings.initiative_mode = EnemyInitiativeMode(mode)
-            db.commit()
-
-            logger.info(
-                f"/party settings initiative_mode updated for user {interaction.user.id}: "
-                f"'{party_name}' → {mode}"
-            )
-            await interaction.response.send_message(
-                Strings.PARTY_SETTINGS_UPDATED.format(
+            await _apply_validated_enum_setting(
+                db, interaction, party,
+                value=mode,
+                enum_class=EnemyInitiativeMode,
+                invalid_msg=Strings.PARTY_SETTINGS_INVALID_MODE,
+                attribute_name="initiative_mode",
+                success_msg=Strings.PARTY_SETTINGS_UPDATED.format(
                     setting="initiative_mode",
                     value=mode,
                     party_name=party.name,
-                )
+                ),
+                log_msg=(
+                    f"/party settings initiative_mode updated for user {interaction.user.id}: "
+                    f"'{party_name}' → {mode}"
+                ),
             )
         finally:
             db.close()
@@ -1433,21 +1176,13 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_PARTY_SETTINGS
+            ):
                 return
 
             party_settings = _get_or_create_party_settings(db, party)
@@ -1505,44 +1240,30 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_PARTY_SETTINGS
+            ):
                 return
 
-            valid_rules = {member.value for member in CritRule}
-            if rule not in valid_rules:
-                await interaction.response.send_message(
-                    Strings.PARTY_SETTINGS_INVALID_CRIT_RULE, ephemeral=True
-                )
-                return
-
-            party_settings = _get_or_create_party_settings(db, party)
-            party_settings.crit_rule = CritRule(rule)
-            db.commit()
-
-            logger.info(
-                f"/party settings crit_rule updated for user {interaction.user.id}: "
-                f"'{party_name}' → {rule}"
-            )
-            await interaction.response.send_message(
-                Strings.PARTY_SETTINGS_UPDATED.format(
+            await _apply_validated_enum_setting(
+                db, interaction, party,
+                value=rule,
+                enum_class=CritRule,
+                invalid_msg=Strings.PARTY_SETTINGS_INVALID_CRIT_RULE,
+                attribute_name="crit_rule",
+                success_msg=Strings.PARTY_SETTINGS_UPDATED.format(
                     setting="crit_rule",
                     value=rule,
                     party_name=party.name,
-                )
+                ),
+                log_msg=(
+                    f"/party settings crit_rule updated for user {interaction.user.id}: "
+                    f"'{party_name}' → {rule}"
+                ),
             )
         finally:
             db.close()
@@ -1584,43 +1305,29 @@ def register_party_commands(bot: commands.Bot) -> None:
         db = SessionLocal()
         try:
             user, server = get_or_create_user_server(db, interaction)
-            party = (
-                db.query(Party).filter_by(name=party_name, server_id=server.id).first()
-            )
-
-            if not party:
-                await interaction.response.send_message(
-                    Strings.PARTY_NOT_FOUND.format(party_name=party_name),
-                    ephemeral=True,
-                )
+            party = await _get_party_or_error(db, interaction, party_name, server.id)
+            if party is None:
                 return
 
-            if not user or user not in party.gms:
-                await interaction.response.send_message(
-                    Strings.ERROR_GM_ONLY_PARTY_SETTINGS, ephemeral=True
-                )
+            if not await _require_gm_or_error(
+                interaction, user, party, Strings.ERROR_GM_ONLY_PARTY_SETTINGS
+            ):
                 return
 
-            valid_modes = {member.value for member in DeathSaveNat20Mode}
-            if mode not in valid_modes:
-                await interaction.response.send_message(
-                    Strings.PARTY_SETTINGS_INVALID_NAT20_MODE, ephemeral=True
-                )
-                return
-
-            party_settings = _get_or_create_party_settings(db, party)
-            party_settings.death_save_nat20_mode = DeathSaveNat20Mode(mode)
-            db.commit()
-
-            logger.info(
-                f"/party settings death_save_nat20 updated for user {interaction.user.id}: "
-                f"'{party_name}' → {mode}"
-            )
-            await interaction.response.send_message(
-                Strings.PARTY_SETTINGS_NAT20_UPDATED.format(
+            await _apply_validated_enum_setting(
+                db, interaction, party,
+                value=mode,
+                enum_class=DeathSaveNat20Mode,
+                invalid_msg=Strings.PARTY_SETTINGS_INVALID_NAT20_MODE,
+                attribute_name="death_save_nat20_mode",
+                success_msg=Strings.PARTY_SETTINGS_NAT20_UPDATED.format(
                     mode=mode,
                     party_name=party.name,
-                )
+                ),
+                log_msg=(
+                    f"/party settings death_save_nat20 updated for user {interaction.user.id}: "
+                    f"'{party_name}' → {mode}"
+                ),
             )
         finally:
             db.close()

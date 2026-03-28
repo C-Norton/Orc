@@ -7,126 +7,20 @@ from tests.commands.conftest import get_callback
 
 
 # ---------------------------------------------------------------------------
-# /character create
+# /character create — wizard entry point
+# (creation logic is tested in test_character_wizard.py)
 # ---------------------------------------------------------------------------
 
 
-async def test_create_character_success(
-    char_bot, sample_user, sample_server, interaction, session_factory
-):
+async def test_create_command_sends_wizard_intro(char_bot, interaction):
+    """/character create sends an ephemeral wizard intro message."""
     cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Aldric", character_class="Fighter", level=1)
+    await cb(interaction)
 
     interaction.response.send_message.assert_called_once()
-    msg = interaction.response.send_message.call_args.args[0]
-    assert "Aldric" in msg
     assert (
         interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     )
-
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name="Aldric").first()
-    assert char is not None
-    assert char.is_active is True
-    assert char.level == 1
-    cl = verify.query(ClassLevel).filter_by(character_id=char.id).first()
-    assert cl is not None
-    assert cl.class_name == "Fighter"
-    verify.close()
-
-
-async def test_create_character_sets_class_save_profs(
-    char_bot, sample_user, sample_server, interaction, session_factory
-):
-    """Creating a Fighter should automatically set STR and CON save proficiencies."""
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Gorrath", character_class="Fighter", level=1)
-
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name="Gorrath").first()
-    assert char.st_prof_strength is True
-    assert char.st_prof_constitution is True
-    assert char.st_prof_dexterity is False
-    verify.close()
-
-
-async def test_create_character_name_too_long(char_bot, interaction):
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="A" * 101, character_class="Fighter", level=1)
-
-    kwargs = interaction.response.send_message.call_args.kwargs
-    assert kwargs.get("ephemeral") is True
-
-
-async def test_create_character_duplicate_name(char_bot, sample_character, interaction):
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Aldric", character_class="Fighter", level=1)
-
-    kwargs = interaction.response.send_message.call_args.kwargs
-    assert kwargs.get("ephemeral") is True
-    assert "already have" in interaction.response.send_message.call_args.args[0]
-
-
-async def test_create_character_new_char_becomes_active(
-    char_bot, sample_character, interaction, session_factory
-):
-    """Creating a second character should deactivate the first."""
-    assert sample_character.is_active is True, "Precondition: sample_character must be active"
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Beren", character_class="Rogue", level=1)
-
-    verify = session_factory()
-    old = verify.query(Character).filter_by(name="Aldric").first()
-    new = verify.query(Character).filter_by(name="Beren").first()
-    assert old.is_active is False
-    assert new.is_active is True
-    verify.close()
-
-
-async def test_create_character_auto_creates_user_record(
-    mocker, char_bot, sample_server, session_factory
-):
-    """A brand-new Discord user should have a User record created automatically."""
-    new_user_interaction = make_interaction(mocker, user_id=999)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(new_user_interaction, name="Ghost", character_class="Wizard", level=1)
-
-    verify = session_factory()
-    from models import User
-
-    user = verify.query(User).filter_by(discord_id="999").first()
-    assert user is not None
-    verify.close()
-
-
-# ---------------------------------------------------------------------------
-# Resource limits
-# ---------------------------------------------------------------------------
-
-
-async def test_create_character_over_user_limit(
-    mocker, char_bot, sample_user, sample_server, db_session, interaction
-):
-    """Creating a character when the user already owns the per-user maximum is rejected."""
-    mocker.patch("commands.character_commands.MAX_CHARACTERS_PER_USER", 2)
-
-    for i in range(2):
-        db_session.add(
-            Character(
-                name=f"ExtraChar{i}",
-                user=sample_user,
-                server=sample_server,
-                is_active=False,
-            )
-        )
-    db_session.commit()
-
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="OneMore", character_class="Fighter", level=1)
-
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    msg = interaction.response.send_message.call_args.args[0]
-    assert "maximum" in msg.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -211,25 +105,27 @@ async def test_set_stats_no_character(
 # ---------------------------------------------------------------------------
 
 
-async def test_set_saving_throws_success(
-    char_bot, sample_character, interaction, session_factory
+async def test_set_saving_throws_sends_edit_view(
+    char_bot, sample_character, interaction
 ):
-    cb = get_callback(char_bot, "character", "saves")
-    await cb(interaction, strength=True, dexterity=True)
+    """/character saves sends an ephemeral CharacterSavesEditView when a character exists."""
+    from commands.character_commands import CharacterSavesEditView
 
-    verify = session_factory()
-    char = verify.query(Character).filter_by(name="Aldric").first()
-    assert char.st_prof_strength is True
-    assert char.st_prof_dexterity is True
-    assert char.st_prof_wisdom is False
-    verify.close()
+    cb = get_callback(char_bot, "character", "saves")
+    await cb(interaction)
+
+    interaction.response.send_message.assert_called_once()
+    kwargs = interaction.response.send_message.call_args.kwargs
+    assert kwargs.get("ephemeral") is True
+    assert isinstance(kwargs.get("view"), CharacterSavesEditView)
 
 
 async def test_set_saving_throws_no_character(
     char_bot, sample_user, sample_server, interaction
 ):
+    """/character saves returns an error message when there is no active character."""
     cb = get_callback(char_bot, "character", "saves")
-    await cb(interaction, strength=True)
+    await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 

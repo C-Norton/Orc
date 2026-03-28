@@ -20,6 +20,7 @@ Sections
 
 import pytest
 
+from models import Server
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
 from utils.db_helpers import (
@@ -189,33 +190,44 @@ def test_get_or_create_idempotent_association(db_session, sample_user, sample_se
 
 
 async def test_character_create_auto_registers_unregistered_server(
-    mocker, char_bot, session_factory
+    mocker, db_session
 ):
-    """``/character create`` is the bootstrap command — it must create both the
-    User and Server rows when neither exists yet."""
-    interaction = _unknown_server_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Newbie", character_class="Wizard", level=1)
-
+    """``save_character_from_wizard`` bootstraps both User and Server rows
+    when neither exists yet (new server + new user)."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
     from models import Server
 
-    verify = session_factory()
-    server = verify.query(Server).filter_by(discord_id=str(_UNKNOWN_GUILD_ID)).first()
-    assert server is not None
-    verify.close()
-
-
-async def test_character_create_in_unregistered_server_succeeds(mocker, char_bot):
-    """``/character create`` does not send an ephemeral error when the server is
-    unregistered — it bootstraps and creates the character normally."""
     interaction = _unknown_server_interaction(mocker)
-    cb = get_callback(char_bot, "character", "create")
-    await cb(interaction, name="Newbie", character_class="Fighter", level=1)
-
-    # Success response should NOT be ephemeral
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    state = WizardState(
+        user_discord_id="111",
+        guild_discord_id=str(_UNKNOWN_GUILD_ID),
+        guild_name="Unknown Server",
+        name="Newbie",
     )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+
+    assert error is None
+    server = db_session.query(Server).filter_by(discord_id=str(_UNKNOWN_GUILD_ID)).first()
+    assert server is not None
+
+
+async def test_character_create_in_unregistered_server_succeeds(mocker, db_session):
+    """``save_character_from_wizard`` creates the character normally on a server
+    that has never been registered."""
+    from commands.character_wizard import WizardState, save_character_from_wizard
+
+    interaction = _unknown_server_interaction(mocker)
+    state = WizardState(
+        user_discord_id="111",
+        guild_discord_id=str(_UNKNOWN_GUILD_ID),
+        guild_name="Unknown Server",
+        name="Newbie",
+    )
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    assert error is None
+    assert char is not None
+    assert char.is_active is True
 
 
 async def test_character_list_in_unregistered_server_returns_ephemeral(
@@ -331,15 +343,7 @@ async def test_character_saves_in_unregistered_server_returns_ephemeral(
     server is unregistered."""
     interaction = _unknown_server_interaction(mocker)
     cb = get_callback(char_bot, "character", "saves")
-    await cb(
-        interaction,
-        strength=True,
-        dexterity=False,
-        constitution=False,
-        intelligence=False,
-        wisdom=False,
-        charisma=False,
-    )
+    await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
     msg = interaction.response.send_message.call_args.args[0]

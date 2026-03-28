@@ -42,8 +42,8 @@ When self-hosting, generate an invite URL from the [Discord Developer Portal](ht
 Once ORC is in your server:
 
 1. **Open the help menu** — `/help` shows a paginated guide to every command category.
-2. **Create a character** — `/character create name:<name>` registers your first character.
-3. **Set your stats** — `/character stats strength:16 dexterity:14 ...` records your ability scores.
+2. **Create a character** — `/character create` opens a step-by-step wizard covering name, class & level (with multiclass support), stats, AC, saving throws, skills, HP, and weapons. Every step has Back, Continue (saves entered data and advances), and Skip Step (bypasses the step) buttons; a Finish button commits at any point.
+3. **Set your stats** — Stats are collected during the wizard; you can also use `/character stats strength:16 dexterity:14 ...` at any time.
 4. **Roll a check** — `/roll check notation:perception` rolls with your proficiency automatically applied.
 5. **Form a party** — A GM runs `/party create name:<name>`, then players join with `/party join party_name:<name>`.
 6. **Start a fight** — The GM runs `/encounter create`, adds enemies with `/encounter enemy`, then `/encounter start` rolls initiative and posts the turn order.
@@ -56,9 +56,9 @@ Use `/help` in Discord for the full interactive reference. Here is a category su
 
 | Group        | Commands                                                                                                             | Notes                                                                                                                                                     |
 |--------------|----------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `/character` | `create`, `delete`, `switch`, `view`, `list`, `stats`, `skill`, `ac`, `class`                                        | Create a character first to use other commands. Can have multiple characters, View to view character sheet. Stats, skill, ac, and class to set key traits |
+| `/character` | `create`, `delete`, `switch`, `view`, `list`, `stats`, `skill`, `ac`, `class`, `saves`                               | `/character create` opens an 8-step wizard (multiclass, HP, weapons). Each step has Continue, Skip Step, Back, and Finish buttons. Can have multiple characters; use `view` for the paginated sheet. |
 | `/roll`      | *(no subcommands)*                                                                                                   | Valid entries for the argument are `skill`/`stat`/`save`/`initiative`/`raw dice`/`death save`; must have a valid character to use anything but raw dice   |
-| `/weapon`    | `search`, `add`                                                                                                      | Search searches the SRD. Add by name after searching                                                                                                      |
+| `/weapon`    | `search`                                                                                                             | Searches the SRD and adds weapons directly to your active character with computed hit modifiers. Also available in Step 8 of the character creation wizard. |
 | `/attack`    | `add`, `roll`, `list`                                                                                                | A lighter-weight alternative to SRD Weapons, suitable for Spells, and non-SRD content. This is inelegent, and will likely be replaced in the future       |
 | `/hp`        | `set_max`, `damage`, `heal`, `temp`, `party_temp`, `status`                                                          | `damage` requires GM when targeting another member; `heal` and `party_temp` are open to all                                                               |
 | `/party`     | `create`, `delete`, `join`, `leave`, `active`, `view`, `list`, `character_remove`, `gm_add`, `gm_remove`, `settings` |                                                                                                                                                    |
@@ -96,7 +96,8 @@ GMs can tune per-party behavior with `/party settings`:
 - [ ] Weapon proficiency and Expertise
 - [ ] Armor tracking
 - [ ] GM Rolls via DM
-- [ ] Full srd lookup for weapons
+- [x] Weapon search and import via SRD (available in `/weapon search` and the character creation wizard)
+- [ ] Full srd lookup for weapons (non-SRD / homebrew weapons)
 - [ ] Full srd lookup for spells
 - [ ] Full srd lookup for classes
 - [ ] Full srd lookup for skills
