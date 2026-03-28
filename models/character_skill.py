@@ -16,7 +16,8 @@ class CharacterSkill(Base):
     )
     skill_name: Mapped[str] = mapped_column(String, nullable=False)
     proficiency: Mapped[SkillProficiencyStatus] = mapped_column(
-        Enum(SkillProficiencyStatus), default=SkillProficiencyStatus.NOT_PROFICIENT
+        Enum(SkillProficiencyStatus, name="proficiencylevel"),
+        default=SkillProficiencyStatus.NOT_PROFICIENT,
     )
 
     character: Mapped["Character"] = relationship("Character", back_populates="skills")
