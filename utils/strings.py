@@ -549,6 +549,7 @@ class Strings:
     WIZARD_COMPLETE_TIP_HP = "💡 Max HP is auto-calculated when both a class and Constitution are set."
     WIZARD_COMPLETE_HP_OVERRIDE = "manual"
     WIZARD_COMPLETE_HP_AUTO = "auto-calculated"
+    WIZARD_COMPLETE_EPHEMERAL_DISMISS = "Character created! See the summary below."
 
     WIZARD_MANUAL_MODAL_TITLE = "Create Character"
     WIZARD_MANUAL_NAME_LABEL = "Character Name"

@@ -147,7 +147,7 @@ def wizard_bot(session_factory, mocker):
     the wizard package so wizard commit tests write to the in-memory DB."""
     bot = make_bot()
     mocker.patch("commands.character_commands.SessionLocal", new=session_factory)
-    mocker.patch("commands.wizard.SessionLocal", new=session_factory)
+    mocker.patch("commands.wizard.completion.SessionLocal", new=session_factory)
     from commands.character_commands import register_character_commands
 
     register_character_commands(bot)

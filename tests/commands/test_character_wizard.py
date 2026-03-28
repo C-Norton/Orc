@@ -2510,3 +2510,106 @@ async def test_hub_view_on_timeout_does_not_raise_when_message_absent(mocker):
 
     # State reference must be cleared
     assert view.wizard_state is None
+
+
+# ---------------------------------------------------------------------------
+# _finish_wizard — completion behaviour (ephemeral dismiss + public followup)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_finish_wizard_success_dismisses_ephemeral_message(mocker, db_session):
+    """On success, edit_message is called with the dismissal string, embed=None, view=None.
+
+    This verifies the ephemeral wizard message is replaced with a brief
+    confirmation rather than the full completion embed.
+    """
+    state, interaction = _make_state(mocker)
+    fake_char = mocker.Mock(spec=Character)
+    fake_char.name = "Thalindra"
+    fake_char.max_hp = 10
+    mocker.patch(
+        "commands.wizard.completion.save_character_from_wizard",
+        return_value=(fake_char, None),
+    )
+    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+
+    from commands.wizard import _finish_wizard
+
+    await _finish_wizard(state, interaction)
+
+    interaction.response.edit_message.assert_called_once_with(
+        content=Strings.WIZARD_COMPLETE_EPHEMERAL_DISMISS,
+        embed=None,
+        view=None,
+    )
+
+
+@pytest.mark.asyncio
+async def test_finish_wizard_success_sends_public_followup_with_embed(mocker, db_session):
+    """On success, followup.send is called with ephemeral=False and a discord.Embed."""
+    state, interaction = _make_state(mocker)
+    fake_char = mocker.Mock(spec=Character)
+    fake_char.name = "Thalindra"
+    fake_char.max_hp = 10
+    mocker.patch(
+        "commands.wizard.completion.save_character_from_wizard",
+        return_value=(fake_char, None),
+    )
+    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+
+    from commands.wizard import _finish_wizard
+
+    await _finish_wizard(state, interaction)
+
+    interaction.followup.send.assert_called_once()
+    call_kwargs = interaction.followup.send.call_args.kwargs
+    assert call_kwargs.get("ephemeral") is False
+    assert isinstance(call_kwargs.get("embed"), discord.Embed)
+
+
+@pytest.mark.asyncio
+async def test_finish_wizard_success_does_not_pass_embed_to_edit_message(mocker, db_session):
+    """Regression: the completion embed must NOT be passed to edit_message.
+
+    The old behaviour sent the embed via edit_message (keeping it ephemeral).
+    The new behaviour sends it only via followup.send (making it public).
+    """
+    state, interaction = _make_state(mocker)
+    fake_char = mocker.Mock(spec=Character)
+    fake_char.name = "Thalindra"
+    fake_char.max_hp = 10
+    mocker.patch(
+        "commands.wizard.completion.save_character_from_wizard",
+        return_value=(fake_char, None),
+    )
+    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+
+    from commands.wizard import _finish_wizard
+
+    await _finish_wizard(state, interaction)
+
+    # edit_message must not have received a non-None embed
+    call_kwargs = interaction.response.edit_message.call_args.kwargs
+    assert call_kwargs.get("embed") is None
+
+
+@pytest.mark.asyncio
+async def test_finish_wizard_error_stays_ephemeral_no_followup(mocker, db_session):
+    """When save_character_from_wizard returns an error, the error message is
+    sent ephemerally and followup.send is never called."""
+    state, interaction = _make_state(mocker)
+    mocker.patch(
+        "commands.wizard.completion.save_character_from_wizard",
+        return_value=(None, Strings.CHAR_CREATE_NAME_LIMIT),
+    )
+    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+
+    from commands.wizard import _finish_wizard
+
+    await _finish_wizard(state, interaction)
+
+    interaction.response.send_message.assert_called_once_with(
+        Strings.CHAR_CREATE_NAME_LIMIT, ephemeral=True
+    )
+    interaction.followup.send.assert_not_called()

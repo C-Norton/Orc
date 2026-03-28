@@ -18,6 +18,16 @@ import discord
 from commands.wizard.state import WizardState, _WIZARD_TIMEOUT
 from utils.strings import Strings
 
+
+async def _show_hub(
+    interaction: discord.Interaction, wizard_state: WizardState
+) -> None:
+    """Edit the current message to display the hub view."""
+    embed = _build_hub_embed(wizard_state)
+    view = HubView(wizard_state)
+    await interaction.response.edit_message(embed=embed, view=view)
+
+
 # Ordered list of (section_key, button_label, discord_row) for section buttons.
 _SECTION_BUTTONS: list[tuple[str, str, int]] = [
     ("class_level", Strings.WIZARD_HUB_CLASS_LEVEL_BUTTON, 1),
