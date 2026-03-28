@@ -59,9 +59,10 @@ class Strings:
 
     HELP_CHAR_MGMT_NAME = "👤 Character Management"
     HELP_CHAR_MGMT_VALUE = (
-        "**/character create**: Launch the 8-step guided wizard (name → class & level → stats → AC → saves → skills → HP → weapons). "
-        "Supports multiclassing (up to 5 classes, total level ≤ 20). Every step has Back, Skip, and Finish buttons. "
-        "Or choose Manual Setup for a quick single-form entry.\n"
+        "**/character create**: Launch the hub-based character creation wizard. "
+        "A central hub shows all sections (Name, Class & Level, Ability Scores, AC, Saving Throws, Skills, HP, Weapons) as buttons — "
+        "🟢 green when configured, 🔴 red when not. Visit any section in any order; Name is required to save. "
+        "Supports multiclassing (up to 5 classes, total level ≤ 20). Or use **Quick Setup** for a single-form entry.\n"
         "**/character class_add <class> <level>**: Add or update a class on your active character (for levelling up or multiclassing).\n"
         "**/character class_remove <class>**: Remove a class from your active character.\n"
         "**/character list**: View all your characters in this server.\n"
@@ -383,7 +384,36 @@ class Strings:
     CHAR_NOT_FOUND_NAME = "You don't have a character named **{name}** in this server."
     CHAR_DELETE_SUCCESS = "Character **{name}** has been deleted."
 
-    # Character Creation Wizard
+    # Character Creation Wizard — Hub model
+    WIZARD_HUB_TITLE = "Character Creation"
+    WIZARD_HUB_DESC = (
+        "Use the buttons below to configure each section of your character. "
+        "**Name is required** to save. All other sections are optional.\n\n"
+        "🟢 = configured  🔵 = auto-calculated  🔴 = not yet configured"
+    )
+    WIZARD_HUB_SAVE_EXIT = "Save & Exit"
+    WIZARD_HUB_CANCEL = "Cancel"
+    WIZARD_HUB_NAME_BUTTON = "Name (Required)"
+    WIZARD_HUB_INITIATIVE_BUTTON = "Initiative"
+    WIZARD_HUB_CLASS_LEVEL_BUTTON = "Class & Level"
+    WIZARD_HUB_ABILITY_SCORES_BUTTON = "Ability Scores"
+    WIZARD_HUB_AC_BUTTON = "Armor Class"
+    WIZARD_HUB_SAVING_THROWS_BUTTON = "Saving Throws"
+    WIZARD_HUB_SKILLS_BUTTON = "Skills"
+    WIZARD_HUB_HP_BUTTON = "Hit Points"
+    WIZARD_HUB_WEAPONS_BUTTON = "Weapons"
+    WIZARD_HUB_NAME_FIELD_LABEL = "Character Name"
+    WIZARD_HUB_NAME_NOT_SET = "*Not set (required)*"
+    WIZARD_HUB_MANUAL_BUTTON = "Quick Setup"
+    # Section navigation
+    WIZARD_SECTION_SAVE_RETURN = "Save & Return to Hub"
+    WIZARD_SECTION_RETURN_NO_SAVE = "Return without Saving"
+    WIZARD_SECTION_CANCEL = "Cancel"
+    # Wizard lifecycle
+    WIZARD_TIMEOUT_MSG = "Character creation timed out. No character was saved."
+    WIZARD_CANCELLED = "Character creation cancelled."
+
+    # Character Creation Wizard — legacy step-based strings (retained for compatibility)
     WIZARD_INTRO_TITLE = "🧙 Character Creation"
     WIZARD_INTRO_DESC = "How would you like to create your character?"
     WIZARD_BUTTON_WIZARD = "🧙 Start Wizard"
@@ -426,16 +456,16 @@ class Strings:
     WIZARD_PHYSICAL_STATS_BUTTON = "✏️ STR / DEX / CON"
     WIZARD_MENTAL_STATS_BUTTON = "✏️INT / WIS / CHA"
     WIZARD_INIT_BUTTON = "✏️ Initiative Override"
-    WIZARD_PRIMARY_STATS_MODAL_TITLE = "Ability Scores (Part 1 of 3)"
-    WIZARD_WIS_CHA_MODAL_TITLE = "Wisdom & Charisma (Part 2 of 3)"
-    WIZARD_INIT_MODAL_TITLE = "Initiative Override (Part 3 of 3)"
+    WIZARD_PRIMARY_STATS_MODAL_TITLE = "Ability Scores (Part 1 of 2)"
+    WIZARD_WIS_CHA_MODAL_TITLE = "Wisdom & Charisma (Part 2 of 2)"
+    WIZARD_INIT_MODAL_TITLE = "Initiative Override"
     WIZARD_STR_LABEL = "Strength (1–30)"
     WIZARD_DEX_LABEL = "Dexterity (1–30)"
     WIZARD_CON_LABEL = "Constitution (1–30)"
     WIZARD_INT_LABEL = "Intelligence (1–30)"
     WIZARD_WIS_LABEL = "Wisdom (1–30)"
     WIZARD_CHA_LABEL = "Charisma (1–30)"
-    WIZARD_INIT_LABEL = "Initiative Bonus (blank = use Dex mod)"
+    WIZARD_INIT_LABEL = "Initiative Bonus (Leave blank to auto calculate)"
     WIZARD_STAT_NOT_NUMBER = "{stat} must be a whole number between 1 and 30."
 
     WIZARD_AC_DESC = "Set your character's Armor Class (1–30)."

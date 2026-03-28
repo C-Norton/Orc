@@ -1,12 +1,14 @@
-"""Tests for the character creation wizard.
+"""Tests for the character creation wizard (hub model).
 
 Covers:
 * ``save_character_from_wizard`` — DB validation and creation logic
-* WizardState properties — character_class, level, total_level
+* ``WizardState`` properties — character_class, level, total_level
+* ``snapshot_section`` / ``restore_section`` — snapshot helpers
 * Modal ``on_submit`` handlers — field validation and state transitions
-* View classes — embed building, button behaviour
-* View entry point — /character create sends the wizard intro
-* /character saves — button-based toggle view
+* Section views — embed building, button behaviour, save/return/cancel
+* ``HubView`` — button colours, enabled states
+* ``/character create`` entry point — sends the wizard hub
+* ``/character saves`` — button-based toggle view
 """
 
 import pytest
@@ -14,9 +16,14 @@ import discord
 from models import Attack, Character, CharacterSkill, ClassLevel
 from enums.character_class import CharacterClass
 from enums.skill_proficiency_status import SkillProficiencyStatus
-from commands.character_wizard import (
+from commands.wizard import start_character_creation
+from commands.wizard.state import (
     WizardState,
     save_character_from_wizard,
+    snapshot_section,
+    restore_section,
+)
+from commands.wizard.modals import (
     _CharacterNameModal,
     _LevelForClassModal,
     _PhysicalStatsModal,
@@ -24,24 +31,28 @@ from commands.character_wizard import (
     _InitiativeModal,
     _ACModal,
     _HPModal,
-    _ClassLevelView,
+)
+from commands.wizard.buttons import (
+    _SaveToggleButton,
+    _SkillToggleButton,
     _ClassRemoveButton,
-    _BackButton,
-    _ContinueButton,
+    _SaveReturnButton,
+    _ReturnNoSaveButton,
+    _CancelWizardButton,
+    _WeaponSelectButton,
+    _BackToWeaponsButton,
+)
+from commands.wizard.section_views import (
+    _ClassLevelView,
     _StatsView,
-    _WisChaButton,
-    _InitiativeButton,
     _ACView,
     _SavesView,
     _SkillsView,
     _HPView,
     _WeaponsWizardView,
-    _WeaponSelectButton,
     _WeaponResultsView,
-    _BackToWeaponsButton,
-    _FinishButton,
-    _SkipButton,
 )
+from commands.wizard.hub_view import HubView
 from utils.strings import Strings
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
@@ -533,6 +544,76 @@ def test_wizard_state_total_level_zero_when_empty():
     assert state.total_level == 0
 
 
+def test_wizard_state_sections_completed_starts_empty():
+    """sections_completed is an empty set by default."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    assert state.sections_completed == set()
+
+
+# ---------------------------------------------------------------------------
+# snapshot_section / restore_section
+# ---------------------------------------------------------------------------
+
+
+def test_snapshot_section_captures_fields():
+    """snapshot_section returns a dict with deep-copied field values."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.ac = 15
+    snapshot = snapshot_section(state, "ac")
+
+    assert snapshot["ac"] == 15
+    # Mutation after snapshot must not affect the snapshot
+    state.ac = 20
+    assert snapshot["ac"] == 15
+
+
+def test_snapshot_section_deep_copies_mutable_fields():
+    """snapshot_section deep-copies list fields so mutations don't affect the snapshot."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
+    snapshot = snapshot_section(state, "class_level")
+
+    # Mutate the list after snapshotting
+    state.classes_and_levels.append((CharacterClass.ROGUE, 3))
+    assert len(snapshot["classes_and_levels"]) == 1  # snapshot unchanged
+
+
+def test_restore_section_restores_fields():
+    """restore_section writes snapshot values back to state fields."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.ac = 15
+    snapshot = snapshot_section(state, "ac")
+
+    # Simulate a change in the section
+    state.ac = 20
+    restore_section(state, "ac", snapshot)
+
+    assert state.ac == 15
+
+
+def test_restore_section_restores_list_fields():
+    """restore_section restores list fields, discarding in-section mutations."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
+    snapshot = snapshot_section(state, "class_level")
+
+    state.classes_and_levels.append((CharacterClass.ROGUE, 3))
+    restore_section(state, "class_level", snapshot)
+
+    assert len(state.classes_and_levels) == 1
+    assert state.classes_and_levels[0][0] == CharacterClass.FIGHTER
+
+
 # ---------------------------------------------------------------------------
 # _LevelForClassModal — on_submit
 # ---------------------------------------------------------------------------
@@ -544,7 +625,7 @@ async def test_level_for_class_modal_new_class_added(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "5"
 
@@ -563,7 +644,7 @@ async def test_level_for_class_modal_existing_class_updated(mocker):
         guild_name="Test", name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 3)]
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, 0, parent_view)
     modal.level_input._value = "10"
 
@@ -580,7 +661,7 @@ async def test_level_for_class_modal_invalid_non_numeric_sends_error(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "abc"
 
@@ -597,7 +678,7 @@ async def test_level_for_class_modal_level_zero_rejected(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "0"
 
@@ -614,7 +695,7 @@ async def test_level_for_class_modal_level_21_rejected(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "21"
 
@@ -632,7 +713,7 @@ async def test_level_for_class_modal_total_level_would_exceed_20(mocker):
         guild_name="Test", name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 15)]
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.WIZARD, None, parent_view)
     modal.level_input._value = "10"  # 15 + 10 = 25 > 20
 
@@ -650,7 +731,7 @@ async def test_level_for_class_modal_first_class_autofills_saving_throws(mocker)
         guild_name="Test", name="Hero",
     )
     assert state.saves_explicitly_set is False
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "1"
 
@@ -674,7 +755,7 @@ async def test_level_for_class_modal_second_class_does_not_change_saving_throws(
     state.saving_throws = {s: s in ("strength", "constitution") for s in
                            ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
 
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.WIZARD, None, parent_view)
     modal.level_input._value = "3"
 
@@ -699,7 +780,7 @@ async def test_level_for_class_modal_re_editing_first_class_does_not_reapply_sav
     state.saving_throws = {s: s == "dexterity" for s in
                            ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
 
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, 0, parent_view)
     modal.level_input._value = "7"
 
@@ -724,7 +805,7 @@ async def test_class_remove_button_removes_class(mocker):
         guild_name="Test", name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5), (CharacterClass.ROGUE, 3)]
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     button = _ClassRemoveButton(state, CharacterClass.ROGUE, parent_view, row=1)
 
     interaction = make_interaction(mocker)
@@ -746,7 +827,7 @@ async def test_class_remove_button_first_class_updates_saves_when_not_explicit(m
                            ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
     state.saves_explicitly_set = False
 
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     button = _ClassRemoveButton(state, CharacterClass.FIGHTER, parent_view, row=1)
 
     interaction = make_interaction(mocker)
@@ -771,7 +852,7 @@ async def test_class_remove_button_first_class_removed_all_saves_cleared_when_no
                            ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
     state.saves_explicitly_set = False
 
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     button = _ClassRemoveButton(state, CharacterClass.FIGHTER, parent_view, row=1)
 
     interaction = make_interaction(mocker)
@@ -793,7 +874,7 @@ async def test_class_remove_button_saves_explicitly_set_not_changed(mocker):
     state.saving_throws = {s: s == "dexterity" for s in
                            ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
 
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     button = _ClassRemoveButton(state, CharacterClass.FIGHTER, parent_view, row=1)
 
     interaction = make_interaction(mocker)
@@ -815,7 +896,7 @@ async def test_class_level_view_on_class_selected_opens_modal(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    view = _ClassLevelView(state, step_number=2)
+    view = _ClassLevelView(state)
     view._class_select._values = ["Fighter"]
 
     interaction = make_interaction(mocker)
@@ -829,7 +910,7 @@ async def test_class_level_view_on_class_selected_opens_modal(mocker):
 
 async def test_class_level_view_on_class_selected_max_classes_sends_error(mocker):
     """Selecting a new class when already at _MAX_CLASSES sends an error."""
-    from commands.character_wizard import _MAX_CLASSES
+    from commands.wizard.state import _MAX_CLASSES
 
     state = WizardState(
         user_discord_id="111", guild_discord_id="222",
@@ -839,7 +920,7 @@ async def test_class_level_view_on_class_selected_max_classes_sends_error(mocker
     all_classes = list(CharacterClass)
     state.classes_and_levels = [(cls, 4) for cls in all_classes[:_MAX_CLASSES]]
 
-    view = _ClassLevelView(state, step_number=2)
+    view = _ClassLevelView(state)
     # Try to add a new class that is not already in the list
     new_class = all_classes[_MAX_CLASSES]  # 6th class
     view._class_select._values = [new_class.value]
@@ -857,7 +938,7 @@ async def test_class_level_view_on_class_selected_existing_class_finds_index(moc
         guild_name="Test", name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
-    view = _ClassLevelView(state, step_number=2)
+    view = _ClassLevelView(state)
     view._class_select._values = ["Fighter"]
 
     interaction = make_interaction(mocker)
@@ -874,10 +955,9 @@ def test_class_level_view_build_embed_shows_classes_and_total_level():
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5), (CharacterClass.WIZARD, 3)]
-    view = _ClassLevelView(state, step_number=2)
+    view = _ClassLevelView(state)
     embed = view._build_embed()
 
-    field_names = [f.name for f in embed.fields]
     # Should contain a field about total level
     total_level_field = next(
         (f for f in embed.fields if "8" in f.name or "total" in f.name.lower()), None
@@ -891,64 +971,12 @@ async def test_class_level_view_refresh_rebuilds_items(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    view = _ClassLevelView(state, step_number=2)
+    view = _ClassLevelView(state)
     interaction = make_interaction(mocker)
 
     await view._refresh(interaction)
 
     interaction.response.edit_message.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# _BackButton tests
-# ---------------------------------------------------------------------------
-
-
-async def test_back_button_step_3_goes_to_step_2(mocker):
-    """Clicking Back on step 3 shows step 2 (ClassLevelView)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    button = _BackButton(prev_step_number=2, state=state, row=2)
-    interaction = make_interaction(mocker)
-    await button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _ClassLevelView)
-
-
-async def test_back_button_step_2_goes_to_step_1_intro(mocker):
-    """Clicking Back on step 2 shows step 1 (WizardIntroView)."""
-    from commands.character_wizard import _WizardIntroView
-
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    button = _BackButton(prev_step_number=1, state=state, row=2)
-    interaction = make_interaction(mocker)
-    await button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _WizardIntroView)
-
-
-async def test_back_button_step_7_goes_to_step_6(mocker):
-    """Clicking Back on step 7 shows step 6 (SkillsView)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    button = _BackButton(prev_step_number=6, state=state, row=1)
-    interaction = make_interaction(mocker)
-    await button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _SkillsView)
 
 
 # ---------------------------------------------------------------------------
@@ -962,7 +990,7 @@ async def test_hp_modal_valid_hp_stored(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _HPView(state, step_number=7)
+    parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
     modal.hp_input._value = "55"
 
@@ -979,7 +1007,7 @@ async def test_hp_modal_non_numeric_sends_error(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _HPView(state, step_number=7)
+    parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
     modal.hp_input._value = "lots"
 
@@ -996,7 +1024,7 @@ async def test_hp_modal_zero_rejected(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _HPView(state, step_number=7)
+    parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
     modal.hp_input._value = "0"
 
@@ -1013,7 +1041,7 @@ async def test_hp_modal_1000_rejected(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _HPView(state, step_number=7)
+    parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
     modal.hp_input._value = "1000"
 
@@ -1030,7 +1058,7 @@ async def test_hp_modal_view_refreshed_after_valid_submission(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    parent_view = _HPView(state, step_number=7)
+    parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
     modal.hp_input._value = "40"
 
@@ -1051,7 +1079,7 @@ def test_hp_view_build_embed_shows_override_when_set():
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
     state.hp_override = 45
-    view = _HPView(state, step_number=7)
+    view = _HPView(state)
     embed = view._build_embed()
 
     field_values = [f.value for f in embed.fields]
@@ -1065,7 +1093,7 @@ def test_hp_view_build_embed_shows_will_auto_calc_hint_when_class_and_con_set():
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 1)]
     state.constitution = 14
-    view = _HPView(state, step_number=7)
+    view = _HPView(state)
     embed = view._build_embed()
 
     field_values = [f.value for f in embed.fields]
@@ -1079,7 +1107,7 @@ def test_hp_view_build_embed_shows_cannot_auto_calc_when_no_class():
     )
     state.constitution = 14
     # No class
-    view = _HPView(state, step_number=7)
+    view = _HPView(state)
     embed = view._build_embed()
 
     field_values = [f.value for f in embed.fields]
@@ -1093,7 +1121,7 @@ def test_hp_view_build_embed_shows_cannot_auto_calc_when_no_con():
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 1)]
     # No CON
-    view = _HPView(state, step_number=7)
+    view = _HPView(state)
     embed = view._build_embed()
 
     field_values = [f.value for f in embed.fields]
@@ -1111,7 +1139,7 @@ async def test_weapon_select_button_adds_weapon_to_state(mocker):
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test", name="Hero",
     )
-    weapons_view = _WeaponsWizardView(state, step_number=8)
+    weapons_view = _WeaponsWizardView(state)
     weapon_data = {"name": "Longsword", "damage_dice": "1d8"}
     button = _WeaponSelectButton(state, weapon_data, weapons_view)
 
@@ -1132,7 +1160,7 @@ async def test_weapon_select_button_already_queued_sends_error(mocker):
     weapon_data = {"name": "Shortsword", "damage_dice": "1d6"}
     state.weapons_to_add = [weapon_data]
 
-    weapons_view = _WeaponsWizardView(state, step_number=8)
+    weapons_view = _WeaponsWizardView(state)
     button = _WeaponSelectButton(state, weapon_data, weapons_view)
 
     interaction = make_interaction(mocker)
@@ -1152,7 +1180,7 @@ def test_weapon_results_view_build_embed_contains_result_select_string():
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    weapons_view = _WeaponsWizardView(state, step_number=8)
+    weapons_view = _WeaponsWizardView(state)
     results = [{"name": "Dagger"}, {"name": "Handaxe"}]
     results_view = _WeaponResultsView(state, results, weapons_view)
     embed = results_view._build_embed()
@@ -1166,7 +1194,7 @@ def test_weapon_results_view_contains_one_button_per_result():
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    weapons_view = _WeaponsWizardView(state, step_number=8)
+    weapons_view = _WeaponsWizardView(state)
     results = [{"name": "Dagger"}, {"name": "Handaxe"}, {"name": "Longsword"}]
     results_view = _WeaponResultsView(state, results, weapons_view)
 
@@ -1182,7 +1210,7 @@ def test_weapon_results_view_contains_back_to_weapons_button():
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    weapons_view = _WeaponsWizardView(state, step_number=8)
+    weapons_view = _WeaponsWizardView(state)
     results = [{"name": "Dagger"}]
     results_view = _WeaponResultsView(state, results, weapons_view)
 
@@ -1204,7 +1232,7 @@ def test_weapons_wizard_view_build_embed_shows_queued_weapons():
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
     state.weapons_to_add = [{"name": "Longsword"}, {"name": "Shield"}]
-    view = _WeaponsWizardView(state, step_number=8)
+    view = _WeaponsWizardView(state)
     embed = view._build_embed()
 
     field_values = [f.value for f in embed.fields]
@@ -1216,7 +1244,7 @@ def test_weapons_wizard_view_build_embed_shows_no_results_query():
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    view = _WeaponsWizardView(state, step_number=8)
+    view = _WeaponsWizardView(state)
     embed = view._build_embed(no_results_query="zzz invalid weapon")
 
     field_names = [f.name for f in embed.fields]
@@ -1228,7 +1256,7 @@ def test_weapons_wizard_view_build_embed_no_queued_section_when_empty():
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    view = _WeaponsWizardView(state, step_number=8)
+    view = _WeaponsWizardView(state)
     embed = view._build_embed()
 
     field_names = [f.name for f in embed.fields]
@@ -1241,38 +1269,17 @@ def test_weapons_wizard_view_build_embed_no_queued_section_when_empty():
 
 
 def test_skills_view_nav_buttons_on_row_4():
-    """Nav buttons (Back, Skip, Finish) are on row 4 in _SkillsView."""
+    """Nav buttons (SaveReturn, ReturnNoSave, Cancel) are on row 4 in _SkillsView."""
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    view = _SkillsView(state, step_number=6)
+    view = _SkillsView(state)
 
     nav_buttons = [
         item for item in view.children
         if isinstance(item, discord.ui.Button) and item.row == 4
     ]
-    assert len(nav_buttons) >= 2  # At least Back and Skip (Finish also)
-
-
-async def test_skills_view_skip_advances_to_step_7_hp(mocker):
-    """The skip button on the skills step advances to the HP step (step 7)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    view = _SkillsView(state, step_number=6)
-
-    skip_button = next(
-        item for item in view.children
-        if isinstance(item, discord.ui.Button)
-        and item.label == Strings.WIZARD_BUTTON_SKIP
-    )
-    interaction = make_interaction(mocker)
-    await skip_button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _HPView)
+    assert len(nav_buttons) >= 2  # At least SaveReturn and ReturnNoSave
 
 
 # ---------------------------------------------------------------------------
@@ -1280,8 +1287,8 @@ async def test_skills_view_skip_advances_to_step_7_hp(mocker):
 # ---------------------------------------------------------------------------
 
 
-async def test_name_modal_valid_name_advances_to_class_step(mocker):
-    """A valid name saves to state and triggers edit_message to the class step."""
+async def test_name_modal_valid_name_returns_to_hub(mocker):
+    """A valid name saves to state and calls edit_message to show the hub."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
@@ -1294,6 +1301,7 @@ async def test_name_modal_valid_name_advances_to_class_step(mocker):
     await modal.on_submit(interaction)
 
     assert state.name == "Thalindra"
+    # _show_hub calls interaction.response.edit_message
     interaction.response.edit_message.assert_called_once()
 
 
@@ -1314,25 +1322,44 @@ async def test_name_modal_empty_name_sends_error(mocker):
     assert state.name == ""
 
 
+async def test_name_modal_does_not_navigate_to_class_view(mocker):
+    """After submitting a valid name, the hub is shown (not _ClassLevelView)."""
+    state = WizardState(
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+    )
+    modal = _CharacterNameModal(state)
+    _set_text_input(modal.name_input, "Aria")
+
+    interaction = make_interaction(mocker)
+    await modal.on_submit(interaction)
+
+    # edit_message is used (hub), not send_modal
+    interaction.response.edit_message.assert_called_once()
+    # The view passed should be HubView, not _ClassLevelView
+    call_kwargs = interaction.response.edit_message.call_args.kwargs
+    assert isinstance(call_kwargs.get("view"), HubView)
+
+
 # ---------------------------------------------------------------------------
-# _PrimaryStatsModal — on_submit
+# _PhysicalStatsModal — on_submit (STR / DEX / CON only)
 # ---------------------------------------------------------------------------
 
 
 async def test_primary_stats_modal_valid_stats_stored(mocker):
-    """Valid STR/DEX/CON/INT are stored in state and the stats view is refreshed."""
+    """Valid STR/DEX/CON are stored in state and the stats view is refreshed."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
+    parent_view = _StatsView(state)
     modal = _PhysicalStatsModal(state, parent_view)
     _set_text_input(modal.str_input, "16")
     _set_text_input(modal.dex_input, "14")
     _set_text_input(modal.con_input, "15")
-    _set_text_input(modal.int_input, "10")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
@@ -1340,24 +1367,22 @@ async def test_primary_stats_modal_valid_stats_stored(mocker):
     assert state.strength == 16
     assert state.dexterity == 14
     assert state.constitution == 15
-    assert state.intelligence == 10
     interaction.response.edit_message.assert_called_once()
 
 
 async def test_primary_stats_modal_non_number_rejected(mocker):
-    """A non-numeric STR/DEX/CON/INT value sends an error and nothing is stored."""
+    """A non-numeric STR/DEX/CON value sends an error and nothing is stored."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
+    parent_view = _StatsView(state)
     modal = _PhysicalStatsModal(state, parent_view)
     _set_text_input(modal.str_input, "abc")
     _set_text_input(modal.dex_input, "14")
     _set_text_input(modal.con_input, "15")
-    _set_text_input(modal.int_input, "10")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
@@ -1367,19 +1392,18 @@ async def test_primary_stats_modal_non_number_rejected(mocker):
 
 
 async def test_primary_stats_modal_out_of_range_rejected(mocker):
-    """A STR/DEX/CON/INT stat above 30 sends an error."""
+    """A STR/DEX/CON stat above 30 sends an error."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
+    parent_view = _StatsView(state)
     modal = _PhysicalStatsModal(state, parent_view)
     _set_text_input(modal.str_input, "31")
     _set_text_input(modal.dex_input, "14")
     _set_text_input(modal.con_input, "15")
-    _set_text_input(modal.int_input, "10")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
@@ -1389,19 +1413,18 @@ async def test_primary_stats_modal_out_of_range_rejected(mocker):
 
 
 async def test_primary_stats_modal_zero_rejected(mocker):
-    """A STR/DEX/CON/INT stat of 0 is out of range (minimum is 1)."""
+    """A STR/DEX/CON stat of 0 is out of range (minimum is 1)."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
+    parent_view = _StatsView(state)
     modal = _PhysicalStatsModal(state, parent_view)
     _set_text_input(modal.str_input, "0")
     _set_text_input(modal.dex_input, "14")
     _set_text_input(modal.con_input, "15")
-    _set_text_input(modal.int_input, "10")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
@@ -1411,32 +1434,34 @@ async def test_primary_stats_modal_zero_rejected(mocker):
 
 
 # ---------------------------------------------------------------------------
-# _WisChaModal — on_submit
+# _MentalStatsModal — on_submit (INT / WIS / CHA)
 # ---------------------------------------------------------------------------
 
 
-async def test_cha_modal_valid_stores_and_advances(mocker):
-    """Valid WIS and CHA are stored; the view refreshes the current stats step."""
+async def test_mental_stats_modal_valid_stores_and_advances(mocker):
+    """Valid INT/WIS/CHA are stored; the view refreshes the stats step."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
+    parent_view = _StatsView(state)
     modal = _MentalStatsModal(state, parent_view)
     _set_text_input(modal.wis_input, "12")
     _set_text_input(modal.cha_input, "8")
+    _set_text_input(modal.int_input, "10")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
 
     assert state.wisdom == 12
     assert state.charisma == 8
+    assert state.intelligence == 10
     interaction.response.edit_message.assert_called_once()
 
 
-async def test_wis_cha_modal_invalid_wis_sends_error(mocker):
+async def test_mental_stats_modal_invalid_wis_sends_error(mocker):
     """A non-numeric WIS value sends an error."""
     state = WizardState(
         user_discord_id="111",
@@ -1444,10 +1469,11 @@ async def test_wis_cha_modal_invalid_wis_sends_error(mocker):
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
+    parent_view = _StatsView(state)
     modal = _MentalStatsModal(state, parent_view)
     _set_text_input(modal.wis_input, "abc")
     _set_text_input(modal.cha_input, "8")
+    _set_text_input(modal.int_input, "10")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
@@ -1456,7 +1482,7 @@ async def test_wis_cha_modal_invalid_wis_sends_error(mocker):
     assert state.wisdom is None
 
 
-async def test_cha_modal_invalid_cha_sends_error(mocker):
+async def test_mental_stats_modal_invalid_cha_sends_error(mocker):
     """A non-numeric CHA value sends an error."""
     state = WizardState(
         user_discord_id="111",
@@ -1464,10 +1490,11 @@ async def test_cha_modal_invalid_cha_sends_error(mocker):
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
+    parent_view = _StatsView(state)
     modal = _MentalStatsModal(state, parent_view)
     _set_text_input(modal.wis_input, "12")
     _set_text_input(modal.cha_input, "zz")
+    _set_text_input(modal.int_input, "10")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
@@ -1482,15 +1509,14 @@ async def test_cha_modal_invalid_cha_sends_error(mocker):
 
 
 async def test_initiative_modal_valid_stores_bonus(mocker):
-    """A valid positive initiative bonus is stored and the stats view is refreshed."""
+    """A valid positive initiative bonus is stored and returns to hub."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
-    modal = _InitiativeModal(state, parent_view)
+    modal = _InitiativeModal(state)
     _set_text_input(modal.init_input, "+3")
 
     interaction = make_interaction(mocker)
@@ -1508,8 +1534,7 @@ async def test_initiative_modal_negative_stores_bonus(mocker):
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
-    modal = _InitiativeModal(state, parent_view)
+    modal = _InitiativeModal(state)
     _set_text_input(modal.init_input, "-2")
 
     interaction = make_interaction(mocker)
@@ -1527,8 +1552,7 @@ async def test_initiative_modal_invalid_sends_error(mocker):
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
-    modal = _InitiativeModal(state, parent_view)
+    modal = _InitiativeModal(state)
     _set_text_input(modal.init_input, "fast")
 
     interaction = make_interaction(mocker)
@@ -1551,7 +1575,7 @@ async def test_ac_modal_valid_stores_and_advances(mocker):
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _ACView(state, step_number=4)
+    parent_view = _ACView(state)
     modal = _ACModal(state, parent_view)
     _set_text_input(modal.ac_input, "17")
 
@@ -1570,7 +1594,7 @@ async def test_ac_modal_non_number_sends_error(mocker):
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _ACView(state, step_number=4)
+    parent_view = _ACView(state)
     modal = _ACModal(state, parent_view)
     _set_text_input(modal.ac_input, "high")
 
@@ -1589,7 +1613,7 @@ async def test_ac_modal_out_of_range_sends_error(mocker):
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _ACView(state, step_number=4)
+    parent_view = _ACView(state)
     modal = _ACModal(state, parent_view)
     _set_text_input(modal.ac_input, "31")
 
@@ -1615,7 +1639,7 @@ async def test_save_toggle_flips_proficiency(mocker):
     )
     assert state.saving_throws["strength"] is False
 
-    view = _SavesView(state, step_number=5)
+    view = _SavesView(state)
     interaction = make_interaction(mocker)
 
     # Find the STR Save toggle button and trigger it
@@ -1637,7 +1661,7 @@ async def test_save_toggle_sets_explicitly_set_flag(mocker):
         guild_name="Test",
         name="Hero",
     )
-    view = _SavesView(state, step_number=5)
+    view = _SavesView(state)
     interaction = make_interaction(mocker)
 
     wis_button = next(
@@ -1662,7 +1686,7 @@ async def test_skill_toggle_marks_proficient(mocker):
         guild_name="Test",
         name="Hero",
     )
-    view = _SkillsView(state, step_number=6)
+    view = _SkillsView(state)
     interaction = make_interaction(mocker)
 
     acro_button = next(
@@ -1682,7 +1706,7 @@ async def test_skill_toggle_twice_toggles_back(mocker):
         guild_name="Test",
         name="Hero",
     )
-    view = _SkillsView(state, step_number=6)
+    view = _SkillsView(state)
     interaction = make_interaction(mocker)
 
     stealth_button = next(
@@ -1698,17 +1722,218 @@ async def test_skill_toggle_twice_toggles_back(mocker):
 
 
 # ---------------------------------------------------------------------------
+# HubView — button colours and enable/disable state
+# ---------------------------------------------------------------------------
+
+
+def test_hub_view_name_button_is_danger_when_no_name():
+    """HubView name button is red (danger style) when no name is set."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test", name=""
+    )
+    view = HubView(state)
+
+    name_button = next(
+        item for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.WIZARD_HUB_NAME_BUTTON
+    )
+    assert name_button.style == discord.ButtonStyle.danger
+
+
+def test_hub_view_name_button_is_success_when_name_set():
+    """HubView name button is green (success style) when a name is set."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Aria"
+    )
+    view = HubView(state)
+
+    name_button = next(
+        item for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.WIZARD_HUB_NAME_BUTTON
+    )
+    assert name_button.style == discord.ButtonStyle.success
+
+
+def test_hub_view_save_exit_disabled_when_no_name():
+    """HubView Save & Exit button is disabled when no name is set."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test", name=""
+    )
+    view = HubView(state)
+
+    save_exit_button = next(
+        item for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.WIZARD_HUB_SAVE_EXIT
+    )
+    assert save_exit_button.disabled is True
+
+
+def test_hub_view_save_exit_enabled_when_name_set():
+    """HubView Save & Exit button is enabled when a name has been entered."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Aria"
+    )
+    view = HubView(state)
+
+    save_exit_button = next(
+        item for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.WIZARD_HUB_SAVE_EXIT
+    )
+    assert save_exit_button.disabled is False
+
+
+def test_hub_view_section_buttons_are_danger_when_not_completed():
+    """Section buttons in HubView are red (danger) when section is not in sections_completed."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    # No sections completed
+    view = HubView(state)
+
+    section_button = next(
+        item for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.WIZARD_HUB_CLASS_LEVEL_BUTTON
+    )
+    assert section_button.style == discord.ButtonStyle.danger
+
+
+def test_hub_view_section_button_is_success_when_completed():
+    """Section buttons in HubView are green (success) when the section is completed."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.sections_completed.add("class_level")
+    view = HubView(state)
+
+    section_button = next(
+        item for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.WIZARD_HUB_CLASS_LEVEL_BUTTON
+    )
+    assert section_button.style == discord.ButtonStyle.success
+
+
+def test_hub_view_all_section_buttons_initially_danger():
+    """All section buttons are danger (red) when sections_completed is empty."""
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    view = HubView(state)
+
+    section_labels = {
+        Strings.WIZARD_HUB_CLASS_LEVEL_BUTTON,
+        Strings.WIZARD_HUB_ABILITY_SCORES_BUTTON,
+        Strings.WIZARD_HUB_AC_BUTTON,
+        Strings.WIZARD_HUB_SAVING_THROWS_BUTTON,
+        Strings.WIZARD_HUB_SKILLS_BUTTON,
+        Strings.WIZARD_HUB_HP_BUTTON,
+        Strings.WIZARD_HUB_WEAPONS_BUTTON,
+    }
+    section_buttons = [
+        item for item in view.children
+        if isinstance(item, discord.ui.Button) and item.label in section_labels
+    ]
+    assert len(section_buttons) == 7
+    for button in section_buttons:
+        assert button.style == discord.ButtonStyle.danger
+
+
+# ---------------------------------------------------------------------------
+# Section _save_and_return / _return_no_save / _cancel_wizard
+# ---------------------------------------------------------------------------
+
+
+async def test_save_and_return_marks_section_complete_and_shows_hub(mocker):
+    """_save_and_return adds the section key to sections_completed and shows hub."""
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222", guild_name="Test", name="Hero"
+    )
+    view = _ACView(state)
+    state.ac = 17
+
+    interaction = make_interaction(mocker)
+    await view._save_and_return(interaction)
+
+    assert "ac" in state.sections_completed
+    interaction.response.edit_message.assert_called_once()
+
+
+async def test_return_no_save_restores_snapshot_and_shows_hub(mocker):
+    """_return_no_save restores the pre-entry snapshot and shows the hub."""
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222", guild_name="Test", name="Hero"
+    )
+    state.ac = 10  # value before entering the section
+    view = _ACView(state)  # snapshot taken here: ac=10
+
+    # Simulate a change during the section
+    state.ac = 25
+
+    interaction = make_interaction(mocker)
+    await view._return_no_save(interaction)
+
+    # Snapshot should restore the original value
+    assert state.ac == 10
+    interaction.response.edit_message.assert_called_once()
+
+
+
+async def test_hub_cancel_button_edits_message_with_cancelled_embed(mocker):
+    """Clicking the HubView cancel button shows a cancellation embed with view=None."""
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222", guild_name="Test", name="Hero"
+    )
+    view = HubView(state)
+    interaction = make_interaction(mocker)
+
+    cancel_button = next(
+        item for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.WIZARD_HUB_CANCEL
+    )
+    await cancel_button.callback(interaction)
+
+    interaction.response.edit_message.assert_called_once()
+    call_kwargs = interaction.response.edit_message.call_args.kwargs
+    assert call_kwargs.get("view") is None
+    embed = call_kwargs.get("embed")
+    assert embed is not None
+    assert embed.title == Strings.WIZARD_CANCELLED
+
+
+async def test_saves_view_save_and_return_marks_saves_explicitly_set(mocker):
+    """_SavesView._save_and_return sets saves_explicitly_set=True."""
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222", guild_name="Test", name="Hero"
+    )
+    view = _SavesView(state)
+    interaction = make_interaction(mocker)
+
+    await view._save_and_return(interaction)
+
+    assert state.saves_explicitly_set is True
+    assert "saving_throws" in state.sections_completed
+
+
+# ---------------------------------------------------------------------------
 # /character create entry point
 # ---------------------------------------------------------------------------
 
 
-async def test_character_create_sends_wizard_intro(wizard_bot, interaction):
-    """``/character create`` sends an ephemeral message with the wizard intro embed."""
+async def test_character_create_sends_wizard_hub(wizard_bot, interaction):
+    """``/character create`` sends an ephemeral message with the wizard hub embed."""
     cb = get_callback(wizard_bot, "character", "create")
     await cb(interaction)
 
     interaction.response.send_message.assert_called_once()
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    view = interaction.response.send_message.call_args.kwargs.get("view")
+    assert isinstance(view, HubView)
 
 
 # ---------------------------------------------------------------------------
@@ -1820,345 +2045,468 @@ async def test_saves_edit_view_cancel_makes_no_changes(
 
 
 # ---------------------------------------------------------------------------
-# _ContinueButton — presence in each view
+# _PrimaryStatsButton and _WisChaButton dynamic styles
 # ---------------------------------------------------------------------------
 
 
-def test_class_level_view_contains_continue_button():
-    """_ClassLevelView (step 2) contains a _ContinueButton instance."""
+def test_primary_stats_button_is_danger_when_physical_stats_incomplete():
+    """_PrimaryStatsButton is danger when any of STR, DEX, or CON is missing."""
+    from commands.wizard.buttons import _PrimaryStatsButton
+
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    view = _ClassLevelView(state, step_number=2)
+    # Only STR set — DEX and CON are None
+    state.strength = 16
+    parent_view = _StatsView(state)
 
-    continue_buttons = [
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    ]
-    assert len(continue_buttons) == 1
+    button = _PrimaryStatsButton(state, parent_view, row=0)
+
+    assert button.style == discord.ButtonStyle.danger
 
 
-def test_stats_view_contains_continue_button():
-    """_StatsView (step 3) contains a _ContinueButton instance."""
+def test_primary_stats_button_is_success_when_all_physical_stats_set():
+    """_PrimaryStatsButton is success when STR, DEX, and CON are all set."""
+    from commands.wizard.buttons import _PrimaryStatsButton
+
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    view = _StatsView(state, step_number=3)
+    state.strength = 16
+    state.dexterity = 14
+    state.constitution = 15
+    parent_view = _StatsView(state)
 
-    continue_buttons = [
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    ]
-    assert len(continue_buttons) == 1
+    button = _PrimaryStatsButton(state, parent_view, row=0)
+
+    assert button.style == discord.ButtonStyle.success
 
 
-def test_ac_view_contains_continue_button():
-    """_ACView (step 4) contains a _ContinueButton instance."""
+def test_wischa_button_is_danger_when_mental_stats_incomplete():
+    """_WisChaButton is danger when any of INT, WIS, or CHA is missing."""
+    from commands.wizard.buttons import _WisChaButton
+
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    view = _ACView(state, step_number=4)
+    # Only WIS set — INT and CHA are None
+    state.wisdom = 12
+    parent_view = _StatsView(state)
 
-    continue_buttons = [
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    ]
-    assert len(continue_buttons) == 1
+    button = _WisChaButton(state, parent_view, row=1)
+
+    assert button.style == discord.ButtonStyle.danger
 
 
-def test_saves_view_contains_continue_button():
-    """_SavesView (step 5) contains a _ContinueButton instance."""
+def test_wischa_button_is_success_when_all_mental_stats_set():
+    """_WisChaButton is success when INT, WIS, and CHA are all set."""
+    from commands.wizard.buttons import _WisChaButton
+
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    view = _SavesView(state, step_number=5)
+    state.intelligence = 10
+    state.wisdom = 12
+    state.charisma = 8
+    parent_view = _StatsView(state)
 
-    continue_buttons = [
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    ]
-    assert len(continue_buttons) == 1
+    button = _WisChaButton(state, parent_view, row=1)
 
-
-def test_skills_view_contains_continue_button():
-    """_SkillsView (step 6) contains a _ContinueButton instance."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
-    )
-    view = _SkillsView(state, step_number=6)
-
-    continue_buttons = [
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    ]
-    assert len(continue_buttons) == 1
-
-
-def test_hp_view_contains_continue_button():
-    """_HPView (step 7) contains a _ContinueButton instance."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
-    )
-    view = _HPView(state, step_number=7)
-
-    continue_buttons = [
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    ]
-    assert len(continue_buttons) == 1
+    assert button.style == discord.ButtonStyle.success
 
 
 # ---------------------------------------------------------------------------
-# _ContinueButton — label check
+# _StatsView._refresh() rebuilds button styles
 # ---------------------------------------------------------------------------
 
 
-def test_continue_button_label_matches_strings_constant():
-    """All _ContinueButton instances use the Strings.WIZARD_BUTTON_CONTINUE label."""
+async def test_stats_view_refresh_turns_physical_button_green_after_all_set(mocker):
+    """After setting all physical stats via modal, _StatsView._refresh rebuilds the
+    STR/DEX/CON button as success (green)."""
+    from commands.wizard.buttons import _PrimaryStatsButton
+    from commands.wizard.modals import _PhysicalStatsModal
+
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222", guild_name="Test", name="Hero"
+    )
+    parent_view = _StatsView(state)
+
+    # Confirm the button starts red (no stats set)
+    physical_btn_before = next(
+        item for item in parent_view.children
+        if isinstance(item, _PrimaryStatsButton)
+    )
+    assert physical_btn_before.style == discord.ButtonStyle.danger
+
+    # Submit the physical stats modal (which calls parent_view._refresh)
+    modal = _PhysicalStatsModal(state, parent_view)
+    _set_text_input(modal.str_input, "18")
+    _set_text_input(modal.dex_input, "14")
+    _set_text_input(modal.con_input, "16")
+
+    interaction = make_interaction(mocker)
+    await modal.on_submit(interaction)
+
+    # _refresh was called — find the updated button
+    physical_btn_after = next(
+        item for item in parent_view.children
+        if isinstance(item, _PrimaryStatsButton)
+    )
+    assert physical_btn_after.style == discord.ButtonStyle.success
+
+
+async def test_stats_view_refresh_turns_mental_button_green_after_all_set(mocker):
+    """After setting all mental stats via modal, _StatsView._refresh rebuilds the
+    INT/WIS/CHA button as success (green)."""
+    from commands.wizard.buttons import _WisChaButton
+    from commands.wizard.modals import _MentalStatsModal
+
+    state = WizardState(
+        user_discord_id="111", guild_discord_id="222", guild_name="Test", name="Hero"
+    )
+    parent_view = _StatsView(state)
+
+    # Confirm the button starts red (no stats set)
+    mental_btn_before = next(
+        item for item in parent_view.children
+        if isinstance(item, _WisChaButton)
+    )
+    assert mental_btn_before.style == discord.ButtonStyle.danger
+
+    # Submit the mental stats modal (which calls parent_view._refresh)
+    modal = _MentalStatsModal(state, parent_view)
+    _set_text_input(modal.int_input, "10")
+    _set_text_input(modal.wis_input, "12")
+    _set_text_input(modal.cha_input, "8")
+
+    interaction = make_interaction(mocker)
+    await modal.on_submit(interaction)
+
+    # _refresh was called — find the updated button
+    mental_btn_after = next(
+        item for item in parent_view.children
+        if isinstance(item, _WisChaButton)
+    )
+    assert mental_btn_after.style == discord.ButtonStyle.success
+
+
+# ---------------------------------------------------------------------------
+# _HubInitiativeButton styles
+# ---------------------------------------------------------------------------
+
+
+def test_hub_initiative_button_is_danger_when_no_bonus_and_no_dexterity():
+    """_HubInitiativeButton is danger when both initiative_bonus and dexterity are None."""
+    from commands.wizard.buttons import _HubInitiativeButton
+
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
     )
-    for view in [
-        _ClassLevelView(state, step_number=2),
-        _StatsView(state, step_number=3),
-        _ACView(state, step_number=4),
-        _SavesView(state, step_number=5),
-        _SkillsView(state, step_number=6),
-        _HPView(state, step_number=7),
-    ]:
-        continue_button = next(
-            item for item in view.children
-            if isinstance(item, _ContinueButton)
+    # Both initiative_bonus and dexterity default to None
+    button = _HubInitiativeButton(state, row=0)
+
+    assert button.style == discord.ButtonStyle.danger
+
+
+def test_hub_initiative_button_is_primary_when_dexterity_set_but_no_override():
+    """_HubInitiativeButton is primary (blue) when dexterity is set but no explicit bonus."""
+    from commands.wizard.buttons import _HubInitiativeButton
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
+    )
+    state.dexterity = 14  # will auto-calc from DEX mod
+    button = _HubInitiativeButton(state, row=0)
+
+    assert button.style == discord.ButtonStyle.primary
+
+
+def test_hub_initiative_button_is_success_when_initiative_bonus_explicitly_set():
+    """_HubInitiativeButton is success (green) when an explicit initiative_bonus is set."""
+    from commands.wizard.buttons import _HubInitiativeButton
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
+    )
+    state.initiative_bonus = 3
+    button = _HubInitiativeButton(state, row=0)
+
+    assert button.style == discord.ButtonStyle.success
+
+
+def test_hub_initiative_button_success_overrides_dexterity_when_both_set():
+    """When both initiative_bonus and dexterity are set, success (green) takes priority."""
+    from commands.wizard.buttons import _HubInitiativeButton
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
+    )
+    state.dexterity = 16
+    state.initiative_bonus = 5  # explicit override wins
+    button = _HubInitiativeButton(state, row=0)
+
+    assert button.style == discord.ButtonStyle.success
+
+
+# ---------------------------------------------------------------------------
+# _section_button_style — auto-calculated sections
+# ---------------------------------------------------------------------------
+
+
+def test_section_button_style_saving_throws_danger_when_no_class_and_not_explicit():
+    """saving_throws section is danger when no class is set and saves_explicitly_set is False."""
+    from commands.wizard.hub_view import _section_button_style
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    assert state.character_class is None
+    assert state.saves_explicitly_set is False
+
+    style = _section_button_style("saving_throws", state)
+
+    assert style == discord.ButtonStyle.danger
+
+
+def test_section_button_style_saving_throws_primary_when_class_set_but_not_explicit():
+    """saving_throws section is primary (auto from class) when class is set but saves_explicitly_set is False."""
+    from commands.wizard.hub_view import _section_button_style
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.classes_and_levels = [(CharacterClass.FIGHTER, 1)]
+    # classes_and_levels being set makes character_class return the first class
+    assert state.saves_explicitly_set is False
+
+    style = _section_button_style("saving_throws", state)
+
+    assert style == discord.ButtonStyle.primary
+
+
+def test_section_button_style_saving_throws_success_when_explicitly_set():
+    """saving_throws section is success when saves_explicitly_set is True."""
+    from commands.wizard.hub_view import _section_button_style
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.saves_explicitly_set = True
+
+    style = _section_button_style("saving_throws", state)
+
+    assert style == discord.ButtonStyle.success
+
+
+def test_section_button_style_hp_danger_when_no_class_and_no_override():
+    """hp section is danger when no class and no hp_override are set."""
+    from commands.wizard.hub_view import _section_button_style
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    assert state.character_class is None
+    assert state.hp_override is None
+
+    style = _section_button_style("hp", state)
+
+    assert style == discord.ButtonStyle.danger
+
+
+def test_section_button_style_hp_primary_when_class_and_constitution_set_but_no_override():
+    """hp section is primary when class and constitution are both set but no hp_override."""
+    from commands.wizard.hub_view import _section_button_style
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.classes_and_levels = [(CharacterClass.BARBARIAN, 1)]
+    state.constitution = 16
+    # hp_override remains None — HP will be auto-calculated
+
+    style = _section_button_style("hp", state)
+
+    assert style == discord.ButtonStyle.primary
+
+
+def test_section_button_style_hp_success_when_hp_override_explicitly_set():
+    """hp section is success when hp_override is explicitly set."""
+    from commands.wizard.hub_view import _section_button_style
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.hp_override = 42
+
+    style = _section_button_style("hp", state)
+
+    assert style == discord.ButtonStyle.success
+
+
+def test_section_button_style_hp_danger_when_class_set_but_constitution_missing():
+    """hp section is danger when class is set but constitution is None (cannot auto-calc without CON)."""
+    from commands.wizard.hub_view import _section_button_style
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    state.classes_and_levels = [(CharacterClass.WIZARD, 1)]
+    # constitution is None — cannot auto-calc HP
+
+    style = _section_button_style("hp", state)
+
+    assert style == discord.ButtonStyle.danger
+
+
+# ---------------------------------------------------------------------------
+# Cancel button placement — section views have no cancel; hub has exactly one
+# ---------------------------------------------------------------------------
+
+
+def test_section_views_have_no_cancel_button():
+    """Section views must not contain any _CancelWizardButton."""
+    from commands.wizard.buttons import _CancelWizardButton
+    from commands.wizard.section_views import (
+        _ACView,
+        _ClassLevelView,
+        _HPView,
+        _SavesView,
+        _SkillsView,
+        _StatsView,
+        _WeaponsWizardView,
+    )
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    section_views = [
+        _StatsView(state),
+        _ClassLevelView(state),
+        _ACView(state),
+        _SavesView(state),
+        _SkillsView(state),
+        _HPView(state),
+        _WeaponsWizardView(state),
+    ]
+    for view in section_views:
+        cancel_buttons = [
+            item for item in view.children if isinstance(item, _CancelWizardButton)
+        ]
+        assert cancel_buttons == [], (
+            f"{type(view).__name__} unexpectedly contains a _CancelWizardButton"
         )
-        assert continue_button.label == Strings.WIZARD_BUTTON_CONTINUE
+
+
+def test_weapon_results_view_has_no_cancel_button():
+    """_WeaponResultsView must not contain any _CancelWizardButton."""
+    from commands.wizard.buttons import _CancelWizardButton
+    from commands.wizard.section_views import _WeaponResultsView, _WeaponsWizardView
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    weapons_view = _WeaponsWizardView(state)
+    # Pass an empty results list so no _WeaponSelectButton items are added
+    view = _WeaponResultsView(state, results=[], weapons_view=weapons_view)
+    cancel_buttons = [
+        item for item in view.children if isinstance(item, _CancelWizardButton)
+    ]
+    assert cancel_buttons == []
+
+
+def test_hub_view_has_cancel_button():
+    """HubView must contain exactly one _HubCancelButton."""
+    from commands.wizard.hub_view import HubView, _HubCancelButton
+
+    state = WizardState(
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
+    )
+    view = HubView(state)
+    hub_cancel_buttons = [
+        item for item in view.children if isinstance(item, _HubCancelButton)
+    ]
+    assert len(hub_cancel_buttons) == 1
 
 
 # ---------------------------------------------------------------------------
-# _ContinueButton — callback advances to correct next view
+# _InitiativeModal — blank input clears the bonus
 # ---------------------------------------------------------------------------
 
 
-async def test_class_level_view_continue_advances_to_step_3_stats(mocker):
-    """Clicking Continue on step 2 (_ClassLevelView) navigates to _StatsView (step 3)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    view = _ClassLevelView(state, step_number=2)
-    continue_button = next(
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    )
-
-    interaction = make_interaction(mocker)
-    await continue_button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _StatsView)
-
-
-async def test_stats_view_continue_advances_to_step_4_ac(mocker):
-    """Clicking Continue on step 3 (_StatsView) navigates to _ACView (step 4)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    view = _StatsView(state, step_number=3)
-    continue_button = next(
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    )
-
-    interaction = make_interaction(mocker)
-    await continue_button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _ACView)
-
-
-async def test_ac_view_continue_advances_to_step_5_saves(mocker):
-    """Clicking Continue on step 4 (_ACView) navigates to _SavesView (step 5)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    view = _ACView(state, step_number=4)
-    continue_button = next(
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    )
-
-    interaction = make_interaction(mocker)
-    await continue_button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _SavesView)
-
-
-async def test_saves_view_continue_advances_to_step_6_skills(mocker):
-    """Clicking Continue on step 5 (_SavesView) navigates to _SkillsView (step 6)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    view = _SavesView(state, step_number=5)
-    continue_button = next(
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    )
-
-    interaction = make_interaction(mocker)
-    await continue_button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _SkillsView)
-
-
-async def test_skills_view_continue_advances_to_step_7_hp(mocker):
-    """Clicking Continue on step 6 (_SkillsView) navigates to _HPView (step 7)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    view = _SkillsView(state, step_number=6)
-    continue_button = next(
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    )
-
-    interaction = make_interaction(mocker)
-    await continue_button.callback(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert isinstance(call_kwargs.get("view"), _HPView)
-
-
-async def test_hp_view_continue_calls_finish_wizard(mocker):
-    """Clicking Continue on step 7 (_HPView) triggers _finish_wizard (step 8 = finish)."""
-    state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
-    )
-    view = _HPView(state, step_number=7)
-    continue_button = next(
-        item for item in view.children
-        if isinstance(item, _ContinueButton)
-    )
-
-    mocker.patch(
-        "commands.character_wizard.save_character_from_wizard",
-        return_value=(mocker.Mock(name="FakeChar", max_hp=-1), None),
-    )
-
-    interaction = make_interaction(mocker)
-    await continue_button.callback(interaction)
-
-    # _finish_wizard calls edit_message on success or send_message on error;
-    # either way the interaction response must have been used.
-    was_called = (
-        interaction.response.edit_message.called
-        or interaction.response.send_message.called
-    )
-    assert was_called
-
-
-# ---------------------------------------------------------------------------
-# _WisChaModal — on_submit refreshes the CURRENT stats step (not auto-advance)
-# ---------------------------------------------------------------------------
-
-
-async def test_wis_cha_modal_on_submit_refreshes_stats_view_not_advances(mocker):
-    """_WisChaModal.on_submit with valid inputs calls edit_message with the parent _StatsView."""
+async def test_initiative_modal_blank_clears_bonus(mocker):
+    """Submitting a blank initiative clears any existing override and returns to hub."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
-    modal = _MentalStatsModal(state, parent_view)
-    _set_text_input(modal.wis_input, "12")
-    _set_text_input(modal.cha_input, "8")
+    state.initiative_bonus = 5
+    modal = _InitiativeModal(state)
+    _set_text_input(modal.init_input, "")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
 
+    assert state.initiative_bonus is None
     interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    # Must return the same parent_view, not a new _ACView
-    returned_view = call_kwargs.get("view")
-    assert returned_view is parent_view
-    assert isinstance(returned_view, _StatsView)
 
 
-async def test_wis_cha_modal_on_submit_does_not_advance_to_ac_view(mocker):
-    """_WisChaModal.on_submit must NOT navigate to _ACView; it must stay on _StatsView."""
+async def test_initiative_modal_blank_when_already_none_stays_none(mocker):
+    """Submitting blank when initiative_bonus is already None keeps it None and returns to hub."""
     state = WizardState(
         user_discord_id="111",
         guild_discord_id="222",
         guild_name="Test",
         name="Hero",
     )
-    parent_view = _StatsView(state, step_number=3)
-    modal = _MentalStatsModal(state, parent_view)
-    _set_text_input(modal.wis_input, "12")
-    _set_text_input(modal.cha_input, "8")
+    assert state.initiative_bonus is None
+    modal = _InitiativeModal(state)
+    _set_text_input(modal.init_input, "")
 
     interaction = make_interaction(mocker)
     await modal.on_submit(interaction)
 
+    assert state.initiative_bonus is None
     interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert not isinstance(call_kwargs.get("view"), _ACView)
 
 
 # ---------------------------------------------------------------------------
-# _ACModal — on_submit refreshes the CURRENT AC step (not auto-advance)
+# HubView — Quick Setup button removed
 # ---------------------------------------------------------------------------
 
 
-async def test_ac_modal_on_submit_refreshes_ac_view_not_advances(mocker):
-    """_ACModal.on_submit with valid AC calls edit_message with the parent _ACView."""
+def test_hub_view_has_no_quick_setup_button():
+    """HubView must not contain any _QuickSetupButton."""
+    from commands.wizard.hub_view import HubView, _QuickSetupButton
+
     state = WizardState(
-        user_discord_id="111",
-        guild_discord_id="222",
-        guild_name="Test",
-        name="Hero",
+        user_discord_id="1", guild_discord_id="2", guild_name="Test"
     )
-    parent_view = _ACView(state, step_number=4)
-    modal = _ACModal(state, parent_view)
-    _set_text_input(modal.ac_input, "15")
-
-    interaction = make_interaction(mocker)
-    await modal.on_submit(interaction)
-
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    returned_view = call_kwargs.get("view")
-    assert returned_view is parent_view
-    assert isinstance(returned_view, _ACView)
+    view = HubView(state)
+    quick_setup_buttons = [
+        item for item in view.children if isinstance(item, _QuickSetupButton)
+    ]
+    assert quick_setup_buttons == []
 
 
-async def test_ac_modal_on_submit_does_not_advance_to_saves_view(mocker):
-    """_ACModal.on_submit must NOT navigate to _SavesView; it must stay on _ACView."""
+# HubView — on_timeout robustness
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_hub_view_on_timeout_does_not_raise_when_message_absent(mocker):
+    """on_timeout must not raise AttributeError when discord.py hasn't set .message."""
     state = WizardState(
-        user_discord_id="111",
-        guild_discord_id="222",
-        guild_name="Test",
-        name="Hero",
+        user_discord_id="111", guild_discord_id="222", guild_name="Test", name="Hero"
     )
-    parent_view = _ACView(state, step_number=4)
-    modal = _ACModal(state, parent_view)
-    _set_text_input(modal.ac_input, "18")
+    view = HubView(state)
+    # Ensure the attribute is absent (simulate the discord.py build that never sets it)
+    if hasattr(view, "message"):
+        delattr(view, "message")
 
-    interaction = make_interaction(mocker)
-    await modal.on_submit(interaction)
+    # Should complete without raising
+    await view.on_timeout()
 
-    interaction.response.edit_message.assert_called_once()
-    call_kwargs = interaction.response.edit_message.call_args.kwargs
-    assert not isinstance(call_kwargs.get("view"), _SavesView)
+    # State reference must be cleared
+    assert view.wizard_state is None

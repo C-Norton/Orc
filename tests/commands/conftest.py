@@ -143,11 +143,11 @@ def weapon_bot(session_factory, mocker):
 
 @pytest.fixture
 def wizard_bot(session_factory, mocker):
-    """Bot fixture that patches SessionLocal in both character_commands and
-    character_wizard so wizard commit tests write to the in-memory DB."""
+    """Bot fixture that patches SessionLocal in character_commands and
+    the wizard package so wizard commit tests write to the in-memory DB."""
     bot = make_bot()
     mocker.patch("commands.character_commands.SessionLocal", new=session_factory)
-    mocker.patch("commands.character_wizard.SessionLocal", new=session_factory)
+    mocker.patch("commands.wizard.SessionLocal", new=session_factory)
     from commands.character_commands import register_character_commands
 
     register_character_commands(bot)

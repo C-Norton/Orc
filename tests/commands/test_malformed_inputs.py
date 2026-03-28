@@ -89,7 +89,7 @@ async def test_character_create_name_at_limit_accepted(
     mocker, db_session, sample_user, sample_server
 ):
     """A 100-character name is exactly at the limit and must be accepted."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -105,7 +105,7 @@ async def test_character_create_name_over_limit_rejected(
     mocker, db_session
 ):
     """A 101-character name exceeds the limit and must be rejected."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -121,7 +121,7 @@ async def test_character_create_sql_injection_name_stored_safely(
     mocker, db_session, sample_user, sample_server
 ):
     """A SQL-injection name must be stored verbatim (not interpreted) and succeed."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -139,7 +139,7 @@ async def test_character_create_sql_injection_2_name_stored_safely(
     mocker, db_session, sample_user, sample_server
 ):
     """A second SQL-injection pattern must also be stored safely."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -157,7 +157,7 @@ async def test_character_create_discord_mention_in_name(
     mocker, db_session, sample_user, sample_server
 ):
     """@everyone in a character name is stored as plain text."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -175,7 +175,7 @@ async def test_character_create_markdown_in_name_stored_safely(
     mocker, db_session, sample_user, sample_server
 ):
     """Markdown characters in a character name are stored verbatim."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -193,7 +193,7 @@ async def test_character_create_emoji_name_stored_safely(
     mocker, db_session, sample_user, sample_server
 ):
     """Emoji in a character name are stored and retrieved correctly."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -211,7 +211,7 @@ async def test_character_create_newline_in_name_stored_safely(
     mocker, db_session, sample_user, sample_server
 ):
     """A newline embedded in a name does not crash the wizard commit."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
@@ -230,14 +230,16 @@ async def test_character_create_newline_in_name_stored_safely(
 
 async def test_character_create_level_zero_rejected(mocker):
     """Level 0 is below the minimum of 1 and must be rejected."""
-    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from commands.wizard.state import WizardState
+    from commands.wizard.modals import _LevelForClassModal
+    from commands.wizard.section_views import _ClassLevelView
     from enums.character_class import CharacterClass
 
     state = WizardState(
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test Server", name="LowLevel",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "0"
 
@@ -251,14 +253,16 @@ async def test_character_create_level_zero_rejected(mocker):
 
 async def test_character_create_level_21_rejected(mocker):
     """Level 21 is above the maximum of 20 and must be rejected."""
-    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from commands.wizard.state import WizardState
+    from commands.wizard.modals import _LevelForClassModal
+    from commands.wizard.section_views import _ClassLevelView
     from enums.character_class import CharacterClass
 
     state = WizardState(
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test Server", name="OverLevel",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "21"
 
@@ -272,14 +276,16 @@ async def test_character_create_level_21_rejected(mocker):
 
 async def test_character_create_level_negative_rejected(mocker):
     """A negative level must be rejected."""
-    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from commands.wizard.state import WizardState
+    from commands.wizard.modals import _LevelForClassModal
+    from commands.wizard.section_views import _ClassLevelView
     from enums.character_class import CharacterClass
 
     state = WizardState(
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test Server", name="NegLevel",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "-1"
 
@@ -292,14 +298,16 @@ async def test_character_create_level_negative_rejected(mocker):
 
 async def test_character_create_level_1_accepted(mocker):
     """Level 1 is the minimum and must be accepted."""
-    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from commands.wizard.state import WizardState
+    from commands.wizard.modals import _LevelForClassModal
+    from commands.wizard.section_views import _ClassLevelView
     from enums.character_class import CharacterClass
 
     state = WizardState(
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test Server", name="MinLevel",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "1"
 
@@ -312,14 +320,16 @@ async def test_character_create_level_1_accepted(mocker):
 
 async def test_character_create_level_20_accepted(mocker):
     """Level 20 is the maximum and must be accepted."""
-    from commands.character_wizard import WizardState, _LevelForClassModal, _ClassLevelView
+    from commands.wizard.state import WizardState
+    from commands.wizard.modals import _LevelForClassModal
+    from commands.wizard.section_views import _ClassLevelView
     from enums.character_class import CharacterClass
 
     state = WizardState(
         user_discord_id="111", guild_discord_id="222",
         guild_name="Test Server", name="MaxLevel",
     )
-    parent_view = _ClassLevelView(state, step_number=2)
+    parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
     modal.level_input._value = "20"
 
@@ -1397,7 +1407,7 @@ async def test_character_create_at_user_limit_rejected(
 ):
     """Creating a character when the user already has MAX_CHARACTERS_PER_USER
     characters must be rejected by save_character_from_wizard."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     # Fill up to the limit
     for i in range(MAX_CHARACTERS_PER_USER):

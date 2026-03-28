@@ -544,7 +544,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
     async def character_create(interaction: discord.Interaction) -> None:
         """Launch the character creation wizard."""
-        from commands.character_wizard import start_character_creation
+        from commands.wizard import start_character_creation
 
         await start_character_creation(interaction)
 

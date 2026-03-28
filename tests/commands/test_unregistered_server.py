@@ -194,7 +194,7 @@ async def test_character_create_auto_registers_unregistered_server(
 ):
     """``save_character_from_wizard`` bootstraps both User and Server rows
     when neither exists yet (new server + new user)."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
     from models import Server
 
     interaction = _unknown_server_interaction(mocker)
@@ -215,7 +215,7 @@ async def test_character_create_auto_registers_unregistered_server(
 async def test_character_create_in_unregistered_server_succeeds(mocker, db_session):
     """``save_character_from_wizard`` creates the character normally on a server
     that has never been registered."""
-    from commands.character_wizard import WizardState, save_character_from_wizard
+    from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = _unknown_server_interaction(mocker)
     state = WizardState(
