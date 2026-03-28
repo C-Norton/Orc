@@ -1015,6 +1015,104 @@ def register_character_commands(bot: commands.Bot) -> None:
             db.close()
 
     # ------------------------------------------------------------------
+    # /character list_all
+    # ------------------------------------------------------------------
+
+    @character_group.command(
+        name="list_all", description="View all characters registered in this server"
+    )
+    async def character_list_all(interaction: discord.Interaction) -> None:
+        logger.debug(
+            f"Command /character list_all called by {interaction.user} (ID: {interaction.user.id}) "
+            f"for guild {interaction.guild_id}"
+        )
+        # Defer immediately — we may make multiple API calls to resolve member names.
+        await interaction.response.defer()
+        db = SessionLocal()
+        try:
+            _, server = get_or_create_user_server(db, interaction)
+
+            if not server:
+                await interaction.followup.send(
+                    Strings.CHAR_LIST_ALL_NONE, ephemeral=True
+                )
+                return
+
+            # Fetch all characters for this server, ordered by owner then name.
+            all_characters = (
+                db.query(Character)
+                .filter_by(server_id=server.id)
+                .order_by(Character.user_id, Character.name)
+                .all()
+            )
+            logger.debug(
+                f"/character list_all for guild {interaction.guild_id}: "
+                f"found {len(all_characters)} character(s)"
+            )
+
+            if not all_characters:
+                await interaction.followup.send(
+                    Strings.CHAR_LIST_ALL_NONE, ephemeral=True
+                )
+                return
+
+            # Group characters by their owning user's Discord ID.
+            characters_by_user: dict[str, list[Character]] = {}
+            for character in all_characters:
+                discord_id = character.user.discord_id
+                characters_by_user.setdefault(discord_id, []).append(character)
+
+            # Resolve Discord display names via API — get_member only hits the local
+            # cache and misses users who haven't interacted recently.
+            display_names: dict[str, str] = {}
+            for discord_id in characters_by_user:
+                try:
+                    member = await interaction.guild.fetch_member(int(discord_id))
+                    display_names[discord_id] = member.display_name
+                except (discord.NotFound, discord.HTTPException):
+                    display_names[discord_id] = Strings.CHAR_LIST_ALL_UNKNOWN_PLAYER
+
+            embed = discord.Embed(
+                title=Strings.CHAR_LIST_ALL_TITLE.format(
+                    server_name=interaction.guild.name
+                ),
+                description=Strings.CHAR_LIST_ALL_DESC.format(
+                    character_count=len(all_characters),
+                    player_count=len(characters_by_user),
+                ),
+                color=discord.Color.blue(),
+            )
+
+            # Add one embed field per player listing their characters.
+            for discord_id, chars in characters_by_user.items():
+                player_name = display_names[discord_id]
+                character_lines = []
+                for char in chars:
+                    sorted_cls = sorted(char.class_levels, key=lambda cl: cl.id)
+                    class_summary = (
+                        " / ".join(f"{cl.class_name} {cl.level}" for cl in sorted_cls)
+                        if sorted_cls
+                        else "No class"
+                    )
+                    active_marker = " ★" if char.is_active else ""
+                    character_lines.append(
+                        f"**{char.name}**{active_marker} — Lv {char.level} {class_summary}"
+                    )
+                embed.add_field(
+                    name=player_name,
+                    value="\n".join(character_lines),
+                    inline=False,
+                )
+
+            await interaction.followup.send(embed=embed)
+            logger.info(
+                f"/character list_all completed for guild {interaction.guild_id}: "
+                f"listed {len(all_characters)} character(s) across {len(characters_by_user)} player(s)"
+            )
+        finally:
+            db.close()
+
+    # ------------------------------------------------------------------
     # /character switch
     # ------------------------------------------------------------------
 

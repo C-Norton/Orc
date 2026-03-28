@@ -1,6 +1,6 @@
 import pytest
 import discord
-from models import Character, CharacterSkill, ClassLevel
+from models import Character, CharacterSkill, ClassLevel, User
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from tests.conftest import make_interaction
 from tests.commands.conftest import get_callback
@@ -693,6 +693,198 @@ async def test_characters_no_characters(
     await cb(interaction)
 
     assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+
+
+# ---------------------------------------------------------------------------
+# /character list_all
+# ---------------------------------------------------------------------------
+
+
+async def test_list_all_no_characters_sends_ephemeral_none_message(
+    char_bot, sample_user, sample_server, interaction
+):
+    """/character list_all with no server characters sends ephemeral CHAR_LIST_ALL_NONE."""
+    from utils.strings import Strings
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    interaction.response.defer.assert_called_once()
+    call_args = interaction.followup.send.call_args
+    assert call_args.kwargs.get("ephemeral") is True
+    assert call_args.args[0] == Strings.CHAR_LIST_ALL_NONE
+
+
+async def test_list_all_groups_characters_by_player(
+    char_bot, sample_character, interaction, mocker
+):
+    """/character list_all groups characters under per-player embed fields."""
+    member = mocker.Mock()
+    member.display_name = "TestUser"
+    interaction.guild.fetch_member = mocker.AsyncMock(return_value=member)
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    call_kwargs = interaction.followup.send.call_args.kwargs
+    embed = call_kwargs.get("embed")
+    assert embed is not None
+    # One field per player
+    assert len(embed.fields) == 1
+    assert embed.fields[0].name == "TestUser"
+
+
+async def test_list_all_active_character_marked_with_star(
+    char_bot, sample_character, interaction, mocker
+):
+    """Active characters should have a ★ marker in the embed field value."""
+    member = mocker.Mock()
+    member.display_name = "TestUser"
+    interaction.guild.fetch_member = mocker.AsyncMock(return_value=member)
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    embed = interaction.followup.send.call_args.kwargs.get("embed")
+    assert embed is not None
+    field_value = embed.fields[0].value
+    # sample_character (Aldric) is active
+    assert "★" in field_value
+    assert "Aldric" in field_value
+
+
+async def test_list_all_character_with_no_class_shows_no_class(
+    char_bot, db_session, sample_user, sample_server, interaction, mocker
+):
+    """Characters with no class_levels show 'No class' in the embed field."""
+    char = Character(
+        name="Classless",
+        user=sample_user,
+        server=sample_server,
+        is_active=True,
+    )
+    db_session.add(char)
+    db_session.commit()
+
+    member = mocker.Mock()
+    member.display_name = "TestUser"
+    interaction.guild.fetch_member = mocker.AsyncMock(return_value=member)
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    embed = interaction.followup.send.call_args.kwargs.get("embed")
+    assert embed is not None
+    # At least one field must contain "No class"
+    field_values = [f.value for f in embed.fields]
+    assert any("No class" in value for value in field_values)
+
+
+async def test_list_all_unknown_player_shows_unknown_player_string(
+    char_bot, sample_character, interaction, mocker
+):
+    """When a guild member cannot be found, field name falls back to CHAR_LIST_ALL_UNKNOWN_PLAYER."""
+    from utils.strings import Strings
+
+    # fetch_member raises NotFound — user is not in the guild
+    interaction.guild.fetch_member = mocker.AsyncMock(
+        side_effect=discord.NotFound(mocker.MagicMock(), mocker.MagicMock())
+    )
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    embed = interaction.followup.send.call_args.kwargs.get("embed")
+    assert embed is not None
+    field_names = [f.name for f in embed.fields]
+    assert Strings.CHAR_LIST_ALL_UNKNOWN_PLAYER in field_names
+
+
+async def test_list_all_multiple_characters_per_player_in_one_field(
+    char_bot, db_session, sample_character, sample_user, sample_server, interaction, mocker
+):
+    """Multiple characters belonging to the same player appear in a single embed field."""
+    second_char = Character(
+        name="Zara",
+        user=sample_user,
+        server=sample_server,
+        is_active=False,
+    )
+    db_session.add(second_char)
+    db_session.commit()
+
+    member = mocker.Mock()
+    member.display_name = "TestUser"
+    interaction.guild.fetch_member = mocker.AsyncMock(return_value=member)
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    embed = interaction.followup.send.call_args.kwargs.get("embed")
+    assert embed is not None
+    # Both characters belong to the same player → only one field
+    assert len(embed.fields) == 1
+    field_value = embed.fields[0].value
+    assert "Aldric" in field_value
+    assert "Zara" in field_value
+
+
+async def test_list_all_multiple_players_each_get_own_field(
+    char_bot, db_session, sample_character, sample_server, interaction, mocker, session_factory
+):
+    """Characters from different players each appear in their own embed field."""
+    second_user = User(discord_id="999")
+    db_session.add(second_user)
+    db_session.flush()
+
+    second_char = Character(
+        name="Beren",
+        user=second_user,
+        server=sample_server,
+        is_active=True,
+    )
+    db_session.add(second_char)
+    db_session.commit()
+
+    first_member = mocker.Mock()
+    first_member.display_name = "TestUser"
+    second_member = mocker.Mock()
+    second_member.display_name = "OtherUser"
+
+    async def fetch_member_side_effect(discord_id: int):
+        if discord_id == 111:
+            return first_member
+        if discord_id == 999:
+            return second_member
+        raise discord.NotFound(mocker.MagicMock(), mocker.MagicMock())
+
+    interaction.guild.fetch_member = mocker.AsyncMock(side_effect=fetch_member_side_effect)
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    embed = interaction.followup.send.call_args.kwargs.get("embed")
+    assert embed is not None
+    assert len(embed.fields) == 2
+    field_names = {f.name for f in embed.fields}
+    assert "TestUser" in field_names
+    assert "OtherUser" in field_names
+
+
+async def test_list_all_message_is_not_ephemeral(
+    char_bot, sample_character, interaction, mocker
+):
+    """/character list_all response is visible to the channel (not ephemeral)."""
+    member = mocker.Mock()
+    member.display_name = "TestUser"
+    interaction.guild.fetch_member = mocker.AsyncMock(return_value=member)
+
+    cb = get_callback(char_bot, "character", "list_all")
+    await cb(interaction)
+
+    call_kwargs = interaction.followup.send.call_args.kwargs
+    # ephemeral must be absent or explicitly False
+    assert call_kwargs.get("ephemeral") is not True
 
 
 # ---------------------------------------------------------------------------

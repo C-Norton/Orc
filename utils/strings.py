@@ -66,6 +66,7 @@ class Strings:
         "**/character class_add <class> <level>**: Add or update a class on your active character (for levelling up or multiclassing).\n"
         "**/character class_remove <class>**: Remove a class from your active character.\n"
         "**/character list**: View all your characters in this server.\n"
+        "**/character list_all**: View all characters registered in this server (across all players).\n"
         "**/character view**: See your active character's stats, skills, and saving throws.\n"
         "**/character switch <name>**: Change which character is currently active.\n"
         "**/character delete <name>**: Permanently delete one of your characters.\n"
@@ -381,6 +382,10 @@ class Strings:
     CHAR_LIST_NONE = "You don't have any characters in this server."
     CHAR_LIST_TITLE = "Characters for {user_name}"
     CHAR_LIST_DESC = "In server: **{server_name}**"
+    CHAR_LIST_ALL_NONE = "There are no characters registered in this server."
+    CHAR_LIST_ALL_TITLE = "All Characters in {server_name}"
+    CHAR_LIST_ALL_DESC = "{character_count} character(s) across {player_count} player(s)"
+    CHAR_LIST_ALL_UNKNOWN_PLAYER = "Unknown Player"
     CHAR_NOT_FOUND_NAME = "You don't have a character named **{name}** in this server."
     CHAR_DELETE_SUCCESS = "Character **{name}** has been deleted."
 
