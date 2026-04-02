@@ -15,7 +15,7 @@ import discord
 from discord.ext import commands
 from sqlalchemy import inspect as sa_inspect, text
 
-from database import SessionLocal
+from database import db_session
 from utils.dev_notifications import (
     get_buffer_stats,
     get_recent_logs,
@@ -180,8 +180,7 @@ def register_admin_commands(bot: commands.Bot) -> None:
         uptime = _uptime_string()
         guild_count = len(bot.guilds)
 
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             inspector = sa_inspect(db.bind)
             table_names = sorted(
                 name
@@ -194,8 +193,6 @@ def register_admin_commands(bot: commands.Bot) -> None:
                     text(f"SELECT COUNT(*) FROM {table_name}")  # noqa: S608
                 ).scalar()
                 rows.append(f"  {table_name}: {count}")
-        finally:
-            db.close()
 
         counts_block = "\n".join(rows) or "  (no tables found)"
         message = (

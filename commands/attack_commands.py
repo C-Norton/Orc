@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 import random
-from database import SessionLocal
+from database import db_session
 from models import (
     User,
     Server,
@@ -56,59 +56,65 @@ def register_attack_commands(bot: commands.Bot) -> None:
             f"Command /attack add called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {name}"
         )
-        db = SessionLocal()
-        try:
-            user, server = get_or_create_user_server(db, interaction)
-            char = get_active_character(db, user, server)
-            logger.debug(
-                f"Character lookup for user {interaction.user.id}: "
-                f"{'found: ' + char.name if char else 'not found'}"
-            )
-
-            roll_dice(damage_formula)  # raises ValueError on invalid formula
-
-            if not char:
-                await interaction.response.send_message(
-                    Strings.CHARACTER_NOT_FOUND, ephemeral=True
+        with db_session() as db:
+            try:
+                user, server = get_or_create_user_server(db, interaction)
+                char = get_active_character(db, user, server)
+                logger.debug(
+                    f"Character lookup for user {interaction.user.id}: "
+                    f"{'found: ' + char.name if char else 'not found'}"
                 )
-                return
 
-            attack = db.query(Attack).filter_by(character_id=char.id, name=name).first()
-            if attack:
-                attack.hit_modifier = hit_mod
-                attack.damage_formula = damage_formula
-                msg = Strings.ATTACK_UPDATED.format(
-                    attack_name=name, char_name=char.name
-                )
-            else:
-                attack_count = db.query(Attack).filter_by(character_id=char.id).count()
-                if attack_count >= MAX_ATTACKS_PER_CHARACTER:
+                roll_dice(damage_formula)  # raises ValueError on invalid formula
+
+                if not char:
                     await interaction.response.send_message(
-                        Strings.ERROR_LIMIT_ATTACKS.format(
-                            char_name=char.name, limit=MAX_ATTACKS_PER_CHARACTER
-                        ),
-                        ephemeral=True,
+                        Strings.CHARACTER_NOT_FOUND, ephemeral=True
                     )
                     return
-                attack = Attack(
-                    character_id=char.id,
-                    name=name,
-                    hit_modifier=hit_mod,
-                    damage_formula=damage_formula,
-                )
-                db.add(attack)
-                msg = Strings.ATTACK_ADDED.format(attack_name=name, char_name=char.name)
 
-            db.commit()
-            logger.info(f"/attack add completed for user {interaction.user.id}: {msg}")
-            await interaction.response.send_message(msg, ephemeral=True)
-        except ValueError as e:
-            logger.error(f"Error adding attack for user {interaction.user.id}: {e}")
-            await interaction.response.send_message(
-                Strings.ERROR_ATTACK_ADD.format(error=e), ephemeral=True
-            )
-        finally:
-            db.close()
+                attack = (
+                    db.query(Attack).filter_by(character_id=char.id, name=name).first()
+                )
+                if attack:
+                    attack.hit_modifier = hit_mod
+                    attack.damage_formula = damage_formula
+                    msg = Strings.ATTACK_UPDATED.format(
+                        attack_name=name, char_name=char.name
+                    )
+                else:
+                    attack_count = (
+                        db.query(Attack).filter_by(character_id=char.id).count()
+                    )
+                    if attack_count >= MAX_ATTACKS_PER_CHARACTER:
+                        await interaction.response.send_message(
+                            Strings.ERROR_LIMIT_ATTACKS.format(
+                                char_name=char.name, limit=MAX_ATTACKS_PER_CHARACTER
+                            ),
+                            ephemeral=True,
+                        )
+                        return
+                    attack = Attack(
+                        character_id=char.id,
+                        name=name,
+                        hit_modifier=hit_mod,
+                        damage_formula=damage_formula,
+                    )
+                    db.add(attack)
+                    msg = Strings.ATTACK_ADDED.format(
+                        attack_name=name, char_name=char.name
+                    )
+
+                db.commit()
+                logger.info(
+                    f"/attack add completed for user {interaction.user.id}: {msg}"
+                )
+                await interaction.response.send_message(msg, ephemeral=True)
+            except ValueError as e:
+                logger.error(f"Error adding attack for user {interaction.user.id}: {e}")
+                await interaction.response.send_message(
+                    Strings.ERROR_ATTACK_ADD.format(error=e), ephemeral=True
+                )
 
     @attack_group.command(name="roll", description="Perform an attack roll")
     @app_commands.describe(
@@ -129,8 +135,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
             f"Command /attack roll called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with attack_name: {attack_name}, target: {target}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -369,16 +374,13 @@ def register_attack_commands(bot: commands.Bot) -> None:
                     f"/attack roll: {char.name} missed '{enemy.name}' "
                     f"(rolled {hit_total} vs AC {enemy.ac}) in '{encounter.name}'"
                 )
-        finally:
-            db.close()
 
     @attack_roll.autocomplete("attack_name")
     async def attack_roll_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         """Suggest attacks belonging to the user's active character."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
 
@@ -390,16 +392,13 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 for a in char.attacks
                 if current.lower() in a.name.lower()
             ][:25]
-        finally:
-            db.close()
 
     @attack_roll.autocomplete("target")
     async def attack_roll_target_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         """Suggest enemy names from the active encounter's initiative order."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
             if not party:
@@ -426,8 +425,6 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 for name in enemy_names
                 if current.lower() in name.lower()
             ][:25]
-        finally:
-            db.close()
 
     @attack_group.command(
         name="list", description="List all attacks for your active character"
@@ -437,8 +434,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
             f"Command /attack list called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -474,7 +470,5 @@ def register_attack_commands(bot: commands.Bot) -> None:
                 f"/attack list completed for user {interaction.user.id}: "
                 f"listed {len(char.attacks)} attacks"
             )
-        finally:
-            db.close()
 
     bot.tree.add_command(attack_group)

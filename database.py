@@ -1,11 +1,13 @@
 import os
-from typing import Generator
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from utils.logging_config import get_logger
-from sqlalchemy.engine import Engine
-from sqlalchemy import event
 import sqlite3
+from contextlib import contextmanager
+from typing import Generator
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
+
+from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -30,6 +32,23 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 def get_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@contextmanager
+def db_session() -> Generator[Session, None, None]:
+    """Provide a database session and guarantee it is closed on exit.
+
+    Usage::
+
+        with db_session() as db:
+            ...
+            db.commit()
+    """
     db = SessionLocal()
     try:
         yield db

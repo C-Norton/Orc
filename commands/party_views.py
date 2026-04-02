@@ -1,7 +1,7 @@
 import math
 import discord
 from typing import List
-from database import SessionLocal
+from database import db_session
 from enums.encounter_status import EncounterStatus
 from models import Character, Encounter, EncounterTurn, Party, User
 from utils.logging_config import get_logger
@@ -33,8 +33,7 @@ class ConfirmCharacterRemoveView(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
         """Cascade-delete the character's EncounterTurn, then remove from party."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             party = db.get(Party, self.party_id)
             char = db.get(Character, self.char_id)
 
@@ -91,8 +90,6 @@ class ConfirmCharacterRemoveView(discord.ui.View):
                 ),
                 view=None,
             )
-        finally:
-            db.close()
         self.stop()
 
     @discord.ui.button(
@@ -130,8 +127,7 @@ class ConfirmPartyDeleteView(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
         """Auto-complete open encounters, then delete the party."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             party = db.get(Party, self.party_id)
             if not party:
                 await interaction.response.edit_message(
@@ -164,8 +160,6 @@ class ConfirmPartyDeleteView(discord.ui.View):
                         encounter_name=enc_name
                     )
             await interaction.response.edit_message(content=message, view=None)
-        finally:
-            db.close()
         self.stop()
 
     @discord.ui.button(
@@ -201,8 +195,7 @@ class ConfirmSelfGMRemoveView(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
         """Remove the user from the party's GM list."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             party = db.get(Party, self.party_id)
             user = db.query(User).filter_by(discord_id=self.user_discord_id).first()
 
@@ -230,8 +223,6 @@ class ConfirmSelfGMRemoveView(discord.ui.View):
                 ),
                 view=None,
             )
-        finally:
-            db.close()
         self.stop()
 
     @discord.ui.button(

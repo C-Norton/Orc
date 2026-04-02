@@ -1,12 +1,11 @@
-from database import SessionLocal
+from database import db_session
 from models import User, Server, Character, Party, Attack, user_server_association
 from sqlalchemy import select, update, delete
 import os
 
 
 def test_scenarios():
-    db = SessionLocal()
-    try:
+    with db_session() as db:
         # 1. Setup mock data
         user1 = db.query(User).filter_by(discord_id="1").first()
         if not user1:
@@ -156,9 +155,6 @@ def test_scenarios():
         assert char_found.user_id == user1.id
 
         print("All simulated scenarios passed.")
-
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":

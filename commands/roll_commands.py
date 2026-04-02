@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
-from database import SessionLocal
+from database import db_session
 from dice_roller import (
     evaluate_expression,
     get_named_tokens,
@@ -220,75 +220,77 @@ def register_roll_commands(bot: commands.Bot) -> None:
             f"Command /gmroll called by {interaction.user} (ID: {interaction.user.id}) "
             f"in guild {interaction.guild_id} — notation={notation!r} advantage={advantage}"
         )
-        db = SessionLocal()
         try:
-            char = None
+            with db_session() as db:
+                char = None
 
-            if _needs_character(notation):
-                user, server = get_or_create_user_server(db, interaction)
-                char = get_active_character(db, user, server)
-                logger.debug(
-                    f"Character lookup: {'found: ' + char.name if char else 'not found'}"
-                )
-                if not char:
-                    await interaction.response.send_message(
-                        Strings.CHARACTER_NOT_FOUND, ephemeral=True
-                    )
-                    return
-
-                response = await perform_roll(char, notation, db, advantage=advantage)
-
-            else:
-                # Pure dice / number expression — no character required for the roll.
-                tokens = parse_expression_tokens(notation)
-                result = evaluate_expression(tokens, advantage=advantage)
-                response = Strings.ROLL_RESULT_DICE_EXPR.format(
-                    notation=notation,
-                    breakdown=result.breakdown(),
-                    total=result.total,
-                    tip=random.choice(Strings.TIPS),
-                )
-                # Still attempt to resolve the active character so GMs can be
-                # notified even when the notation itself didn't need one.
-                try:
+                if _needs_character(notation):
                     user, server = get_or_create_user_server(db, interaction)
                     char = get_active_character(db, user, server)
+                    logger.debug(
+                        f"Character lookup: {'found: ' + char.name if char else 'not found'}"
+                    )
+                    if not char:
+                        await interaction.response.send_message(
+                            Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                        )
+                        return
+
+                    response = await perform_roll(
+                        char, notation, db, advantage=advantage
+                    )
+
+                else:
+                    # Pure dice / number expression — no character required for the roll.
+                    tokens = parse_expression_tokens(notation)
+                    result = evaluate_expression(tokens, advantage=advantage)
+                    response = Strings.ROLL_RESULT_DICE_EXPR.format(
+                        notation=notation,
+                        breakdown=result.breakdown(),
+                        total=result.total,
+                        tip=random.choice(Strings.TIPS),
+                    )
+                    # Still attempt to resolve the active character so GMs can be
+                    # notified even when the notation itself didn't need one.
+                    try:
+                        user, server = get_or_create_user_server(db, interaction)
+                        char = get_active_character(db, user, server)
+                        logger.info(
+                            f"/gmroll pure-dice character lookup for user {interaction.user.id}: "
+                            f"{'found: ' + char.name if char else 'not found — no GM notifications will be sent'}"
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            f"/gmroll pure-dice character lookup failed "
+                            f"({type(exc).__name__}: {exc}) — no GM notifications will be sent"
+                        )
+                        char = None
+
+                # Player always gets an ephemeral response.
+                await interaction.response.send_message(
+                    response, ephemeral=True, suppress_embeds=True
+                )
+                logger.info(f"/gmroll completed for user {interaction.user.id}")
+
+                # DM every GM across all parties the character belongs to.
+                if not char:
                     logger.info(
-                        f"/gmroll pure-dice character lookup for user {interaction.user.id}: "
-                        f"{'found: ' + char.name if char else 'not found — no GM notifications will be sent'}"
+                        f"/gmroll: no active character for user {interaction.user.id} "
+                        f"— skipping GM notifications"
                     )
-                except Exception as exc:
-                    logger.warning(
-                        f"/gmroll pure-dice character lookup failed "
-                        f"({type(exc).__name__}: {exc}) — no GM notifications will be sent"
+                elif not char.parties:
+                    logger.info(
+                        f"/gmroll: character '{char.name}' has no party memberships "
+                        f"— skipping GM notifications"
                     )
-                    char = None
-
-            # Player always gets an ephemeral response.
-            await interaction.response.send_message(
-                response, ephemeral=True, suppress_embeds=True
-            )
-            logger.info(f"/gmroll completed for user {interaction.user.id}")
-
-            # DM every GM across all parties the character belongs to.
-            if not char:
-                logger.info(
-                    f"/gmroll: no active character for user {interaction.user.id} "
-                    f"— skipping GM notifications"
-                )
-            elif not char.parties:
-                logger.info(
-                    f"/gmroll: character '{char.name}' has no party memberships "
-                    f"— skipping GM notifications"
-                )
-            else:
-                gm_message = Strings.GMROLL_GM_MESSAGE.format(
-                    char_name=char.name,
-                    notation=notation,
-                    result=response,
-                    tip=random.choice(Strings.TIPS),
-                )
-                await _notify_gmroll_gms(interaction.client, char, gm_message)
+                else:
+                    gm_message = Strings.GMROLL_GM_MESSAGE.format(
+                        char_name=char.name,
+                        notation=notation,
+                        result=response,
+                        tip=random.choice(Strings.TIPS),
+                    )
+                    await _notify_gmroll_gms(interaction.client, char, gm_message)
 
         except ValueError as exc:
             logger.warning(f"ValueError in /gmroll (notation={notation!r}): {exc}")
@@ -301,8 +303,6 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 exc_info=True,
             )
             await notify_command_error(interaction, exc)
-        finally:
-            db.close()
 
     @bot.tree.command(
         name="roll",
@@ -335,42 +335,50 @@ def register_roll_commands(bot: commands.Bot) -> None:
             f"Command /roll called by {interaction.user} (ID: {interaction.user.id}) "
             f"in guild {interaction.guild_id} — notation={notation!r} advantage={advantage}"
         )
-        db = SessionLocal()
         try:
-            if _needs_character(notation):
-                user, server = get_or_create_user_server(db, interaction)
-                char = get_active_character(db, user, server)
-                logger.debug(
-                    f"Character lookup: {'found: ' + char.name if char else 'not found'}"
-                )
-                if not char:
-                    await interaction.response.send_message(
-                        Strings.CHARACTER_NOT_FOUND, ephemeral=True
+            with db_session() as db:
+                if _needs_character(notation):
+                    user, server = get_or_create_user_server(db, interaction)
+                    char = get_active_character(db, user, server)
+                    logger.debug(
+                        f"Character lookup: {'found: ' + char.name if char else 'not found'}"
                     )
-                    return
+                    if not char:
+                        await interaction.response.send_message(
+                            Strings.CHARACTER_NOT_FOUND, ephemeral=True
+                        )
+                        return
 
-                if notation.lower().strip() == _DEATH_SAVE_NOTATION:
-                    await _handle_death_save(interaction, char, db)
-                    return
+                    if notation.lower().strip() == _DEATH_SAVE_NOTATION:
+                        await _handle_death_save(interaction, char, db)
+                        return
 
-                response = await perform_roll(char, notation, db, advantage=advantage)
-                await interaction.response.send_message(response, suppress_embeds=True)
-                logger.info(
-                    f"/roll (character) completed for user {interaction.user.id}"
-                )
+                    response = await perform_roll(
+                        char, notation, db, advantage=advantage
+                    )
+                    await interaction.response.send_message(
+                        response, suppress_embeds=True
+                    )
+                    logger.info(
+                        f"/roll (character) completed for user {interaction.user.id}"
+                    )
 
-            else:
-                # Pure dice / number expression — no character needed
-                tokens = parse_expression_tokens(notation)
-                result = evaluate_expression(tokens, advantage=advantage)
-                response = Strings.ROLL_RESULT_DICE_EXPR.format(
-                    notation=notation,
-                    breakdown=result.breakdown(),
-                    total=result.total,
-                    tip=random.choice(Strings.TIPS),
-                )
-                await interaction.response.send_message(response, suppress_embeds=True)
-                logger.info(f"/roll (dice) completed for user {interaction.user.id}")
+                else:
+                    # Pure dice / number expression — no character needed
+                    tokens = parse_expression_tokens(notation)
+                    result = evaluate_expression(tokens, advantage=advantage)
+                    response = Strings.ROLL_RESULT_DICE_EXPR.format(
+                        notation=notation,
+                        breakdown=result.breakdown(),
+                        total=result.total,
+                        tip=random.choice(Strings.TIPS),
+                    )
+                    await interaction.response.send_message(
+                        response, suppress_embeds=True
+                    )
+                    logger.info(
+                        f"/roll (dice) completed for user {interaction.user.id}"
+                    )
 
         except ValueError as e:
             logger.warning(f"ValueError in /roll (notation={notation!r}): {e}")
@@ -382,8 +390,6 @@ def register_roll_commands(bot: commands.Bot) -> None:
                 f"Unexpected error in /roll (notation={notation!r}): {e}", exc_info=True
             )
             await notify_command_error(interaction, e)
-        finally:
-            db.close()
 
     @roll.autocomplete("notation")
     async def roll_autocomplete(
@@ -409,15 +415,12 @@ def register_roll_commands(bot: commands.Bot) -> None:
             suggestions.append(f"{stat} Save")
 
         # Include "death save" only when the active character is at 0 HP
-        death_save_db = SessionLocal()
-        try:
+        with db_session() as death_save_db:
             user, server = get_or_create_user_server(death_save_db, interaction)
             if user and server:
                 char = get_active_character(death_save_db, user, server)
                 if char and character_is_dying(char):
                     suggestions.insert(0, "death save")
-        finally:
-            death_save_db.close()
 
         filtered = [
             app_commands.Choice(name=s, value=s)

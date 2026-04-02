@@ -6,7 +6,7 @@ from alembic.config import Config
 from alembic import command as alembic_command
 from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from database import SessionLocal
+from database import db_session
 from models import Server
 from commands.meta_commands import register_meta_commands
 from commands.roll_commands import register_roll_commands
@@ -194,47 +194,42 @@ class DnDBot(commands.Bot):
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Update the database when the bot joins a new server."""
         set_guild_context(str(guild.id))
-        db = SessionLocal()
         try:
-            server = db.query(Server).filter_by(discord_id=str(guild.id)).first()
-            if not server:
-                server = Server(discord_id=str(guild.id), name=guild.name)
-                db.add(server)
-                db.commit()
-                logger.info(f"Added new server: {guild.name} ({guild.id})")
-                await notify_guild_join(guild.name, guild.id, guild.member_count)
+            with db_session() as db:
+                server = db.query(Server).filter_by(discord_id=str(guild.id)).first()
+                if not server:
+                    server = Server(discord_id=str(guild.id), name=guild.name)
+                    db.add(server)
+                    db.commit()
+                    logger.info(f"Added new server: {guild.name} ({guild.id})")
+                    await notify_guild_join(guild.name, guild.id, guild.member_count)
         except Exception as e:
             logger.error(f"Error on guild join {guild.name}: {e}")
             await notify_background_error(
                 e, context=f"Error in on_guild_join for {guild.name} ({guild.id})"
             )
-        finally:
-            db.close()
 
     async def on_guild_remove(self, guild: discord.Guild) -> None:
         """Purge all server data when the bot is kicked or leaves a guild."""
         set_guild_context(str(guild.id))
-        db = SessionLocal()
         try:
-            server = db.query(Server).filter_by(discord_id=str(guild.id)).first()
-            if server:
-                purge_server_data(db, server)
-                db.commit()
-                logger.info(
-                    f"Purged all data for removed guild: {guild.name} ({guild.id})"
-                )
-            else:
-                logger.info(
-                    f"Bot removed from guild {guild.name} ({guild.id}) — no DB record found"
-                )
+            with db_session() as db:
+                server = db.query(Server).filter_by(discord_id=str(guild.id)).first()
+                if server:
+                    purge_server_data(db, server)
+                    db.commit()
+                    logger.info(
+                        f"Purged all data for removed guild: {guild.name} ({guild.id})"
+                    )
+                else:
+                    logger.info(
+                        f"Bot removed from guild {guild.name} ({guild.id}) — no DB record found"
+                    )
         except Exception as e:
-            db.rollback()
             logger.error(f"Error purging data for guild {guild.name} ({guild.id}): {e}")
             await notify_background_error(
                 e, context=f"Error in on_guild_remove for {guild.name} ({guild.id})"
             )
-        finally:
-            db.close()
 
 
 bot = DnDBot()

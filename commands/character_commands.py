@@ -2,7 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
-from database import SessionLocal
+from database import db_session
 from models import (
     User,
     Server,
@@ -54,8 +54,7 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
         """Delete the character, cascade-removing any active EncounterTurn first."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             char = db.get(Character, self.char_id)
             if not char:
                 await interaction.response.edit_message(
@@ -98,8 +97,6 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
                 content=Strings.CHAR_DELETE_SUCCESS.format(name=self.char_name),
                 view=None,
             )
-        finally:
-            db.close()
         self.stop()
 
     @discord.ui.button(
@@ -345,8 +342,7 @@ class _CharacterSheetPageButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         """Re-fetch the character and render the selected page."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             char = db.get(Character, self._char_id)
             if char is None:
                 await interaction.response.edit_message(
@@ -354,8 +350,6 @@ class _CharacterSheetPageButton(discord.ui.Button):
                 )
                 return
             embed = self._builder(char)
-        finally:
-            db.close()
         await interaction.response.edit_message(embed=embed, view=self.view)
 
 
@@ -501,8 +495,7 @@ class _SaveChangesButton(discord.ui.Button):
     async def callback(self, interaction: discord.Interaction) -> None:
         """Write saves to DB and confirm."""
         view: CharacterSavesEditView = self.view  # type: ignore[assignment]
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             char = db.get(Character, view.char_id)
             if not char:
                 await interaction.response.edit_message(
@@ -520,8 +513,6 @@ class _SaveChangesButton(discord.ui.Button):
                 embed=None,
                 view=None,
             )
-        finally:
-            db.close()
         view.stop()
 
 
@@ -580,8 +571,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character edit called by {interaction.user} "
             f"(ID: {interaction.user.id}) in guild {interaction.guild_id}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             if not char:
@@ -590,8 +580,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 )
                 return
             await start_character_edit(interaction, char)
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character stats
@@ -623,8 +611,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character stats called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -704,8 +691,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 Strings.CHAR_STATS_UPDATED.format(char_name=char.name),
                 ephemeral=True,
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character saves  (button-based toggle view)
@@ -720,8 +705,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character saves called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -749,8 +733,6 @@ def register_character_commands(bot: commands.Bot) -> None:
             logger.info(
                 f"/character saves view sent for user {interaction.user.id}: '{char.name}'"
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character skill
@@ -775,8 +757,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character skill called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with skill: {skill}, status: {status}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -832,8 +813,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 ),
                 ephemeral=True,
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character ac
@@ -853,8 +832,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                 Strings.CHAR_AC_LIMIT, ephemeral=True
             )
             return
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -878,8 +856,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 Strings.CHAR_AC_UPDATED.format(char_name=char.name, ac=ac),
                 ephemeral=True,
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character view
@@ -906,8 +882,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"for guild {interaction.guild_id}"
             + (f" — requested name: '{name}'" if name else "")
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if name is None:
@@ -949,16 +924,13 @@ def register_character_commands(bot: commands.Bot) -> None:
             logger.info(
                 f"/character view completed for user {interaction.user.id}: viewed '{char.name}'"
             )
-        finally:
-            db.close()
 
     @character_view.autocomplete("name")
     async def character_view_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         """Suggest own characters first, then active party members' characters."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             if not user or not server:
                 return []
@@ -990,8 +962,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                         seen_names.add(character.name)
 
             return choices[:25]
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character list
@@ -1005,8 +975,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character list called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if not user or not server:
@@ -1055,8 +1024,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"/character list completed for user {interaction.user.id}: "
                 f"listed {len(chars)} character(s)"
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character list_all
@@ -1072,8 +1039,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         )
         # Defer immediately — we may make multiple API calls to resolve member names.
         await interaction.response.defer()
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             _, server = get_or_create_user_server(db, interaction)
 
             if not server:
@@ -1153,8 +1119,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 f"/character list_all completed for guild {interaction.guild_id}: "
                 f"listed {len(all_characters)} character(s) across {len(characters_by_user)} player(s)"
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character switch
@@ -1169,8 +1133,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character switch called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {name}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             char = (
@@ -1200,16 +1163,13 @@ def register_character_commands(bot: commands.Bot) -> None:
                 Strings.CHAR_SWITCH_SUCCESS.format(name=name),
                 ephemeral=True,
             )
-        finally:
-            db.close()
 
     @character_switch.autocomplete("name")
     async def character_switch_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         """Suggest character names owned by this user on this server."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             if not user or not server:
                 return []
@@ -1220,8 +1180,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 for c in chars
                 if current.lower() in c.name.lower()
             ][:25]
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character delete
@@ -1236,8 +1194,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character delete called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {name}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if not user or not server:
@@ -1283,15 +1240,12 @@ def register_character_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 confirm_msg, view=view, ephemeral=True
             )
-        finally:
-            db.close()
 
     @character_delete.autocomplete("name")
     async def character_delete_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             if not user or not server:
                 return []
@@ -1302,8 +1256,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 for c in chars
                 if current.lower() in c.name.lower()
             ]
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character class_add
@@ -1335,8 +1287,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                 Strings.CHAR_LEVEL_LIMIT, ephemeral=True
             )
             return
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -1412,8 +1363,6 @@ def register_character_commands(bot: commands.Bot) -> None:
                 ),
                 ephemeral=True,
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /character class_remove
@@ -1436,8 +1385,7 @@ def register_character_commands(bot: commands.Bot) -> None:
             f"Command /character class_remove called by {interaction.user} (ID: {interaction.user.id}) "
             f"with class: {character_class}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             logger.debug(
@@ -1491,7 +1439,5 @@ def register_character_commands(bot: commands.Bot) -> None:
                 ),
                 ephemeral=True,
             )
-        finally:
-            db.close()
 
     bot.tree.add_command(character_group)

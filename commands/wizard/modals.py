@@ -500,7 +500,7 @@ class _ManualSetupModal(discord.ui.Modal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         """Validate fields, create the character, show follow-up command list."""
         from commands.wizard.state import save_character_from_wizard
-        from database import SessionLocal
+        from database import db_session
 
         name = self.name_input.value.strip()
         if not name:
@@ -554,30 +554,28 @@ class _ManualSetupModal(discord.ui.Modal):
             class_profs = get_class_save_profs(character_class)
             state.saving_throws = {s: s in class_profs for s in _ALL_STATS}
 
-        db = SessionLocal()
-        try:
-            char, error = save_character_from_wizard(state, interaction, db)
-            if error:
-                await interaction.response.send_message(error, ephemeral=True)
-                return
-            db.commit()
-            logger.info(
-                f"Manual setup: created '{name}' for user {interaction.user.id} "
-                f"in guild {interaction.guild_id}"
-            )
-            await interaction.response.edit_message(
-                content=Strings.WIZARD_MANUAL_SETUP_CMDS.format(name=name),
-                embed=None,
-                view=None,
-            )
-        except Exception as exc:
-            db.rollback()
-            logger.error(
-                f"Error in manual setup for user {interaction.user.id}: {exc}",
-                exc_info=True,
-            )
-            await interaction.response.send_message(
-                Strings.ERROR_GENERIC, ephemeral=True
-            )
-        finally:
-            db.close()
+        with db_session() as db:
+            try:
+                char, error = save_character_from_wizard(state, interaction, db)
+                if error:
+                    await interaction.response.send_message(error, ephemeral=True)
+                    return
+                db.commit()
+                logger.info(
+                    f"Manual setup: created '{name}' for user {interaction.user.id} "
+                    f"in guild {interaction.guild_id}"
+                )
+                await interaction.response.edit_message(
+                    content=Strings.WIZARD_MANUAL_SETUP_CMDS.format(name=name),
+                    embed=None,
+                    view=None,
+                )
+            except Exception as exc:
+                db.rollback()
+                logger.error(
+                    f"Error in manual setup for user {interaction.user.id}: {exc}",
+                    exc_info=True,
+                )
+                await interaction.response.send_message(
+                    Strings.ERROR_GENERIC, ephemeral=True
+                )

@@ -3,7 +3,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from database import SessionLocal
+from database import db_session
 from models import Character, User, Server, Party
 from utils.db_helpers import (
     get_active_character,
@@ -156,8 +156,7 @@ class _NegativeAmountConfirmView(discord.ui.View):
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
         """Apply the absolute amount as the intended operation."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             char = db.get(Character, self.char_id)
             if not char:
                 await interaction.response.edit_message(
@@ -172,8 +171,6 @@ class _NegativeAmountConfirmView(discord.ui.View):
                 await _execute_healing(
                     interaction, char, db, self.abs_amount, respond_by_editing=True
                 )
-        finally:
-            db.close()
         self.stop()
 
     @discord.ui.button(
@@ -207,8 +204,7 @@ def register_health_commands(bot: commands.Bot) -> None:
                 Strings.ERROR_INVALID_MAX_HP, ephemeral=True
             )
             return
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             if not char:
@@ -226,8 +222,6 @@ def register_health_commands(bot: commands.Bot) -> None:
                 ),
                 ephemeral=True,
             )
-        finally:
-            db.close()
 
     @hp_group.command(name="damage", description="Apply damage to a character")
     @app_commands.describe(
@@ -239,8 +233,7 @@ def register_health_commands(bot: commands.Bot) -> None:
     ) -> None:
         """Apply damage to the active character or a named party member (GM only)."""
         logger.debug(f"Command /hp damage called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if partymember:
@@ -302,8 +295,6 @@ def register_health_commands(bot: commands.Bot) -> None:
                 return
 
             await _execute_damage(interaction, char, db, dmg)
-        finally:
-            db.close()
 
     @hp_group.command(name="heal", description="Heal a character")
     @app_commands.describe(
@@ -315,8 +306,7 @@ def register_health_commands(bot: commands.Bot) -> None:
     ) -> None:
         """Heal the active character or a named party member."""
         logger.debug(f"Command /hp heal called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if partymember:
@@ -373,8 +363,6 @@ def register_health_commands(bot: commands.Bot) -> None:
                 return
 
             await _execute_healing(interaction, char, db, healing)
-        finally:
-            db.close()
 
     @hp_group.command(
         name="temp", description="Add temporary HP to your active character"
@@ -383,8 +371,7 @@ def register_health_commands(bot: commands.Bot) -> None:
     async def hp_temp(interaction: discord.Interaction, amount: int) -> None:
         """Add temp HP to the active character (5e rule: replace if higher, keep if lower)."""
         logger.debug(f"Command /hp temp called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             if not char:
@@ -398,8 +385,6 @@ def register_health_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.HP_TEMP_MSG.format(char_name=char.name, temp=char.temp_hp)
             )
-        finally:
-            db.close()
 
     @hp_group.command(
         name="party_temp",
@@ -409,8 +394,7 @@ def register_health_commands(bot: commands.Bot) -> None:
     async def hp_party_temp(interaction: discord.Interaction, amount: int) -> None:
         """Add temp HP to every character in the caller's active party."""
         logger.debug(f"Command /hp party_temp called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
             if not party:
@@ -433,15 +417,12 @@ def register_health_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.HP_TEMP_PARTY_HEADER + "\n".join(lines)
             )
-        finally:
-            db.close()
 
     @hp_group.command(name="status", description="View your character's current HP")
     async def hp_status(interaction: discord.Interaction) -> None:
         """Display the active character's current, max, and temp HP."""
         logger.debug(f"Command /hp status called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             char = get_active_character(db, user, server)
             if not char:
@@ -455,7 +436,5 @@ def register_health_commands(bot: commands.Bot) -> None:
             if char.temp_hp:
                 msg += Strings.HP_VIEW_TEMP.format(temp=char.temp_hp)
             await interaction.response.send_message(msg)
-        finally:
-            db.close()
 
     bot.tree.add_command(hp_group)

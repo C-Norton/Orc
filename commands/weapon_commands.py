@@ -19,7 +19,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from database import SessionLocal
+from database import db_session
 from enums.ruleset_edition import RulesetEdition
 from models import Attack, Character
 from utils.db_helpers import get_active_character, get_or_create_user_server
@@ -161,52 +161,50 @@ class WeaponAddButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         """Import the weapon to the active character and confirm publicly."""
-        db = SessionLocal()
         try:
-            user, server = get_or_create_user_server(db, interaction)
-            character = get_active_character(db, user, server)
-            if not character:
-                await interaction.response.send_message(
-                    Strings.CHARACTER_NOT_FOUND, ephemeral=True
-                )
-                return
-
-            weapon_name = self.weapon.get("name", "Unknown")
-            existing_attack = (
-                db.query(Attack)
-                .filter_by(character_id=character.id, name=weapon_name)
-                .first()
-            )
-
-            if not existing_attack:
-                attack_count = (
-                    db.query(Attack).filter_by(character_id=character.id).count()
-                )
-                if attack_count >= MAX_ATTACKS_PER_CHARACTER:
+            with db_session() as db:
+                user, server = get_or_create_user_server(db, interaction)
+                character = get_active_character(db, user, server)
+                if not character:
                     await interaction.response.send_message(
-                        Strings.ERROR_LIMIT_ATTACKS.format(
-                            char_name=character.name,
-                            limit=MAX_ATTACKS_PER_CHARACTER,
-                        ),
-                        ephemeral=True,
+                        Strings.CHARACTER_NOT_FOUND, ephemeral=True
                     )
                     return
 
-            is_new, hit_modifier_result = _import_weapon_to_character(
-                self.weapon, character, db
-            )
-            db.commit()
-            confirmation = _build_weapon_add_message(
-                self.weapon, character, is_new, hit_modifier_result
-            )
+                weapon_name = self.weapon.get("name", "Unknown")
+                existing_attack = (
+                    db.query(Attack)
+                    .filter_by(character_id=character.id, name=weapon_name)
+                    .first()
+                )
+
+                if not existing_attack:
+                    attack_count = (
+                        db.query(Attack).filter_by(character_id=character.id).count()
+                    )
+                    if attack_count >= MAX_ATTACKS_PER_CHARACTER:
+                        await interaction.response.send_message(
+                            Strings.ERROR_LIMIT_ATTACKS.format(
+                                char_name=character.name,
+                                limit=MAX_ATTACKS_PER_CHARACTER,
+                            ),
+                            ephemeral=True,
+                        )
+                        return
+
+                is_new, hit_modifier_result = _import_weapon_to_character(
+                    self.weapon, character, db
+                )
+                db.commit()
+                confirmation = _build_weapon_add_message(
+                    self.weapon, character, is_new, hit_modifier_result
+                )
         except Exception as error:
             logger.error(
                 f"WeaponAddButton error for {self.weapon.get('name')!r}: {error}"
             )
             await notify_command_error(interaction, error)
             return
-        finally:
-            db.close()
 
         self.disabled = True
         self.style = discord.ButtonStyle.success
@@ -296,8 +294,7 @@ def register_weapon_commands(bot: commands.Bot) -> None:
             f"with query: {query!r}, ruleset: {ruleset_edition.value!r}"
         )
         await interaction.response.defer(ephemeral=True)
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             character = get_active_character(db, user, server)
             if not character:
@@ -350,7 +347,5 @@ def register_weapon_commands(bot: commands.Bot) -> None:
                 f"{len(weapon_list)} result(s) for {query!r} "
                 f"in {ruleset_edition.value!r}"
             )
-        finally:
-            db.close()
 
     bot.tree.add_command(weapon_group)

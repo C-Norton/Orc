@@ -3,7 +3,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
-from database import SessionLocal
+from database import db_session
 from models import (
     User,
     Server,
@@ -391,8 +391,7 @@ class EnemyPlacementView(discord.ui.View):
         for child in self.children:
             child.disabled = True
 
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             encounter = db.get(Encounter, self.encounter_id)
             if not encounter or encounter.status != EncounterStatus.ACTIVE:
                 await interaction.response.edit_message(
@@ -469,8 +468,6 @@ class EnemyPlacementView(discord.ui.View):
                 f"EnemyPlacementView: {enemy_description} added to "
                 f"'{encounter.name}' via {placement.value}"
             )
-        finally:
-            db.close()
 
     async def on_timeout(self) -> None:
         """Disable all buttons when the placement menu expires without a selection."""
@@ -538,8 +535,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
     @app_commands.describe(name="Name for this encounter (e.g. 'Goblin Ambush')")
     async def encounter_create(interaction: discord.Interaction, name: str) -> None:
         logger.debug(f"Command /encounter create called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
@@ -576,8 +572,6 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.ENCOUNTER_CREATED.format(name=name), ephemeral=True
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /encounter enemy
@@ -609,8 +603,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         ``"<name> <count>"``, all sharing the same ``type_name``.
         """
         logger.debug(f"Command /encounter enemy called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
@@ -745,8 +738,6 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 await interaction.followup.send(
                     Strings.ENCOUNTER_HP_CLAMPED, ephemeral=True
                 )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /encounter start
@@ -757,8 +748,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
     )
     async def encounter_start(interaction: discord.Interaction) -> None:
         logger.debug(f"Command /encounter start called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
@@ -898,8 +888,6 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             ping = _ping_for_turn(encounter)
             await interaction.followup.send(ping)
             logger.info(f"/encounter start completed: '{encounter.name}' is now ACTIVE")
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /encounter next
@@ -910,8 +898,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
     )
     async def encounter_next(interaction: discord.Interaction) -> None:
         logger.debug(f"Command /encounter next called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, party, encounter = await _require_active_encounter(db, interaction)
             if encounter is None:
                 return
@@ -957,8 +944,6 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 f"/encounter next: '{encounter.name}' advanced to index "
                 f"{encounter.current_turn_index} (round {encounter.round_number})"
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /encounter end
@@ -967,8 +952,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
     @encounter_group.command(name="end", description="End the current encounter")
     async def encounter_end(interaction: discord.Interaction) -> None:
         logger.debug(f"Command /encounter end called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, party, encounter = await _require_active_encounter(
                 db,
                 interaction,
@@ -990,8 +974,6 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.ENCOUNTER_ENDED.format(encounter_name=encounter.name)
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /encounter damage
@@ -1016,8 +998,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         and posts a public defeat announcement.
         """
         logger.debug(f"Command /encounter damage called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, party, encounter = await _require_active_encounter(db, interaction)
             if encounter is None:
                 return
@@ -1103,8 +1084,6 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                     f"/encounter damage: '{enemy.name}' took {damage} damage, "
                     f"HP {new_hp}/{enemy.max_hp} in '{encounter.name}'"
                 )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /encounter view
@@ -1121,8 +1100,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         ``enemy_ac_public`` party setting.
         """
         logger.debug(f"Command /encounter view called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, party, encounter = await _require_active_encounter(db, interaction)
             if encounter is None:
                 return
@@ -1205,7 +1183,5 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                 await interaction.followup.send(embed=gm_embed, ephemeral=True)
 
             logger.info(f"/encounter view served for '{encounter.name}'")
-        finally:
-            db.close()
 
     bot.tree.add_command(encounter_group)

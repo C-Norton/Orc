@@ -1,12 +1,11 @@
-from database import SessionLocal
+from database import db_session
 from models import User, Server, Character, Attack, CharacterSkill
 from sqlalchemy import create_engine
 import os
 
 
 def test_delete_character():
-    db = SessionLocal()
-    try:
+    with db_session() as db:
         # Setup mock data
         user = db.query(User).filter_by(discord_id="test_user").first()
         if not user:
@@ -107,9 +106,6 @@ def test_delete_character():
         # Cleanup
         db.delete(char3)
         db.commit()
-
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":

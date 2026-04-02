@@ -3,7 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from typing import List, Optional
 from sqlalchemy import update, select, insert
-from database import SessionLocal
+from database import db_session
 from models import (
     User,
     Server,
@@ -115,8 +115,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         """Return autocomplete choices for party names in the current server."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             server = (
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             )
@@ -128,15 +127,12 @@ def register_party_commands(bot: commands.Bot) -> None:
                 for p in parties
                 if current.lower() in p.name.lower()
             ][:25]
-        finally:
-            db.close()
 
     async def _character_name_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
         """Return autocomplete choices for character names in the current server."""
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             server = (
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             )
@@ -148,8 +144,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                 for character in characters
                 if current.lower() in character.name.lower()
             ][:25]
-        finally:
-            db.close()
 
     def _set_active_party(db, user: User, server: Server, party: Party) -> None:
         """Upsert the user-server association to point at party."""
@@ -233,8 +227,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         )
         # Defer immediately — character lookups may push past the 3-second response window
         await interaction.response.defer()
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if not user or not server:
@@ -321,8 +314,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                 f"created '{party_name}' with {len(found_characters)} members"
             )
             await interaction.followup.send(message, ephemeral=True)
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /party active
@@ -341,8 +332,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party active called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if party_name:
@@ -389,8 +379,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                     await interaction.response.send_message(
                         Strings.PARTY_ACTIVE_NONE, ephemeral=True
                     )
-        finally:
-            db.close()
 
     @party_active.autocomplete("party_name")
     async def party_active_autocomplete(
@@ -409,8 +397,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party view called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             # party_view doesn't create the server — if it doesn't exist no parties do either
             server = (
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
@@ -457,8 +444,6 @@ def register_party_commands(bot: commands.Bot) -> None:
             logger.info(
                 f"/party view completed for user {interaction.user.id}: viewed '{party_name}'"
             )
-        finally:
-            db.close()
 
     @party_view.autocomplete("party_name")
     async def party_view_autocomplete(
@@ -477,8 +462,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party delete called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -512,8 +496,6 @@ def register_party_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 confirm_msg, view=view, ephemeral=True
             )
-        finally:
-            db.close()
 
     @party_delete.autocomplete("party_name")
     async def party_delete_autocomplete(
@@ -534,8 +516,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party roll called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — notation: {notation}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             party = get_active_party(db, user, server)
@@ -572,8 +553,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                 f"/party roll completed for user {interaction.user.id}: "
                 f"rolled {notation} for {len(party.characters)} members in '{party.name}'"
             )
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /party roll_as
@@ -593,8 +572,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party roll_as called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — member: {member_name}, notation: {notation}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             party = get_active_party(db, user, server)
@@ -626,15 +604,12 @@ def register_party_commands(bot: commands.Bot) -> None:
                 f"/party roll_as completed for user {interaction.user.id}: "
                 f"rolled {notation} as '{member_name}'"
             )
-        finally:
-            db.close()
 
     @party_roll_as.autocomplete("member_name")
     async def party_roll_as_member_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             if not user or not server:
                 return []
@@ -646,8 +621,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                 for character in party.characters
                 if current.lower() in character.name.lower()
             ][:25]
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /party character_add
@@ -669,8 +642,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party character_add called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — party: {party_name}, char: {character_name}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -750,8 +722,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                     party_name=party_name,
                 )
             )
-        finally:
-            db.close()
 
     @party_character_add.autocomplete("party_name")
     async def party_character_add_party_autocomplete(
@@ -788,8 +758,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"(ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — party: {party_name}, char: {character_name}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -855,8 +824,6 @@ def register_party_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 confirm_msg, view=view, ephemeral=True
             )
-        finally:
-            db.close()
 
     @party_character_remove.autocomplete("party_name")
     async def party_character_remove_party_autocomplete(
@@ -868,8 +835,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     async def party_character_remove_char_autocomplete(
         interaction: discord.Interaction, current: str
     ) -> List[app_commands.Choice[str]]:
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             server = (
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             )
@@ -882,8 +848,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                 for character in party.characters
                 if current.lower() in character.name.lower()
             ][:25]
-        finally:
-            db.close()
 
     # ------------------------------------------------------------------
     # /party gm_add
@@ -904,8 +868,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party gm_add called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — party: {party_name}, new_gm: {new_gm.id}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -937,8 +900,6 @@ def register_party_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.GM_ADDED.format(discord_id=new_gm.id, party_name=party_name)
             )
-        finally:
-            db.close()
 
     @party_gm_add.autocomplete("party_name")
     async def party_gm_add_autocomplete(
@@ -965,8 +926,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party gm_remove called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — party: {party_name}, target_gm: {target_gm.id}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -1024,8 +984,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                     discord_id=target_gm.id, party_name=party_name
                 )
             )
-        finally:
-            db.close()
 
     @party_gm_remove.autocomplete("party_name")
     async def party_gm_remove_autocomplete(
@@ -1060,8 +1018,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party settings view called by {interaction.user.id} "
             f"for party '{party_name}'"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
 
             if party_name:
@@ -1089,8 +1046,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                 f"/party settings view served for user {interaction.user.id}: '{party.name}'"
             )
             await interaction.response.send_message(msg, ephemeral=True)
-        finally:
-            db.close()
 
     @party_settings_view.autocomplete("party_name")
     async def party_settings_view_autocomplete(
@@ -1125,8 +1080,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party settings initiative_mode called by {interaction.user.id} "
             f"party='{party_name}' mode='{mode}'"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -1155,8 +1109,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                     f"'{party_name}' → {mode}"
                 ),
             )
-        finally:
-            db.close()
 
     @party_settings_initiative_mode.autocomplete("party_name")
     async def party_settings_initiative_mode_autocomplete(
@@ -1190,8 +1142,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party settings enemy_ac called by {interaction.user.id} "
             f"party='{party_name}' public={public}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -1217,8 +1168,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                     party_name=party.name,
                 )
             )
-        finally:
-            db.close()
 
     @party_settings_enemy_ac.autocomplete("party_name")
     async def party_settings_enemy_ac_autocomplete(
@@ -1254,8 +1203,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party settings crit_rule called by {interaction.user.id} "
             f"party='{party_name}' rule='{rule}'"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -1284,8 +1232,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                     f"'{party_name}' → {rule}"
                 ),
             )
-        finally:
-            db.close()
 
     @party_settings_crit_rule.autocomplete("party_name")
     async def party_settings_crit_rule_autocomplete(
@@ -1321,8 +1267,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             f"Command /party settings death_save_nat20 called by {interaction.user.id} "
             f"party='{party_name}' mode='{mode}'"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = await _get_party_or_error(db, interaction, party_name, server.id)
             if party is None:
@@ -1350,8 +1295,6 @@ def register_party_commands(bot: commands.Bot) -> None:
                     f"'{party_name}' → {mode}"
                 ),
             )
-        finally:
-            db.close()
 
     @party_settings_death_save_nat20.autocomplete("party_name")
     async def party_settings_death_save_nat20_autocomplete(
@@ -1375,8 +1318,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         Available to any user — no character or GM status required.
         """
         logger.debug(f"Command /party list called by {interaction.user.id}")
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             server = (
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
             )
@@ -1405,7 +1347,5 @@ def register_party_commands(bot: commands.Bot) -> None:
                 f"{len(parties)} parties in server {server.discord_id}"
             )
             await interaction.response.send_message(embed=view.build_embed(), view=view)
-        finally:
-            db.close()
 
     bot.tree.add_command(party_group)

@@ -18,7 +18,7 @@ from commands.wizard.state import (
     _ALL_STATS,
     _STAT_DISPLAY,
 )
-from database import SessionLocal
+from database import db_session
 from models import Character
 from utils.logging_config import get_logger
 from utils.strings import Strings
@@ -37,47 +37,49 @@ async def _finish_wizard(
     ``save_character_from_wizard`` for new-character creation.
     """
     is_edit = wizard_state.edit_character_id is not None
-    db = SessionLocal()
-    try:
-        if is_edit:
-            char, error = update_character_from_wizard(wizard_state, db)
-        else:
-            char, error = save_character_from_wizard(wizard_state, interaction, db)
+    with db_session() as db:
+        try:
+            if is_edit:
+                char, error = update_character_from_wizard(wizard_state, db)
+            else:
+                char, error = save_character_from_wizard(wizard_state, interaction, db)
 
-        if error:
-            await interaction.response.send_message(error, ephemeral=True)
-            return
+            if error:
+                await interaction.response.send_message(error, ephemeral=True)
+                return
 
-        db.commit()
+            db.commit()
 
-        if is_edit:
-            logger.info(
-                f"Wizard edit completed: updated '{char.name}' for user "
-                f"{interaction.user.id} in guild {interaction.guild_id}"
+            if is_edit:
+                logger.info(
+                    f"Wizard edit completed: updated '{char.name}' for user "
+                    f"{interaction.user.id} in guild {interaction.guild_id}"
+                )
+                embed = _build_edit_complete_embed(wizard_state, char)
+                dismiss = Strings.WIZARD_EDIT_COMPLETE_EPHEMERAL_DISMISS
+            else:
+                logger.info(
+                    f"Wizard completed: created '{char.name}' for user "
+                    f"{interaction.user.id} in guild {interaction.guild_id}"
+                )
+                embed = _build_complete_embed(wizard_state, char)
+                dismiss = Strings.WIZARD_COMPLETE_EPHEMERAL_DISMISS
+
+            # Discord does not allow changing ephemeral status, so dismiss the
+            # ephemeral wizard message and send the summary publicly.
+            await interaction.response.edit_message(
+                content=dismiss, embed=None, view=None
             )
-            embed = _build_edit_complete_embed(wizard_state, char)
-            dismiss = Strings.WIZARD_EDIT_COMPLETE_EPHEMERAL_DISMISS
-        else:
-            logger.info(
-                f"Wizard completed: created '{char.name}' for user "
-                f"{interaction.user.id} in guild {interaction.guild_id}"
+            await interaction.followup.send(embed=embed, ephemeral=False)
+        except Exception as exc:
+            db.rollback()
+            logger.error(
+                f"Error committing character wizard for user {interaction.user.id}: {exc}",
+                exc_info=True,
             )
-            embed = _build_complete_embed(wizard_state, char)
-            dismiss = Strings.WIZARD_COMPLETE_EPHEMERAL_DISMISS
-
-        # Discord does not allow changing ephemeral status, so dismiss the
-        # ephemeral wizard message and send the summary publicly.
-        await interaction.response.edit_message(content=dismiss, embed=None, view=None)
-        await interaction.followup.send(embed=embed, ephemeral=False)
-    except Exception as exc:
-        db.rollback()
-        logger.error(
-            f"Error committing character wizard for user {interaction.user.id}: {exc}",
-            exc_info=True,
-        )
-        await interaction.response.send_message(Strings.ERROR_GENERIC, ephemeral=True)
-    finally:
-        db.close()
+            await interaction.response.send_message(
+                Strings.ERROR_GENERIC, ephemeral=True
+            )
 
 
 def _add_wizard_embed_field(

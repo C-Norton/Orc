@@ -19,7 +19,7 @@ from discord import app_commands
 from discord.ext import commands
 from sqlalchemy import select
 
-from database import SessionLocal
+from database import db_session
 from models import Character, Party, Server, User, user_server_association
 from utils.db_helpers import (
     get_active_character,
@@ -87,8 +87,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
             f"Command /inspiration grant called by {interaction.user.id} "
             f"partymember={partymember!r}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
@@ -113,8 +112,6 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.INSPIRATION_GRANTED.format(char_name=char.name)
             )
-        finally:
-            db.close()
 
     @inspiration_grant.autocomplete("partymember")
     async def inspiration_grant_autocomplete(
@@ -143,8 +140,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
             f"Command /inspiration use called by {interaction.user.id} "
             f"partymember={partymember!r}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
@@ -169,8 +165,6 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
             await interaction.response.send_message(
                 Strings.INSPIRATION_REMOVED.format(char_name=char.name)
             )
-        finally:
-            db.close()
 
     @inspiration_use.autocomplete("partymember")
     async def inspiration_use_autocomplete(
@@ -195,8 +189,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
             f"Command /inspiration status called by {interaction.user.id} "
             f"partymember={partymember!r}"
         )
-        db = SessionLocal()
-        try:
+        with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
             party = get_active_party(db, user, server)
 
@@ -232,8 +225,6 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
             logger.info(
                 f"/inspiration status for {char.name}: inspiration={char.inspiration}"
             )
-        finally:
-            db.close()
 
     @inspiration_status.autocomplete("partymember")
     async def inspiration_status_autocomplete(
@@ -248,8 +239,7 @@ async def _party_member_autocomplete(
     interaction: discord.Interaction, current: str
 ) -> List[app_commands.Choice[str]]:
     """Suggest names of characters in the user's active party."""
-    db = SessionLocal()
-    try:
+    with db_session() as db:
         user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
         server = (
             db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
@@ -271,5 +261,3 @@ async def _party_member_autocomplete(
             for c in party.characters
             if current.lower() in c.name.lower()
         ][:25]
-    finally:
-        db.close()
