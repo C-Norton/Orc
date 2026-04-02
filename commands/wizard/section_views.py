@@ -113,9 +113,7 @@ class _ClassLevelView(discord.ui.View):
         self.add_item(_SaveReturnButton())
         self.add_item(_ReturnNoSaveButton())
 
-    async def _on_class_selected(
-        self, interaction: discord.Interaction
-    ) -> None:
+    async def _on_class_selected(self, interaction: discord.Interaction) -> None:
         """Open a level modal for the selected class."""
         from commands.wizard.modals import _LevelForClassModal
 
@@ -142,9 +140,7 @@ class _ClassLevelView(discord.ui.View):
             return
 
         await interaction.response.send_modal(
-            _LevelForClassModal(
-                self.wizard_state, class_enum, existing_index, self
-            )
+            _LevelForClassModal(self.wizard_state, class_enum, existing_index, self)
         )
 
     def _build_embed(self) -> discord.Embed:
@@ -174,9 +170,7 @@ class _ClassLevelView(discord.ui.View):
     async def _refresh(self, interaction: discord.Interaction) -> None:
         """Rebuild items and re-render the embed (called by level modal)."""
         self._build_items()
-        await interaction.response.edit_message(
-            embed=self._build_embed(), view=self
-        )
+        await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
     async def _save_and_return(self, interaction: discord.Interaction) -> None:
         """Mark section complete and return to hub."""
@@ -246,9 +240,7 @@ class _StatsView(discord.ui.View):
     async def _refresh(self, interaction: discord.Interaction) -> None:
         """Rebuild items (updating button colours) then re-render the embed."""
         self._build_items()
-        await interaction.response.edit_message(
-            embed=self._build_embed(), view=self
-        )
+        await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
     async def _save_and_return(self, interaction: discord.Interaction) -> None:
         """Mark section complete and return to hub."""
@@ -290,9 +282,7 @@ class _ACView(discord.ui.View):
 
     def _build_embed(self) -> discord.Embed:
         """Build the AC section embed."""
-        embed = _section_embed(
-            Strings.WIZARD_HUB_AC_BUTTON, Strings.WIZARD_AC_DESC
-        )
+        embed = _section_embed(Strings.WIZARD_HUB_AC_BUTTON, Strings.WIZARD_AC_DESC)
         if self.wizard_state.ac is not None:
             embed.add_field(name="AC", value=str(self.wizard_state.ac), inline=True)
         return embed
@@ -533,7 +523,9 @@ class _WeaponsWizardView(discord.ui.View):
         ):
             row = 1 + index // 5
             self.add_item(
-                _WeaponRemoveButton(attack_id, attack_name, self.wizard_state, self, row=row)
+                _WeaponRemoveButton(
+                    attack_id, attack_name, self.wizard_state, self, row=row
+                )
             )
 
         self.add_item(_SaveReturnButton())
@@ -542,13 +534,9 @@ class _WeaponsWizardView(discord.ui.View):
     async def _refresh(self, interaction: discord.Interaction) -> None:
         """Rebuild buttons from current state and update the message."""
         self._build_items()
-        await interaction.response.edit_message(
-            embed=self._build_embed(), view=self
-        )
+        await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
-    def _build_embed(
-        self, no_results_query: Optional[str] = None
-    ) -> discord.Embed:
+    def _build_embed(self, no_results_query: Optional[str] = None) -> discord.Embed:
         """Build the Weapons section embed."""
         embed = _section_embed(
             Strings.WIZARD_HUB_WEAPONS_BUTTON, Strings.WIZARD_WEAPONS_STEP_DESC
@@ -583,9 +571,7 @@ class _WeaponsWizardView(discord.ui.View):
         if no_results_query:
             embed.add_field(
                 name=Strings.WIZARD_WEAPONS_NO_RESULTS_TITLE,
-                value=Strings.WIZARD_WEAPONS_NO_RESULTS.format(
-                    query=no_results_query
-                ),
+                value=Strings.WIZARD_WEAPONS_NO_RESULTS.format(query=no_results_query),
                 inline=False,
             )
 
@@ -649,5 +635,3 @@ class _WeaponResultsView(discord.ui.View):
             inline=False,
         )
         return embed
-
-

@@ -175,8 +175,7 @@ class _LevelForClassModal(discord.ui.Modal):
             return
 
         is_first_class = (
-            self.existing_index is None
-            and len(self.state.classes_and_levels) == 0
+            self.existing_index is None and len(self.state.classes_and_levels) == 0
         )
 
         if self.existing_index is not None:
@@ -420,9 +419,7 @@ class _WeaponSearchModal(discord.ui.Modal):
     15-minute followup window rather than the 3-second initial window.
     """
 
-    def __init__(
-        self, state: WizardState, weapons_view: "_WeaponsWizardView"
-    ) -> None:
+    def __init__(self, state: WizardState, weapons_view: "_WeaponsWizardView") -> None:
         super().__init__(title=Strings.WIZARD_WEAPONS_SEARCH_MODAL_TITLE)
         self.state = state
         self.weapons_view = weapons_view

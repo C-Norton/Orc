@@ -160,9 +160,7 @@ async def test_character_to_wizard_state_sets_edit_character_id(
     assert state.edit_character_id == fighter_character.id
 
 
-async def test_character_to_wizard_state_loads_class_levels(
-    fighter_character, mocker
-):
+async def test_character_to_wizard_state_loads_class_levels(fighter_character, mocker):
     """Classes and levels must be loaded in id order."""
     state = _make_edit_state(fighter_character, mocker)
     assert len(state.classes_and_levels) == 1
@@ -257,9 +255,7 @@ async def test_character_to_wizard_state_saves_explicitly_set_true_when_any_save
     assert state.saves_explicitly_set is True
 
 
-async def test_character_to_wizard_state_loads_saving_throws(
-    fighter_character, mocker
-):
+async def test_character_to_wizard_state_loads_saving_throws(fighter_character, mocker):
     """Saving throw proficiencies must be loaded from the character columns."""
     state = _make_edit_state(fighter_character, mocker)
     assert state.saving_throws["strength"] is True
@@ -326,11 +322,16 @@ async def test_character_to_wizard_state_existing_attacks_sorted_by_id(
     db_session.add(char)
     db_session.flush()
     db_session.add(
-        Attack(character_id=char.id, name="Dagger", hit_modifier=3, damage_formula="1d4")
+        Attack(
+            character_id=char.id, name="Dagger", hit_modifier=3, damage_formula="1d4"
+        )
     )
     db_session.add(
         Attack(
-            character_id=char.id, name="Shortsword", hit_modifier=4, damage_formula="1d6"
+            character_id=char.id,
+            name="Shortsword",
+            hit_modifier=4,
+            damage_formula="1d6",
         )
     )
     db_session.commit()
@@ -360,7 +361,14 @@ async def test_character_to_wizard_state_empty_character_stats_are_none(
 ):
     """A character with no stats must leave all ability score fields as None."""
     state = _make_edit_state(empty_character, mocker)
-    for stat in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"):
+    for stat in (
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ):
         assert getattr(state, stat) is None, f"Expected {stat} to be None"
 
 
@@ -554,9 +562,7 @@ async def test_update_character_updates_saving_throws(
     assert char.st_prof_constitution is True  # unchanged
 
 
-async def test_update_character_replaces_skills(
-    db_session, fighter_character, mocker
-):
+async def test_update_character_replaces_skills(db_session, fighter_character, mocker):
     """Existing skills must be deleted and recreated from the wizard state."""
     state = _make_edit_state(fighter_character, mocker)
     # Remove Athletics, add Perception
@@ -750,7 +756,9 @@ async def test_update_character_respects_max_attacks_limit(
         name=char.name,
         edit_character_id=char.id,
     )
-    state.weapons_to_add = [{"name": "Extra Sword", "damage_dice": "1d8", "properties": []}]
+    state.weapons_to_add = [
+        {"name": "Extra Sword", "damage_dice": "1d8", "properties": []}
+    ]
 
     char, error = update_character_from_wizard(state, db_session)
 
@@ -1027,7 +1035,9 @@ async def test_weapon_select_blocked_when_attack_already_in_existing_attacks(moc
     weapon_data = {"name": "Longsword"}
     weapons_view = mocker.MagicMock()
 
-    button = _WeaponSelectButton(state=state, weapon_data=weapon_data, weapons_view=weapons_view)
+    button = _WeaponSelectButton(
+        state=state, weapon_data=weapon_data, weapons_view=weapons_view
+    )
     interaction = mocker.AsyncMock(spec=discord.Interaction)
     interaction.response = mocker.AsyncMock()
 
@@ -1035,7 +1045,9 @@ async def test_weapon_select_blocked_when_attack_already_in_existing_attacks(moc
 
     interaction.response.send_message.assert_called_once()
     call_args = interaction.response.send_message.call_args
-    message_text = call_args[0][0] if call_args[0] else call_args.kwargs.get("content", "")
+    message_text = (
+        call_args[0][0] if call_args[0] else call_args.kwargs.get("content", "")
+    )
     assert "Longsword" in message_text
 
 
@@ -1053,7 +1065,9 @@ async def test_weapon_select_blocked_does_not_add_to_weapons_to_add(mocker):
     weapon_data = {"name": "Shortsword"}
     weapons_view = mocker.MagicMock()
 
-    button = _WeaponSelectButton(state=state, weapon_data=weapon_data, weapons_view=weapons_view)
+    button = _WeaponSelectButton(
+        state=state, weapon_data=weapon_data, weapons_view=weapons_view
+    )
     interaction = mocker.AsyncMock(spec=discord.Interaction)
     interaction.response = mocker.AsyncMock()
 
@@ -1077,7 +1091,9 @@ async def test_weapon_select_allowed_when_name_not_in_existing_or_queued(mocker)
     weapons_view = mocker.MagicMock()
     weapons_view._build_embed.return_value = discord.Embed()
 
-    button = _WeaponSelectButton(state=state, weapon_data=weapon_data, weapons_view=weapons_view)
+    button = _WeaponSelectButton(
+        state=state, weapon_data=weapon_data, weapons_view=weapons_view
+    )
     interaction = mocker.AsyncMock(spec=discord.Interaction)
     interaction.response = mocker.AsyncMock()
 
@@ -1280,9 +1296,7 @@ async def test_finish_wizard_edit_mode_sends_followup_on_success(
         completion_module.SessionLocal = original_session_local
 
 
-async def test_finish_wizard_edit_mode_sends_error_on_failure(
-    mocker, session_factory
-):
+async def test_finish_wizard_edit_mode_sends_error_on_failure(mocker, session_factory):
     """When update_character_from_wizard returns an error, _finish_wizard must send that error."""
     import commands.wizard.completion as completion_module
 

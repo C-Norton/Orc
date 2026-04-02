@@ -89,7 +89,9 @@ def ensure_prerequisites(int_session_factory):
             session.flush()
 
         # Party
-        party = session.query(Party).filter_by(name=PARTY_NAME, server_id=server.id).first()
+        party = (
+            session.query(Party).filter_by(name=PARTY_NAME, server_id=server.id).first()
+        )
         if party is None:
             party = Party(name=PARTY_NAME, gms=[player_a], server=server)
             session.add(party)
@@ -129,7 +131,9 @@ def ensure_prerequisites(int_session_factory):
             )
             session.add(bramble)
             session.flush()
-            session.add(ClassLevel(character_id=bramble.id, class_name="Rogue", level=4))
+            session.add(
+                ClassLevel(character_id=bramble.id, class_name="Rogue", level=4)
+            )
             party.characters.append(bramble)
 
         # Link player_a to server with party as active
@@ -245,14 +249,17 @@ def _build_bots(mocker, int_session_factory):
 
     health_bot = make_bot()
     from commands.health_commands import register_health_commands
+
     register_health_commands(health_bot)
 
     roll_bot = make_bot()
     from commands.roll_commands import register_roll_commands
+
     register_roll_commands(roll_bot)
 
     party_bot = make_bot()
     from commands.party_commands import register_party_commands
+
     register_party_commands(party_bot)
 
     return health_bot, roll_bot, party_bot
@@ -351,9 +358,7 @@ async def test_19_04_party_temp_higher_kept_lower_applied(
 
 
 @pytest.mark.asyncio
-async def test_20_01_damage_to_zero_shows_downed(
-    int_session_factory, mocker
-) -> None:
+async def test_20_01_damage_to_zero_shows_downed(int_session_factory, mocker) -> None:
     """20.1: /hp damage amount:999 — current_hp=0; response mentions downed/dying."""
     _reset_aldric_to_full_hp(int_session_factory)
 
@@ -620,12 +625,12 @@ async def test_20b_01_set_party_death_save_nat20_to_regain_hp(
     session = int_session_factory()
     try:
         server = session.query(Server).filter_by(discord_id=GUILD_ID).first()
-        party = session.query(Party).filter_by(
-            name=PARTY_NAME, server_id=server.id
-        ).first()
-        party_settings = session.query(PartySettings).filter_by(
-            party_id=party.id
-        ).first()
+        party = (
+            session.query(Party).filter_by(name=PARTY_NAME, server_id=server.id).first()
+        )
+        party_settings = (
+            session.query(PartySettings).filter_by(party_id=party.id).first()
+        )
         assert party_settings is not None, "PartySettings should be created."
         assert party_settings.death_save_nat20_mode == DeathSaveNat20Mode.REGAIN_HP, (
             f"Expected REGAIN_HP mode, got {party_settings.death_save_nat20_mode}"

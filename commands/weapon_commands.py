@@ -104,7 +104,9 @@ def _build_weapon_add_message(
     fields = parse_weapon_fields(weapon_data)
 
     header = (
-        Strings.WEAPON_ADD_SUCCESS_HEADER if is_new else Strings.WEAPON_ADD_UPDATED_HEADER
+        Strings.WEAPON_ADD_SUCCESS_HEADER
+        if is_new
+        else Strings.WEAPON_ADD_UPDATED_HEADER
     ).format(name=fields.name, char_name=character.name)
 
     hit_line = Strings.WEAPON_ADD_HIT_LINE.format(
@@ -114,7 +116,9 @@ def _build_weapon_add_message(
 
     # Append versatile (two-handed) damage when the weapon has it
     versatile_suffix = (
-        Strings.WEAPON_ADD_VERSATILE_SUFFIX.format(two_handed_damage=fields.two_handed_damage)
+        Strings.WEAPON_ADD_VERSATILE_SUFFIX.format(
+            two_handed_damage=fields.two_handed_damage
+        )
         if fields.two_handed_damage
         else ""
     )

@@ -108,7 +108,9 @@ def party_with_gm(db_session, gm_user, sample_server, sample_character):
 
 
 @pytest.fixture
-def party_with_two_gms(db_session, gm_user, second_gm_user, sample_server, sample_character):
+def party_with_two_gms(
+    db_session, gm_user, second_gm_user, sample_server, sample_character
+):
     """One party with two GMs (gm_user + second_gm_user), sample_character is a member."""
     party = Party(
         name="Twin Command",
@@ -592,7 +594,9 @@ async def test_gmroll_dm_forbidden_does_not_block_player_response(
     """
     mock_gm = mocker.AsyncMock()
     mock_gm.send = mocker.AsyncMock(
-        side_effect=discord.Forbidden(mocker.MagicMock(), "Cannot send messages to this user")
+        side_effect=discord.Forbidden(
+            mocker.MagicMock(), "Cannot send messages to this user"
+        )
     )
     _setup_client_fetch(mocker, interaction, {555: mock_gm})
     mocker.patch("dice_roller.random.randint", return_value=10)
@@ -706,7 +710,13 @@ async def test_gmroll_network_error_does_not_corrupt_player_ephemeral(
 
 
 async def test_gmroll_roller_who_is_gm_receives_dm(
-    roll_bot, sample_character, sample_server, sample_user, db_session, interaction, mocker
+    roll_bot,
+    sample_character,
+    sample_server,
+    sample_user,
+    db_session,
+    interaction,
+    mocker,
 ):
     """When the rolling user is also a GM of the party their character belongs to,
     they receive a DM just like any other GM.

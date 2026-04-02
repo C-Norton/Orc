@@ -90,7 +90,9 @@ def _set_text_input(text_input: discord.ui.TextInput, value: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_save_wizard_creates_character(mocker, db_session, sample_user, sample_server):
+async def test_save_wizard_creates_character(
+    mocker, db_session, sample_user, sample_server
+):
     """A minimal state (name only) creates an active Character row."""
     state, interaction = _make_state(mocker)
     char, error = save_character_from_wizard(state, interaction, db_session)
@@ -196,7 +198,10 @@ async def test_save_wizard_multiclass_total_level_sums_correctly(
 ):
     """Total level across multiclass entries sums correctly."""
     state, interaction = _make_state(mocker)
-    state.classes_and_levels = [(CharacterClass.PALADIN, 6), (CharacterClass.WARLOCK, 4)]
+    state.classes_and_levels = [
+        (CharacterClass.PALADIN, 6),
+        (CharacterClass.WARLOCK, 4),
+    ]
     char, error = save_character_from_wizard(state, interaction, db_session)
     db_session.commit()
 
@@ -457,18 +462,14 @@ async def test_save_wizard_with_proficient_skills(
     db_session.commit()
 
     assert error is None
-    skill_rows = (
-        db_session.query(CharacterSkill).filter_by(character_id=char.id).all()
-    )
+    skill_rows = db_session.query(CharacterSkill).filter_by(character_id=char.id).all()
     skill_names = {s.skill_name for s in skill_rows}
     assert "Acrobatics" in skill_names
     assert "Stealth" in skill_names
     assert "History" not in skill_names  # False → not stored
 
 
-async def test_save_wizard_auto_creates_user_and_server(
-    mocker, db_session
-):
+async def test_save_wizard_auto_creates_user_and_server(mocker, db_session):
     """save_character_from_wizard bootstraps User and Server rows when absent."""
     from models import User, Server
 
@@ -491,43 +492,33 @@ async def test_save_wizard_auto_creates_user_and_server(
 
 def test_wizard_state_character_class_returns_first_class():
     """character_class property returns the first class in classes_and_levels."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5), (CharacterClass.WIZARD, 3)]
     assert state.character_class == CharacterClass.FIGHTER
 
 
 def test_wizard_state_character_class_returns_none_when_empty():
     """character_class property returns None when no classes set."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     assert state.character_class is None
 
 
 def test_wizard_state_level_returns_first_class_level():
     """level property returns the level of the first class."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [(CharacterClass.ROGUE, 7), (CharacterClass.FIGHTER, 3)]
     assert state.level == 7
 
 
 def test_wizard_state_level_returns_none_when_empty():
     """level property returns None when no classes set."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     assert state.level is None
 
 
 def test_wizard_state_total_level_sums_all_class_levels():
     """total_level sums all class levels."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [
         (CharacterClass.FIGHTER, 5),
         (CharacterClass.WIZARD, 3),
@@ -538,17 +529,13 @@ def test_wizard_state_total_level_sums_all_class_levels():
 
 def test_wizard_state_total_level_zero_when_empty():
     """total_level is 0 when classes_and_levels is empty."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     assert state.total_level == 0
 
 
 def test_wizard_state_sections_completed_starts_empty():
     """sections_completed is an empty set by default."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     assert state.sections_completed == set()
 
 
@@ -559,9 +546,7 @@ def test_wizard_state_sections_completed_starts_empty():
 
 def test_snapshot_section_captures_fields():
     """snapshot_section returns a dict with deep-copied field values."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.ac = 15
     snapshot = snapshot_section(state, "ac")
 
@@ -573,9 +558,7 @@ def test_snapshot_section_captures_fields():
 
 def test_snapshot_section_deep_copies_mutable_fields():
     """snapshot_section deep-copies list fields so mutations don't affect the snapshot."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
     snapshot = snapshot_section(state, "class_level")
 
@@ -586,9 +569,7 @@ def test_snapshot_section_deep_copies_mutable_fields():
 
 def test_restore_section_restores_fields():
     """restore_section writes snapshot values back to state fields."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.ac = 15
     snapshot = snapshot_section(state, "ac")
 
@@ -601,9 +582,7 @@ def test_restore_section_restores_fields():
 
 def test_restore_section_restores_list_fields():
     """restore_section restores list fields, discarding in-section mutations."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
     snapshot = snapshot_section(state, "class_level")
 
@@ -622,8 +601,10 @@ def test_restore_section_restores_list_fields():
 async def test_level_for_class_modal_new_class_added(mocker):
     """A valid level for a new class appends it to classes_and_levels."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -640,8 +621,10 @@ async def test_level_for_class_modal_new_class_added(mocker):
 async def test_level_for_class_modal_existing_class_updated(mocker):
     """When existing_index is not None, the class level is updated in place."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 3)]
     parent_view = _ClassLevelView(state)
@@ -658,8 +641,10 @@ async def test_level_for_class_modal_existing_class_updated(mocker):
 async def test_level_for_class_modal_invalid_non_numeric_sends_error(mocker):
     """A non-numeric level sends an ephemeral error."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -675,8 +660,10 @@ async def test_level_for_class_modal_invalid_non_numeric_sends_error(mocker):
 async def test_level_for_class_modal_level_zero_rejected(mocker):
     """Level 0 is below the minimum and must be rejected."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -692,8 +679,10 @@ async def test_level_for_class_modal_level_zero_rejected(mocker):
 async def test_level_for_class_modal_level_21_rejected(mocker):
     """Level 21 exceeds the maximum and must be rejected."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -709,8 +698,10 @@ async def test_level_for_class_modal_level_21_rejected(mocker):
 async def test_level_for_class_modal_total_level_would_exceed_20(mocker):
     """Adding a level that pushes total above 20 must be rejected."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 15)]
     parent_view = _ClassLevelView(state)
@@ -727,8 +718,10 @@ async def test_level_for_class_modal_total_level_would_exceed_20(mocker):
 async def test_level_for_class_modal_first_class_autofills_saving_throws(mocker):
     """First class addition auto-fills saving_throws when saves_explicitly_set=False."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     assert state.saves_explicitly_set is False
     parent_view = _ClassLevelView(state)
@@ -747,13 +740,24 @@ async def test_level_for_class_modal_first_class_autofills_saving_throws(mocker)
 async def test_level_for_class_modal_second_class_does_not_change_saving_throws(mocker):
     """Adding a second class does NOT change saving_throws."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
     # Fighter has STR + CON saves already
-    state.saving_throws = {s: s in ("strength", "constitution") for s in
-                           ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
+    state.saving_throws = {
+        s: s in ("strength", "constitution")
+        for s in [
+            "strength",
+            "dexterity",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "charisma",
+        ]
+    }
 
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.WIZARD, None, parent_view)
@@ -769,16 +773,29 @@ async def test_level_for_class_modal_second_class_does_not_change_saving_throws(
     assert state.saving_throws["wisdom"] is False
 
 
-async def test_level_for_class_modal_re_editing_first_class_does_not_reapply_saves(mocker):
+async def test_level_for_class_modal_re_editing_first_class_does_not_reapply_saves(
+    mocker,
+):
     """Re-editing first class level does NOT re-apply save profs when saves_explicitly_set."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 3)]
     state.saves_explicitly_set = True  # user manually set saves
-    state.saving_throws = {s: s == "dexterity" for s in
-                           ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
+    state.saving_throws = {
+        s: s == "dexterity"
+        for s in [
+            "strength",
+            "dexterity",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "charisma",
+        ]
+    }
 
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, 0, parent_view)
@@ -801,8 +818,10 @@ async def test_level_for_class_modal_re_editing_first_class_does_not_reapply_sav
 async def test_class_remove_button_removes_class(mocker):
     """Clicking _ClassRemoveButton removes the class from classes_and_levels."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5), (CharacterClass.ROGUE, 3)]
     parent_view = _ClassLevelView(state)
@@ -818,13 +837,24 @@ async def test_class_remove_button_removes_class(mocker):
 async def test_class_remove_button_first_class_updates_saves_when_not_explicit(mocker):
     """When first class is removed and saves not explicitly set, saving_throws updated to new first class."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5), (CharacterClass.CLERIC, 3)]
     # Fighter saves auto-applied
-    state.saving_throws = {s: s in ("strength", "constitution") for s in
-                           ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
+    state.saving_throws = {
+        s: s in ("strength", "constitution")
+        for s in [
+            "strength",
+            "dexterity",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "charisma",
+        ]
+    }
     state.saves_explicitly_set = False
 
     parent_view = _ClassLevelView(state)
@@ -841,15 +871,28 @@ async def test_class_remove_button_first_class_updates_saves_when_not_explicit(m
     assert state.saving_throws["strength"] is False
 
 
-async def test_class_remove_button_first_class_removed_all_saves_cleared_when_no_remaining(mocker):
+async def test_class_remove_button_first_class_removed_all_saves_cleared_when_no_remaining(
+    mocker,
+):
     """When first class is removed and no remaining classes, saving_throws all False."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
-    state.saving_throws = {s: s in ("strength", "constitution") for s in
-                           ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
+    state.saving_throws = {
+        s: s in ("strength", "constitution")
+        for s in [
+            "strength",
+            "dexterity",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "charisma",
+        ]
+    }
     state.saves_explicitly_set = False
 
     parent_view = _ClassLevelView(state)
@@ -865,14 +908,25 @@ async def test_class_remove_button_first_class_removed_all_saves_cleared_when_no
 async def test_class_remove_button_saves_explicitly_set_not_changed(mocker):
     """When saves_explicitly_set=True, removing first class does NOT change saving_throws."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5), (CharacterClass.ROGUE, 2)]
     state.saves_explicitly_set = True
     # User custom saves: only DEX
-    state.saving_throws = {s: s == "dexterity" for s in
-                           ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"]}
+    state.saving_throws = {
+        s: s == "dexterity"
+        for s in [
+            "strength",
+            "dexterity",
+            "constitution",
+            "intelligence",
+            "wisdom",
+            "charisma",
+        ]
+    }
 
     parent_view = _ClassLevelView(state)
     button = _ClassRemoveButton(state, CharacterClass.FIGHTER, parent_view, row=1)
@@ -893,8 +947,10 @@ async def test_class_remove_button_saves_explicitly_set_not_changed(mocker):
 async def test_class_level_view_on_class_selected_opens_modal(mocker):
     """Selecting a class from the dropdown opens a _LevelForClassModal."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     view = _ClassLevelView(state)
     view._class_select._values = ["Fighter"]
@@ -913,8 +969,10 @@ async def test_class_level_view_on_class_selected_max_classes_sends_error(mocker
     from commands.wizard.state import _MAX_CLASSES
 
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     # Fill to max (5 distinct classes)
     all_classes = list(CharacterClass)
@@ -934,8 +992,10 @@ async def test_class_level_view_on_class_selected_max_classes_sends_error(mocker
 async def test_class_level_view_on_class_selected_existing_class_finds_index(mocker):
     """Selecting an existing class passes its index to the modal (existing_index is not None)."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     state.classes_and_levels = [(CharacterClass.FIGHTER, 5)]
     view = _ClassLevelView(state)
@@ -962,14 +1022,18 @@ def test_class_level_view_build_embed_shows_classes_and_total_level():
     total_level_field = next(
         (f for f in embed.fields if "8" in f.name or "total" in f.name.lower()), None
     )
-    assert total_level_field is not None or any("Fighter" in f.value for f in embed.fields)
+    assert total_level_field is not None or any(
+        "Fighter" in f.value for f in embed.fields
+    )
 
 
 async def test_class_level_view_refresh_rebuilds_items(mocker):
     """_refresh rebuilds items and calls edit_message."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     view = _ClassLevelView(state)
     interaction = make_interaction(mocker)
@@ -987,8 +1051,10 @@ async def test_class_level_view_refresh_rebuilds_items(mocker):
 async def test_hp_modal_valid_hp_stored(mocker):
     """A valid HP value is stored in state.hp_override."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
@@ -1004,8 +1070,10 @@ async def test_hp_modal_valid_hp_stored(mocker):
 async def test_hp_modal_non_numeric_sends_error(mocker):
     """A non-numeric HP sends an ephemeral error."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
@@ -1021,8 +1089,10 @@ async def test_hp_modal_non_numeric_sends_error(mocker):
 async def test_hp_modal_zero_rejected(mocker):
     """HP of 0 is out of range and must be rejected."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
@@ -1038,8 +1108,10 @@ async def test_hp_modal_zero_rejected(mocker):
 async def test_hp_modal_1000_rejected(mocker):
     """HP of 1000 is out of the valid range (max 999) and must be rejected."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
@@ -1055,8 +1127,10 @@ async def test_hp_modal_1000_rejected(mocker):
 async def test_hp_modal_view_refreshed_after_valid_submission(mocker):
     """View is refreshed (edit_message) after a valid HP submission."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     parent_view = _HPView(state)
     modal = _HPModal(state, parent_view)
@@ -1136,8 +1210,10 @@ def test_hp_view_build_embed_shows_cannot_auto_calc_when_no_con():
 async def test_weapon_select_button_adds_weapon_to_state(mocker):
     """Clicking a weapon adds it to state.weapons_to_add."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     weapons_view = _WeaponsWizardView(state)
     weapon_data = {"name": "Longsword", "damage_dice": "1d8"}
@@ -1154,8 +1230,10 @@ async def test_weapon_select_button_adds_weapon_to_state(mocker):
 async def test_weapon_select_button_already_queued_sends_error(mocker):
     """Clicking a weapon already in weapons_to_add sends an ephemeral error."""
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test", name="Hero",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test",
+        name="Hero",
     )
     weapon_data = {"name": "Shortsword", "damage_dice": "1d6"}
     state.weapons_to_add = [weapon_data]
@@ -1199,8 +1277,7 @@ def test_weapon_results_view_contains_one_button_per_result():
     results_view = _WeaponResultsView(state, results, weapons_view)
 
     select_buttons = [
-        item for item in results_view.children
-        if isinstance(item, _WeaponSelectButton)
+        item for item in results_view.children if isinstance(item, _WeaponSelectButton)
     ]
     assert len(select_buttons) == 3
 
@@ -1215,8 +1292,7 @@ def test_weapon_results_view_contains_back_to_weapons_button():
     results_view = _WeaponResultsView(state, results, weapons_view)
 
     back_buttons = [
-        item for item in results_view.children
-        if isinstance(item, _BackToWeaponsButton)
+        item for item in results_view.children if isinstance(item, _BackToWeaponsButton)
     ]
     assert len(back_buttons) == 1
 
@@ -1276,7 +1352,8 @@ def test_skills_view_nav_buttons_on_row_4():
     view = _SkillsView(state)
 
     nav_buttons = [
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button) and item.row == 4
     ]
     assert len(nav_buttons) >= 2  # At least SaveReturn and ReturnNoSave
@@ -1644,7 +1721,8 @@ async def test_save_toggle_flips_proficiency(mocker):
 
     # Find the STR Save toggle button and trigger it
     str_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button) and "STR" in (item.label or "")
     )
     await str_button.callback(interaction)
@@ -1665,7 +1743,8 @@ async def test_save_toggle_sets_explicitly_set_flag(mocker):
     interaction = make_interaction(mocker)
 
     wis_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button) and "WIS" in (item.label or "")
     )
     await wis_button.callback(interaction)
@@ -1690,7 +1769,8 @@ async def test_skill_toggle_marks_proficient(mocker):
     interaction = make_interaction(mocker)
 
     acro_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button) and item.label == "Acrobatics"
     )
     await acro_button.callback(interaction)
@@ -1710,7 +1790,8 @@ async def test_skill_toggle_twice_toggles_back(mocker):
     interaction = make_interaction(mocker)
 
     stealth_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button) and item.label == "Stealth"
     )
     # First click: proficient
@@ -1734,7 +1815,8 @@ def test_hub_view_name_button_is_danger_when_no_name():
     view = HubView(state)
 
     name_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button)
         and item.label == Strings.WIZARD_HUB_NAME_BUTTON
     )
@@ -1749,7 +1831,8 @@ def test_hub_view_name_button_is_success_when_name_set():
     view = HubView(state)
 
     name_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button)
         and item.label == Strings.WIZARD_HUB_NAME_BUTTON
     )
@@ -1764,7 +1847,8 @@ def test_hub_view_save_exit_disabled_when_no_name():
     view = HubView(state)
 
     save_exit_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button)
         and item.label == Strings.WIZARD_HUB_SAVE_EXIT
     )
@@ -1779,7 +1863,8 @@ def test_hub_view_save_exit_enabled_when_name_set():
     view = HubView(state)
 
     save_exit_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button)
         and item.label == Strings.WIZARD_HUB_SAVE_EXIT
     )
@@ -1788,14 +1873,13 @@ def test_hub_view_save_exit_enabled_when_name_set():
 
 def test_hub_view_section_buttons_are_danger_when_not_completed():
     """Section buttons in HubView are red (danger) when section is not in sections_completed."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     # No sections completed
     view = HubView(state)
 
     section_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button)
         and item.label == Strings.WIZARD_HUB_CLASS_LEVEL_BUTTON
     )
@@ -1804,14 +1888,13 @@ def test_hub_view_section_buttons_are_danger_when_not_completed():
 
 def test_hub_view_section_button_is_success_when_completed():
     """Section buttons in HubView are green (success) when the section is completed."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.sections_completed.add("class_level")
     view = HubView(state)
 
     section_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button)
         and item.label == Strings.WIZARD_HUB_CLASS_LEVEL_BUTTON
     )
@@ -1820,9 +1903,7 @@ def test_hub_view_section_button_is_success_when_completed():
 
 def test_hub_view_all_section_buttons_initially_danger():
     """All section buttons are danger (red) when sections_completed is empty."""
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     view = HubView(state)
 
     section_labels = {
@@ -1835,7 +1916,8 @@ def test_hub_view_all_section_buttons_initially_danger():
         Strings.WIZARD_HUB_WEAPONS_BUTTON,
     }
     section_buttons = [
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button) and item.label in section_labels
     ]
     assert len(section_buttons) == 7
@@ -1882,7 +1964,6 @@ async def test_return_no_save_restores_snapshot_and_shows_hub(mocker):
     interaction.response.edit_message.assert_called_once()
 
 
-
 async def test_hub_cancel_button_edits_message_with_cancelled_embed(mocker):
     """Clicking the HubView cancel button shows a cancellation embed with view=None."""
     state = WizardState(
@@ -1892,7 +1973,8 @@ async def test_hub_cancel_button_edits_message_with_cancelled_embed(mocker):
     interaction = make_interaction(mocker)
 
     cancel_button = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, discord.ui.Button)
         and item.label == Strings.WIZARD_HUB_CANCEL
     )
@@ -1977,8 +2059,12 @@ async def test_saves_edit_view_save_changes_persists(
     char_id = sample_character.id
 
     current = {
-        "strength": False, "dexterity": False, "constitution": False,
-        "intelligence": False, "wisdom": False, "charisma": False,
+        "strength": False,
+        "dexterity": False,
+        "constitution": False,
+        "intelligence": False,
+        "wisdom": False,
+        "charisma": False,
     }
     view = CharacterSavesEditView(
         char_id=char_id,
@@ -1990,12 +2076,14 @@ async def test_saves_edit_view_save_changes_persists(
 
     # Patch SessionLocal in character_commands to use the test session factory
     import commands.character_commands as cc_mod
+
     original = cc_mod.SessionLocal
     cc_mod.SessionLocal = session_factory
 
     try:
         save_btn = next(
-            item for item in view.children
+            item
+            for item in view.children
             if isinstance(item, discord.ui.Button)
             and item.label == Strings.BUTTON_SAVE_CHANGES
         )
@@ -2008,6 +2096,7 @@ async def test_saves_edit_view_save_changes_persists(
     verify_session = session_factory()
     try:
         from models import Character as CharacterModel
+
         refreshed = verify_session.get(CharacterModel, char_id)
         assert refreshed.st_prof_strength is True
         assert refreshed.st_prof_dexterity is False
@@ -2022,8 +2111,12 @@ async def test_saves_edit_view_cancel_makes_no_changes(
     from commands.character_commands import CharacterSavesEditView
 
     current = {
-        "strength": True, "dexterity": False, "constitution": True,
-        "intelligence": False, "wisdom": False, "charisma": False,
+        "strength": True,
+        "dexterity": False,
+        "constitution": True,
+        "intelligence": False,
+        "wisdom": False,
+        "charisma": False,
     }
     view = CharacterSavesEditView(
         char_id=sample_character.id,
@@ -2032,9 +2125,9 @@ async def test_saves_edit_view_cancel_makes_no_changes(
     )
 
     cancel_btn = next(
-        item for item in view.children
-        if isinstance(item, discord.ui.Button)
-        and item.label == Strings.BUTTON_CANCEL
+        item
+        for item in view.children
+        if isinstance(item, discord.ui.Button) and item.label == Strings.BUTTON_CANCEL
     )
     interaction = make_interaction(mocker)
     await cancel_btn.callback(interaction)
@@ -2133,8 +2226,7 @@ async def test_stats_view_refresh_turns_physical_button_green_after_all_set(mock
 
     # Confirm the button starts red (no stats set)
     physical_btn_before = next(
-        item for item in parent_view.children
-        if isinstance(item, _PrimaryStatsButton)
+        item for item in parent_view.children if isinstance(item, _PrimaryStatsButton)
     )
     assert physical_btn_before.style == discord.ButtonStyle.danger
 
@@ -2149,8 +2241,7 @@ async def test_stats_view_refresh_turns_physical_button_green_after_all_set(mock
 
     # _refresh was called — find the updated button
     physical_btn_after = next(
-        item for item in parent_view.children
-        if isinstance(item, _PrimaryStatsButton)
+        item for item in parent_view.children if isinstance(item, _PrimaryStatsButton)
     )
     assert physical_btn_after.style == discord.ButtonStyle.success
 
@@ -2168,8 +2259,7 @@ async def test_stats_view_refresh_turns_mental_button_green_after_all_set(mocker
 
     # Confirm the button starts red (no stats set)
     mental_btn_before = next(
-        item for item in parent_view.children
-        if isinstance(item, _WisChaButton)
+        item for item in parent_view.children if isinstance(item, _WisChaButton)
     )
     assert mental_btn_before.style == discord.ButtonStyle.danger
 
@@ -2184,8 +2274,7 @@ async def test_stats_view_refresh_turns_mental_button_green_after_all_set(mocker
 
     # _refresh was called — find the updated button
     mental_btn_after = next(
-        item for item in parent_view.children
-        if isinstance(item, _WisChaButton)
+        item for item in parent_view.children if isinstance(item, _WisChaButton)
     )
     assert mental_btn_after.style == discord.ButtonStyle.success
 
@@ -2257,9 +2346,7 @@ def test_section_button_style_saving_throws_danger_when_no_class_and_not_explici
     """saving_throws section is danger when no class is set and saves_explicitly_set is False."""
     from commands.wizard.hub_view import _section_button_style
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     assert state.character_class is None
     assert state.saves_explicitly_set is False
 
@@ -2272,9 +2359,7 @@ def test_section_button_style_saving_throws_primary_when_class_set_but_not_expli
     """saving_throws section is primary (auto from class) when class is set but saves_explicitly_set is False."""
     from commands.wizard.hub_view import _section_button_style
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [(CharacterClass.FIGHTER, 1)]
     # classes_and_levels being set makes character_class return the first class
     assert state.saves_explicitly_set is False
@@ -2288,9 +2373,7 @@ def test_section_button_style_saving_throws_success_when_explicitly_set():
     """saving_throws section is success when saves_explicitly_set is True."""
     from commands.wizard.hub_view import _section_button_style
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.saves_explicitly_set = True
 
     style = _section_button_style("saving_throws", state)
@@ -2302,9 +2385,7 @@ def test_section_button_style_hp_danger_when_no_class_and_no_override():
     """hp section is danger when no class and no hp_override are set."""
     from commands.wizard.hub_view import _section_button_style
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     assert state.character_class is None
     assert state.hp_override is None
 
@@ -2317,9 +2398,7 @@ def test_section_button_style_hp_primary_when_class_and_constitution_set_but_no_
     """hp section is primary when class and constitution are both set but no hp_override."""
     from commands.wizard.hub_view import _section_button_style
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [(CharacterClass.BARBARIAN, 1)]
     state.constitution = 16
     # hp_override remains None — HP will be auto-calculated
@@ -2333,9 +2412,7 @@ def test_section_button_style_hp_success_when_hp_override_explicitly_set():
     """hp section is success when hp_override is explicitly set."""
     from commands.wizard.hub_view import _section_button_style
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.hp_override = 42
 
     style = _section_button_style("hp", state)
@@ -2347,9 +2424,7 @@ def test_section_button_style_hp_danger_when_class_set_but_constitution_missing(
     """hp section is danger when class is set but constitution is None (cannot auto-calc without CON)."""
     from commands.wizard.hub_view import _section_button_style
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     state.classes_and_levels = [(CharacterClass.WIZARD, 1)]
     # constitution is None — cannot auto-calc HP
 
@@ -2376,9 +2451,7 @@ def test_section_views_have_no_cancel_button():
         _WeaponsWizardView,
     )
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     section_views = [
         _StatsView(state),
         _ClassLevelView(state),
@@ -2402,9 +2475,7 @@ def test_weapon_results_view_has_no_cancel_button():
     from commands.wizard.buttons import _CancelWizardButton
     from commands.wizard.section_views import _WeaponResultsView, _WeaponsWizardView
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     weapons_view = _WeaponsWizardView(state)
     # Pass an empty results list so no _WeaponSelectButton items are added
     view = _WeaponResultsView(state, results=[], weapons_view=weapons_view)
@@ -2418,9 +2489,7 @@ def test_hub_view_has_cancel_button():
     """HubView must contain exactly one _HubCancelButton."""
     from commands.wizard.hub_view import HubView, _HubCancelButton
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     view = HubView(state)
     hub_cancel_buttons = [
         item for item in view.children if isinstance(item, _HubCancelButton)
@@ -2480,9 +2549,7 @@ def test_hub_view_has_no_quick_setup_button():
     """HubView must not contain any _QuickSetupButton."""
     from commands.wizard.hub_view import HubView, _QuickSetupButton
 
-    state = WizardState(
-        user_discord_id="1", guild_discord_id="2", guild_name="Test"
-    )
+    state = WizardState(user_discord_id="1", guild_discord_id="2", guild_name="Test")
     view = HubView(state)
     quick_setup_buttons = [
         item for item in view.children if isinstance(item, _QuickSetupButton)
@@ -2546,7 +2613,9 @@ async def test_finish_wizard_success_dismisses_ephemeral_message(mocker, db_sess
 
 
 @pytest.mark.asyncio
-async def test_finish_wizard_success_sends_public_followup_with_embed(mocker, db_session):
+async def test_finish_wizard_success_sends_public_followup_with_embed(
+    mocker, db_session
+):
     """On success, followup.send is called with ephemeral=False and a discord.Embed."""
     state, interaction = _make_state(mocker)
     fake_char = mocker.Mock(spec=Character)
@@ -2569,7 +2638,9 @@ async def test_finish_wizard_success_sends_public_followup_with_embed(mocker, db
 
 
 @pytest.mark.asyncio
-async def test_finish_wizard_success_does_not_pass_embed_to_edit_message(mocker, db_session):
+async def test_finish_wizard_success_does_not_pass_embed_to_edit_message(
+    mocker, db_session
+):
     """Regression: the completion embed must NOT be passed to edit_message.
 
     The old behaviour sent the embed via edit_message (keeping it ephemeral).

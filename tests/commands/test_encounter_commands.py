@@ -35,9 +35,7 @@ async def test_create_encounter_success_message(
 
     msg = interaction.response.send_message.call_args.args[0]
     assert "Dragon's Lair" in msg
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_create_encounter_no_active_party(
@@ -2108,14 +2106,16 @@ def test_parse_hp_input_invalid_raises():
 
 
 async def test_encounter_enemy_hp_clamped_sends_ephemeral_notice(
-    mocker, encounter_bot, sample_active_party, sample_pending_encounter, session_factory
+    mocker,
+    encounter_bot,
+    sample_active_party,
+    sample_pending_encounter,
+    session_factory,
 ):
     """When a dice HP roll comes up ≤ 0 and is clamped to 1, an ephemeral
     notice must be sent to inform the GM."""
     # Patch roll_dice inside encounter_commands so HP always rolls 0
-    mocker.patch(
-        "commands.encounter_commands.roll_dice", return_value=([1], -5, 0)
-    )
+    mocker.patch("commands.encounter_commands.roll_dice", return_value=([1], -5, 0))
     interaction = make_interaction(mocker)
     cb = get_callback(encounter_bot, "encounter", "enemy")
     await cb(interaction, name="Goblin", initiative_modifier=0, max_hp="1d6-5")
@@ -2125,11 +2125,11 @@ async def test_encounter_enemy_hp_clamped_sends_ephemeral_notice(
     # The HP-clamped notice must be sent as an ephemeral followup
     followup_calls = interaction.followup.send.call_args_list
     clamped_calls = [
-        call for call in followup_calls
-        if call.kwargs.get("ephemeral") is True
+        call for call in followup_calls if call.kwargs.get("ephemeral") is True
     ]
     assert len(clamped_calls) >= 1
     from utils.strings import Strings
+
     assert any(
         Strings.ENCOUNTER_HP_CLAMPED in (call.args[0] if call.args else "")
         for call in clamped_calls

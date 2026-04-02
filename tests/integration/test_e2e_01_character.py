@@ -192,7 +192,9 @@ async def test_2_10_wizard_creates_mira(
             .filter_by(character_id=mira.id, class_name="Wizard")
             .first()
         )
-        assert wizard_class_level is not None, "Wizard ClassLevel row not found for Mira"
+        assert wizard_class_level is not None, (
+            "Wizard ClassLevel row not found for Mira"
+        )
         assert wizard_class_level.level == 1
     finally:
         verify_session.close()
@@ -250,7 +252,9 @@ async def test_2_12_switch_to_mira_makes_mira_active(
         mira = verify_session.query(Character).filter_by(name="Mira").first()
         aldric = verify_session.query(Character).filter_by(name="Aldric").first()
         assert mira.is_active is True, "Mira should be active after switch"
-        assert aldric.is_active is False, "Aldric should be inactive after switch to Mira"
+        assert aldric.is_active is False, (
+            "Aldric should be inactive after switch to Mira"
+        )
     finally:
         verify_session.close()
 
@@ -806,13 +810,17 @@ async def test_5_05_class_remove_fighter_last_class_returns_error(
             .filter_by(character_id=aldric.id, class_name="Fighter")
             .first()
         )
-        assert fighter_row is not None, "Fighter ClassLevel row should NOT have been deleted"
+        assert fighter_row is not None, (
+            "Fighter ClassLevel row should NOT have been deleted"
+        )
         assert aldric.level == 3, f"Total level should still be 3, got {aldric.level}"
     finally:
         verify_session.close()
 
 
-def test_5_06_restore_fighter_class_after_xfail(int_session_factory: sessionmaker) -> None:
+def test_5_06_restore_fighter_class_after_xfail(
+    int_session_factory: sessionmaker,
+) -> None:
     """Ensure Aldric has Fighter 3 regardless of test_5_05 outcome.
 
     Because test_5_05 is xfail (implementation missing the guard), the
@@ -829,7 +837,9 @@ def test_5_06_restore_fighter_class_after_xfail(int_session_factory: sessionmake
             .first()
         )
         if not fighter_row:
-            session.add(ClassLevel(character_id=aldric.id, class_name="Fighter", level=3))
+            session.add(
+                ClassLevel(character_id=aldric.id, class_name="Fighter", level=3)
+            )
             session.commit()
     finally:
         session.close()
@@ -837,6 +847,8 @@ def test_5_06_restore_fighter_class_after_xfail(int_session_factory: sessionmake
     verify = int_session_factory()
     try:
         aldric = verify.query(Character).filter_by(name="Aldric").first()
-        assert aldric.level == 3, f"Aldric level must be 3 after restore, got {aldric.level}"
+        assert aldric.level == 3, (
+            f"Aldric level must be 3 after restore, got {aldric.level}"
+        )
     finally:
         verify.close()

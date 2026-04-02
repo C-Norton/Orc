@@ -67,6 +67,7 @@ def get_prefix_callback(bot: commands.Bot, name: str):
 def test_uptime_string_before_start_returns_unknown():
     """Before record_start_time is called, uptime is reported as unknown."""
     import commands.admin_commands as _mod
+
     original = _mod._start_time
     _mod._start_time = 0.0
     assert _uptime_string() == "unknown"
@@ -90,6 +91,7 @@ def test_uptime_string_formats_correctly(mocker):
 def test_record_start_time_sets_nonzero_value():
     """record_start_time() records a nonzero timestamp."""
     import commands.admin_commands as _mod
+
     record_start_time()
     assert _mod._start_time > 0.0
 
@@ -235,6 +237,7 @@ async def test_admin_restart_no_op_for_non_developer(admin_bot, mocker):
     await cb(ctx)
     ctx.send.assert_not_called()
     import commands.admin_commands as _mod
+
     _mod.os.execv.assert_not_called()
 
 
@@ -290,7 +293,14 @@ async def test_admin_help_lists_all_commands(admin_bot, mocker):
     cb = get_prefix_callback(admin_bot, "help")
     await cb(ctx)
     msg = ctx.send.call_args.args[0]
-    for cmd_name in ("!message", "!stats", "!logs", "!warninglogs", "!restart", "!help"):
+    for cmd_name in (
+        "!message",
+        "!stats",
+        "!logs",
+        "!warninglogs",
+        "!restart",
+        "!help",
+    ):
         assert cmd_name in msg, f"Expected {cmd_name!r} in help output"
 
 
@@ -327,8 +337,8 @@ def test_warning_logs_view_build_content_includes_page_numbers(mocker):
         return_value=(["WARNING: something bad"], 0, 5),
     )
     content = _WarningLogsView.build_content(page=0, total_pages=5)
-    assert "1" in content   # page + 1
-    assert "5" in content   # total_pages
+    assert "1" in content  # page + 1
+    assert "5" in content  # total_pages
 
 
 def test_warning_logs_view_build_content_empty_buffer(mocker):

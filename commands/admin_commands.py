@@ -16,7 +16,11 @@ from discord.ext import commands
 from sqlalchemy import inspect as sa_inspect, text
 
 from database import SessionLocal
-from utils.dev_notifications import get_buffer_stats, get_recent_logs, get_warning_logs_page
+from utils.dev_notifications import (
+    get_buffer_stats,
+    get_recent_logs,
+    get_warning_logs_page,
+)
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
@@ -58,7 +62,9 @@ class _WarningLogsView(discord.ui.View):
             page=page + 1, total_pages=total_pages, body=body
         )
 
-    @discord.ui.button(label=Strings.BUTTON_PREV_SHORT, style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label=Strings.BUTTON_PREV_SHORT, style=discord.ButtonStyle.secondary
+    )
     async def prev_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -69,7 +75,9 @@ class _WarningLogsView(discord.ui.View):
             content=self.build_content(self._page, self._total_pages), view=self
         )
 
-    @discord.ui.button(label=Strings.BUTTON_NEXT_SHORT, style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label=Strings.BUTTON_NEXT_SHORT, style=discord.ButtonStyle.secondary
+    )
     async def next_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -79,6 +87,7 @@ class _WarningLogsView(discord.ui.View):
         await interaction.response.edit_message(
             content=self.build_content(self._page, self._total_pages), view=self
         )
+
 
 _start_time: float = 0.0
 
@@ -126,9 +135,7 @@ def register_admin_commands(bot: commands.Bot) -> None:
 
         guild = bot.get_guild(guild_id)
         if guild is None:
-            await ctx.send(
-                Strings.ADMIN_GUILD_NOT_FOUND.format(guild_id=guild_id)
-            )
+            await ctx.send(Strings.ADMIN_GUILD_NOT_FOUND.format(guild_id=guild_id))
             return
 
         channel = (
@@ -229,9 +236,7 @@ def register_admin_commands(bot: commands.Bot) -> None:
         if not _is_developer(ctx):
             return
 
-        logger.info(
-            f"Admin !restart requested by {ctx.author} ({ctx.author.id})"
-        )
+        logger.info(f"Admin !restart requested by {ctx.author} ({ctx.author.id})")
         await ctx.send(Strings.ADMIN_RESTARTING, delete_after=5)
         os.execv(sys.executable, [sys.executable] + sys.argv)
 

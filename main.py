@@ -19,7 +19,13 @@ from commands.inspiration_commands import register_inspiration_commands
 from commands.admin_commands import record_start_time, register_admin_commands
 from commands.weapon_commands import register_weapon_commands
 from utils.db_helpers import purge_server_data
-from utils.dev_notifications import notify_background_error, notify_command_error, notify_guild_join, notify_startup, set_discord_client
+from utils.dev_notifications import (
+    notify_background_error,
+    notify_command_error,
+    notify_guild_join,
+    notify_startup,
+    set_discord_client,
+)
 from utils.logging_config import setup_logging, get_logger, set_guild_context
 from utils.rate_limiter import check_rate_limit
 from utils.strings import Strings
@@ -63,7 +69,9 @@ def run_migrations() -> list[str]:
     # to get only the migrations that have not yet been applied.
     pending_scripts = [
         script
-        for script in reversed(list(script_dir.walk_revisions(base=lower_bound, head="head")))
+        for script in reversed(
+            list(script_dir.walk_revisions(base=lower_bound, head="head"))
+        )
         if script.revision != current_rev
     ]
     pending_descriptions = [
@@ -150,7 +158,9 @@ class DnDBot(commands.Bot):
     async def on_interaction(self, interaction: discord.Interaction) -> None:
         """Enforce rate limits before every slash command."""
         if interaction.type == discord.InteractionType.application_command:
-            if check_rate_limit(str(interaction.user.id), str(interaction.guild_id or "dm")):
+            if check_rate_limit(
+                str(interaction.user.id), str(interaction.guild_id or "dm")
+            ):
                 logger.warning(
                     f"Rate limit exceeded: user {interaction.user.id} "
                     f"({interaction.user}) sent >8 commands in 10s in guild {interaction.guild_id}"
@@ -177,7 +187,9 @@ class DnDBot(commands.Bot):
         logger.debug("Bot is ready and running")
         set_discord_client(self)
         record_start_time()
-        await notify_startup(applied_migrations=getattr(self, "_applied_migrations", None))
+        await notify_startup(
+            applied_migrations=getattr(self, "_applied_migrations", None)
+        )
 
     async def on_guild_join(self, guild: discord.Guild) -> None:
         """Update the database when the bot joins a new server."""

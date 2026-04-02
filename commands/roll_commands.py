@@ -20,15 +20,14 @@ from utils.dev_notifications import notify_command_error
 from utils.logging_config import get_logger
 from utils.strings import Strings
 import random
+
 logger = get_logger(__name__)
 
 
 _DEATH_SAVE_NOTATION = "death save"
 
 _RECOGNIZED_NAMED_TOKENS: frozenset = frozenset(
-    {s.lower() for s in SKILL_TO_STAT}
-    | set(STAT_NAMES)
-    | {"initiative", "init"}
+    {s.lower() for s in SKILL_TO_STAT} | set(STAT_NAMES) | {"initiative", "init"}
 )
 
 
@@ -247,7 +246,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     notation=notation,
                     breakdown=result.breakdown(),
                     total=result.total,
-                    tip=random.choice(Strings.TIPS)
+                    tip=random.choice(Strings.TIPS),
                 )
                 # Still attempt to resolve the active character so GMs can be
                 # notified even when the notation itself didn't need one.
@@ -304,6 +303,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
             await notify_command_error(interaction, exc)
         finally:
             db.close()
+
     @bot.tree.command(
         name="roll",
         description="Roll dice, a skill check, a save, or a complex expression.",
@@ -325,8 +325,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
         notation: str,
         advantage: str = None,
     ) -> None:
-
-        """"
+        """ "
         Rolls dice, a skill check, a save, or a complex expression.
         Outputs result to the channel.
         Selects a random tip and displays it along side the result message
@@ -355,9 +354,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     return
 
                 response = await perform_roll(char, notation, db, advantage=advantage)
-                await interaction.response.send_message(
-                    response, suppress_embeds=True
-                )
+                await interaction.response.send_message(response, suppress_embeds=True)
                 logger.info(
                     f"/roll (character) completed for user {interaction.user.id}"
                 )
@@ -372,9 +369,7 @@ def register_roll_commands(bot: commands.Bot) -> None:
                     total=result.total,
                     tip=random.choice(Strings.TIPS),
                 )
-                await interaction.response.send_message(
-                    response, suppress_embeds=True
-                )
+                await interaction.response.send_message(response, suppress_embeds=True)
                 logger.info(f"/roll (dice) completed for user {interaction.user.id}")
 
         except ValueError as e:

@@ -366,9 +366,7 @@ async def test_8_01_attack_add_longsword_creates_row(
     verify = int_session_factory()
     aldric = verify.query(Character).filter_by(name="Aldric").first()
     longsword = (
-        verify.query(Attack)
-        .filter_by(character_id=aldric.id, name="Longsword")
-        .first()
+        verify.query(Attack).filter_by(character_id=aldric.id, name="Longsword").first()
     )
     verify.close()
 
@@ -393,9 +391,7 @@ async def test_8_02_attack_add_handaxe_creates_row(
     verify = int_session_factory()
     aldric = verify.query(Character).filter_by(name="Aldric").first()
     handaxe = (
-        verify.query(Attack)
-        .filter_by(character_id=aldric.id, name="Handaxe")
-        .first()
+        verify.query(Attack).filter_by(character_id=aldric.id, name="Handaxe").first()
     )
     verify.close()
 
@@ -443,9 +439,7 @@ async def test_8_05_attack_add_longsword_upsert_updates_values(
     verify = int_session_factory()
     aldric = verify.query(Character).filter_by(name="Aldric").first()
     longsword = (
-        verify.query(Attack)
-        .filter_by(character_id=aldric.id, name="Longsword")
-        .first()
+        verify.query(Attack).filter_by(character_id=aldric.id, name="Longsword").first()
     )
     verify.close()
 
@@ -498,14 +492,17 @@ async def test_8_07_add_attacks_3_through_8_all_succeed(
 
     for attack_name, hit_modifier, damage_formula in additional_attacks:
         interaction = make_e2e_interaction(mocker, user_id=PLAYER_A_ID)
-        await callback(interaction, name=attack_name, hit_mod=hit_modifier, damage_formula=damage_formula)
+        await callback(
+            interaction,
+            name=attack_name,
+            hit_mod=hit_modifier,
+            damage_formula=damage_formula,
+        )
         interaction.response.send_message.assert_called_once()
 
     verify = int_session_factory()
     aldric = verify.query(Character).filter_by(name="Aldric").first()
-    total_attack_count = (
-        verify.query(Attack).filter_by(character_id=aldric.id).count()
-    )
+    total_attack_count = verify.query(Attack).filter_by(character_id=aldric.id).count()
     verify.close()
 
     assert total_attack_count == 8
@@ -535,9 +532,7 @@ async def test_8_08_adding_ninth_attack_is_rejected(
 
     verify = int_session_factory()
     aldric = verify.query(Character).filter_by(name="Aldric").first()
-    total_attack_count = (
-        verify.query(Attack).filter_by(character_id=aldric.id).count()
-    )
+    total_attack_count = verify.query(Attack).filter_by(character_id=aldric.id).count()
     verify.close()
 
     assert total_attack_count == 8
@@ -607,9 +602,7 @@ async def test_9_02_weapon_add_button_imports_longsword_to_db(
     verify = int_session_factory()
     aldric = verify.query(Character).filter_by(name="Aldric").first()
     longsword_attack = (
-        verify.query(Attack)
-        .filter_by(character_id=aldric.id, name="Longsword")
-        .first()
+        verify.query(Attack).filter_by(character_id=aldric.id, name="Longsword").first()
     )
     verify.close()
 
@@ -798,7 +791,15 @@ async def test_10_09_hp_damage_100_clamps_to_zero_and_mentions_downed(
 
     message = _sent_message(interaction)
     # Either instant-death (massive damage) or downed message must be present
-    downed_keywords = ["downed", "death saving", "died", "slain", "death", "killed", "massive"]
+    downed_keywords = [
+        "downed",
+        "death saving",
+        "died",
+        "slain",
+        "death",
+        "killed",
+        "massive",
+    ]
     assert any(keyword in message.lower() for keyword in downed_keywords)
 
 

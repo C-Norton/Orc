@@ -151,7 +151,9 @@ def test_purge_cascades_to_attacks(db_session):
     user = _make_user(db_session)
     server = _make_server(db_session)
     char = _make_character(db_session, user, server)
-    db_session.add(Attack(character_id=char.id, name="Sword", hit_modifier=3, damage_formula="1d8"))
+    db_session.add(
+        Attack(character_id=char.id, name="Sword", hit_modifier=3, damage_formula="1d8")
+    )
     db_session.commit()
 
     purge_server_data(db_session, server)
@@ -277,9 +279,7 @@ def test_purge_removes_party_gm_association(db_session):
     db_session.commit()
 
     rows = db_session.execute(
-        select(party_gm_association).where(
-            party_gm_association.c.party_id == party.id
-        )
+        select(party_gm_association).where(party_gm_association.c.party_id == party.id)
     ).fetchall()
     assert rows == []
 
@@ -343,7 +343,9 @@ def test_purge_full_scenario(db_session):
     user.servers.append(server)
 
     char = _make_character(db_session, user, server)
-    db_session.add(Attack(character_id=char.id, name="Axe", hit_modifier=4, damage_formula="1d6"))
+    db_session.add(
+        Attack(character_id=char.id, name="Axe", hit_modifier=4, damage_formula="1d6")
+    )
     db_session.add(
         CharacterSkill(
             character_id=char.id,

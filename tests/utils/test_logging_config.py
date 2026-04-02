@@ -282,9 +282,7 @@ def test_orc_logger_exception_delegates_to_inner_logger(mocker):
 # ---------------------------------------------------------------------------
 
 
-def test_setup_logging_skips_file_handlers_when_log_level_env_set(
-    mocker, monkeypatch
-):
+def test_setup_logging_skips_file_handlers_when_log_level_env_set(mocker, monkeypatch):
     """When LOG_LEVEL is set (e.g. in Docker), no RotatingFileHandler must be added."""
     from logging.handlers import RotatingFileHandler
 
@@ -302,9 +300,7 @@ def test_setup_logging_skips_file_handlers_when_log_level_env_set(
 
     try:
         setup_logging()
-        added_handlers = [
-            h for h in root_logger.handlers if h not in handlers_before
-        ]
+        added_handlers = [h for h in root_logger.handlers if h not in handlers_before]
         rotating_handlers = [
             h for h in added_handlers if isinstance(h, RotatingFileHandler)
         ]
@@ -320,9 +316,7 @@ def test_setup_logging_skips_file_handlers_when_log_level_env_set(
                 handler.close()
 
 
-def test_setup_logging_stream_handler_gates_output_at_info_level(
-    mocker, monkeypatch
-):
+def test_setup_logging_stream_handler_gates_output_at_info_level(mocker, monkeypatch):
     """The _BufferingStreamHandler added by setup_logging should write to stdout at INFO+,
     not at DEBUG, so that debug noise doesn't appear in the container log stream."""
     monkeypatch.setenv("LOG_LEVEL", "INFO")
@@ -336,9 +330,7 @@ def test_setup_logging_stream_handler_gates_output_at_info_level(
 
     try:
         setup_logging()
-        added_handlers = [
-            h for h in root_logger.handlers if h not in handlers_before
-        ]
+        added_handlers = [h for h in root_logger.handlers if h not in handlers_before]
         stream_handlers = [
             h for h in added_handlers if isinstance(h, _BufferingStreamHandler)
         ]

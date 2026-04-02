@@ -26,7 +26,9 @@ class ConfirmCharacterRemoveView(discord.ui.View):
         self.party_name = party_name
         self.char_name = char_name
 
-    @discord.ui.button(label=Strings.BUTTON_REMOVE, emoji="✅", style=discord.ButtonStyle.danger)
+    @discord.ui.button(
+        label=Strings.BUTTON_REMOVE, emoji="✅", style=discord.ButtonStyle.danger
+    )
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -52,7 +54,9 @@ class ConfirmCharacterRemoveView(discord.ui.View):
 
             if active_turn:
                 encounter = active_turn.encounter
-                sorted_turns = sorted(encounter.turns, key=lambda turn: turn.order_position)
+                sorted_turns = sorted(
+                    encounter.turns, key=lambda turn: turn.order_position
+                )
                 deleted_index = sorted_turns.index(active_turn)
                 turn_count_after = len(sorted_turns) - 1
 
@@ -91,7 +95,9 @@ class ConfirmCharacterRemoveView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary
+    )
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -117,7 +123,9 @@ class ConfirmPartyDeleteView(discord.ui.View):
         self.party_id = party_id
         self.party_name = party_name
 
-    @discord.ui.button(label=Strings.BUTTON_DELETE, emoji="✅", style=discord.ButtonStyle.danger)
+    @discord.ui.button(
+        label=Strings.BUTTON_DELETE, emoji="✅", style=discord.ButtonStyle.danger
+    )
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -134,7 +142,10 @@ class ConfirmPartyDeleteView(discord.ui.View):
             # Auto-complete any open encounters before the party is deleted
             completed_names: list[str] = []
             for encounter in party.encounters:
-                if encounter.status in (EncounterStatus.PENDING, EncounterStatus.ACTIVE):
+                if encounter.status in (
+                    EncounterStatus.PENDING,
+                    EncounterStatus.ACTIVE,
+                ):
                     encounter.status = EncounterStatus.COMPLETE
                     completed_names.append(encounter.name)
             if completed_names:
@@ -157,7 +168,9 @@ class ConfirmPartyDeleteView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary
+    )
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -221,7 +234,9 @@ class ConfirmSelfGMRemoveView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary
+    )
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:

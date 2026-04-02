@@ -229,16 +229,14 @@ class _ClassRemoveButton(discord.ui.Button):
 def _physical_stats_complete(state: WizardState) -> bool:
     """Return True when STR, DEX, and CON are all set."""
     return all(
-        getattr(state, s) is not None
-        for s in ("strength", "dexterity", "constitution")
+        getattr(state, s) is not None for s in ("strength", "dexterity", "constitution")
     )
 
 
 def _mental_stats_complete(state: WizardState) -> bool:
     """Return True when INT, WIS, and CHA are all set."""
     return all(
-        getattr(state, s) is not None
-        for s in ("intelligence", "wisdom", "charisma")
+        getattr(state, s) is not None for s in ("intelligence", "wisdom", "charisma")
     )
 
 
@@ -248,9 +246,7 @@ class _PrimaryStatsButton(discord.ui.Button):
     Green when all three physical stats are set; red when any is missing.
     """
 
-    def __init__(
-        self, state: WizardState, parent_view: "_StatsView", row: int
-    ) -> None:
+    def __init__(self, state: WizardState, parent_view: "_StatsView", row: int) -> None:
         style = (
             discord.ButtonStyle.success
             if _physical_stats_complete(state)
@@ -280,9 +276,7 @@ class _WisChaButton(discord.ui.Button):
     Green when all three mental stats are set; red when any is missing.
     """
 
-    def __init__(
-        self, state: WizardState, parent_view: "_StatsView", row: int
-    ) -> None:
+    def __init__(self, state: WizardState, parent_view: "_StatsView", row: int) -> None:
         style = (
             discord.ButtonStyle.success
             if _mental_stats_complete(state)
@@ -338,9 +332,7 @@ class _HubInitiativeButton(discord.ui.Button):
 class _EnterACButton(discord.ui.Button):
     """Opens the AC modal."""
 
-    def __init__(
-        self, state: WizardState, parent_view: "_ACView", row: int
-    ) -> None:
+    def __init__(self, state: WizardState, parent_view: "_ACView", row: int) -> None:
         super().__init__(
             label=Strings.WIZARD_AC_BUTTON,
             style=discord.ButtonStyle.primary,
@@ -354,9 +346,7 @@ class _EnterACButton(discord.ui.Button):
         """Open the AC modal."""
         from commands.wizard.modals import _ACModal
 
-        await interaction.response.send_modal(
-            _ACModal(self.state, self.parent_view)
-        )
+        await interaction.response.send_modal(_ACModal(self.state, self.parent_view))
 
 
 # ---------------------------------------------------------------------------
@@ -367,9 +357,7 @@ class _EnterACButton(discord.ui.Button):
 class _SetHPButton(discord.ui.Button):
     """Opens the HP override modal."""
 
-    def __init__(
-        self, state: WizardState, parent_view: "_HPView", row: int
-    ) -> None:
+    def __init__(self, state: WizardState, parent_view: "_HPView", row: int) -> None:
         super().__init__(
             label=Strings.WIZARD_HP_BUTTON,
             style=discord.ButtonStyle.primary,
@@ -474,9 +462,7 @@ class _WeaponRemoveButton(discord.ui.Button):
         row: int,
     ) -> None:
         super().__init__(
-            label=Strings.WIZARD_WEAPONS_REMOVE_BUTTON.format(
-                name=attack_name[:70]
-            ),
+            label=Strings.WIZARD_WEAPONS_REMOVE_BUTTON.format(name=attack_name[:70]),
             style=discord.ButtonStyle.danger,
             custom_id=f"wiz_remove_attack_{attack_id}",
             row=row,

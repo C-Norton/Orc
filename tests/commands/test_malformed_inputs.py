@@ -93,24 +93,26 @@ async def test_character_create_name_at_limit_accepted(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_NAME_AT_LIMIT,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_NAME_AT_LIMIT,
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
     assert error is None
     assert char is not None
 
 
-async def test_character_create_name_over_limit_rejected(
-    mocker, db_session
-):
+async def test_character_create_name_over_limit_rejected(mocker, db_session):
     """A 101-character name exceeds the limit and must be rejected."""
     from commands.wizard.state import WizardState, save_character_from_wizard
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_NAME_OVER_LIMIT,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_NAME_OVER_LIMIT,
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
     assert char is None
@@ -125,8 +127,10 @@ async def test_character_create_sql_injection_name_stored_safely(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_SQL_INJECTION,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_SQL_INJECTION,
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
     db_session.commit()
@@ -143,8 +147,10 @@ async def test_character_create_sql_injection_2_name_stored_safely(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_SQL_INJECTION_2,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_SQL_INJECTION_2,
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
     db_session.commit()
@@ -161,8 +167,10 @@ async def test_character_create_discord_mention_in_name(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_DISCORD_EVERYONE,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_DISCORD_EVERYONE,
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
     db_session.commit()
@@ -179,8 +187,10 @@ async def test_character_create_markdown_in_name_stored_safely(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_MARKDOWN_BOLD,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_MARKDOWN_BOLD,
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
     db_session.commit()
@@ -197,8 +207,10 @@ async def test_character_create_emoji_name_stored_safely(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_EMOJI_NAME,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_EMOJI_NAME,
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
     db_session.commit()
@@ -215,8 +227,10 @@ async def test_character_create_newline_in_name_stored_safely(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name=_NEWLINE,
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name=_NEWLINE,
     )
     # Must not raise — either succeeds or returns a validation error
     char, error = save_character_from_wizard(state, interaction, db_session)
@@ -236,8 +250,10 @@ async def test_character_create_level_zero_rejected(mocker):
     from enums.character_class import CharacterClass
 
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name="LowLevel",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="LowLevel",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -247,7 +263,9 @@ async def test_character_create_level_zero_rejected(mocker):
     await modal.on_submit(interaction)
 
     interaction.response.send_message.assert_called_once()
-    assert Strings.CHAR_LEVEL_LIMIT in interaction.response.send_message.call_args.args[0]
+    assert (
+        Strings.CHAR_LEVEL_LIMIT in interaction.response.send_message.call_args.args[0]
+    )
     assert state.level is None
 
 
@@ -259,8 +277,10 @@ async def test_character_create_level_21_rejected(mocker):
     from enums.character_class import CharacterClass
 
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name="OverLevel",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="OverLevel",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -270,7 +290,9 @@ async def test_character_create_level_21_rejected(mocker):
     await modal.on_submit(interaction)
 
     interaction.response.send_message.assert_called_once()
-    assert Strings.CHAR_LEVEL_LIMIT in interaction.response.send_message.call_args.args[0]
+    assert (
+        Strings.CHAR_LEVEL_LIMIT in interaction.response.send_message.call_args.args[0]
+    )
     assert state.level is None
 
 
@@ -282,8 +304,10 @@ async def test_character_create_level_negative_rejected(mocker):
     from enums.character_class import CharacterClass
 
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name="NegLevel",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="NegLevel",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -304,8 +328,10 @@ async def test_character_create_level_1_accepted(mocker):
     from enums.character_class import CharacterClass
 
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name="MinLevel",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="MinLevel",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -326,8 +352,10 @@ async def test_character_create_level_20_accepted(mocker):
     from enums.character_class import CharacterClass
 
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name="MaxLevel",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="MaxLevel",
     )
     parent_view = _ClassLevelView(state)
     modal = _LevelForClassModal(state, CharacterClass.FIGHTER, None, parent_view)
@@ -435,9 +463,7 @@ async def test_character_stats_minimum_values_accepted(
         charisma=1,
         initiative_bonus=0,
     )
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_character_stats_maximum_values_accepted(
@@ -456,9 +482,7 @@ async def test_character_stats_maximum_values_accepted(
         charisma=30,
         initiative_bonus=0,
     )
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_character_stats_first_time_partial_update_rejected(
@@ -499,9 +523,7 @@ async def test_character_stats_initiative_bonus_negative_accepted(
         charisma=10,
         initiative_bonus=-10,
     )
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ===========================================================================
@@ -545,9 +567,7 @@ async def test_character_ac_1_accepted(mocker, char_bot, sample_character):
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=1)
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_character_ac_30_accepted(mocker, char_bot, sample_character):
@@ -555,9 +575,7 @@ async def test_character_ac_30_accepted(mocker, char_bot, sample_character):
     interaction = make_interaction(mocker)
     cb = get_callback(char_bot, "character", "ac")
     await cb(interaction, ac=30)
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ===========================================================================
@@ -619,9 +637,7 @@ async def test_character_class_add_exact_total_20_accepted(
     cb = get_callback(char_bot, "character", "class_add")
     await cb(interaction, character_class="Wizard", level=15)
 
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ===========================================================================
@@ -656,9 +672,7 @@ async def test_hp_set_max_one_accepted(mocker, health_bot, sample_character):
     interaction = make_interaction(mocker)
     cb = get_callback(health_bot, "hp", "set_max")
     await cb(interaction, max_hp=1)
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_hp_set_max_very_large_value_does_not_crash(
@@ -671,9 +685,7 @@ async def test_hp_set_max_very_large_value_does_not_crash(
     await cb(interaction, max_hp=2_000_000_000)
 
     assert interaction.response.send_message.called
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ===========================================================================
@@ -1421,8 +1433,10 @@ async def test_character_create_at_user_limit_rejected(
 
     interaction = make_interaction(mocker)
     state = WizardState(
-        user_discord_id="111", guild_discord_id="222",
-        guild_name="Test Server", name="OneMore",
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="OneMore",
     )
     char, error = save_character_from_wizard(state, interaction, db_session)
 

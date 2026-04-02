@@ -67,9 +67,7 @@ async def _finish_wizard(
 
         # Discord does not allow changing ephemeral status, so dismiss the
         # ephemeral wizard message and send the summary publicly.
-        await interaction.response.edit_message(
-            content=dismiss, embed=None, view=None
-        )
+        await interaction.response.edit_message(content=dismiss, embed=None, view=None)
         await interaction.followup.send(embed=embed, ephemeral=False)
     except Exception as exc:
         db.rollback()
@@ -160,9 +158,7 @@ def _build_complete_embed(state: WizardState, char: Character) -> discord.Embed:
     # Saving Throws — shown when class was set or user explicitly toggled saves
     if state.saves_explicitly_set or state.character_class is not None:
         prof_saves = [
-            _STAT_DISPLAY[s]
-            for s in _ALL_STATS
-            if state.saving_throws.get(s, False)
+            _STAT_DISPLAY[s] for s in _ALL_STATS if state.saving_throws.get(s, False)
         ]
         saves_value = ", ".join(prof_saves) if prof_saves else "None"
     else:

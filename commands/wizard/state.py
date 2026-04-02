@@ -127,9 +127,7 @@ class WizardState:
     guild_discord_id: str
     guild_name: str
     name: str = ""
-    classes_and_levels: list[tuple[CharacterClass, int]] = field(
-        default_factory=list
-    )
+    classes_and_levels: list[tuple[CharacterClass, int]] = field(default_factory=list)
     strength: Optional[int] = None
     dexterity: Optional[int] = None
     constitution: Optional[int] = None
@@ -241,7 +239,9 @@ def save_character_from_wizard(
         db.query(Character).filter_by(user_id=user.id, server_id=server.id).count()
     )
     if char_count >= MAX_CHARACTERS_PER_USER:
-        return None, Strings.ERROR_LIMIT_CHARACTERS.format(limit=MAX_CHARACTERS_PER_USER)
+        return None, Strings.ERROR_LIMIT_CHARACTERS.format(
+            limit=MAX_CHARACTERS_PER_USER
+        )
 
     existing = (
         db.query(Character).filter_by(user=user, server=server, name=state.name).first()
@@ -377,8 +377,7 @@ def character_to_wizard_state(
 
     # Existing attacks (id + name) — displayed with remove buttons in weapons section
     state.existing_attacks = [
-        (attack.id, attack.name)
-        for attack in sorted(char.attacks, key=lambda a: a.id)
+        (attack.id, attack.name) for attack in sorted(char.attacks, key=lambda a: a.id)
     ]
 
     # Mark populated sections as completed so hub buttons show green
@@ -486,9 +485,7 @@ def update_character_from_wizard(
     db.flush()
 
     # Add new weapons, respecting the per-character limit
-    current_attack_count = (
-        db.query(Attack).filter_by(character_id=char.id).count()
-    )
+    current_attack_count = db.query(Attack).filter_by(character_id=char.id).count()
     weapon_count = 0
     for weapon_data in state.weapons_to_add:
         if current_attack_count + weapon_count >= MAX_ATTACKS_PER_CHARACTER:

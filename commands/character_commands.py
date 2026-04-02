@@ -18,7 +18,11 @@ from enums.encounter_status import EncounterStatus
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from utils.class_data import apply_class_save_profs, calculate_max_hp
 from utils.constants import SKILL_TO_STAT
-from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
+from utils.db_helpers import (
+    get_active_character,
+    get_active_party,
+    get_or_create_user_server,
+)
 from utils.dnd_logic import get_proficiency_bonus, get_stat_modifier
 from utils.limits import MAX_CHARACTERS_PER_USER
 from utils.logging_config import get_logger
@@ -43,7 +47,9 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
         self.char_id = char_id
         self.char_name = char_name
 
-    @discord.ui.button(label=Strings.BUTTON_DELETE, emoji="✅", style=discord.ButtonStyle.danger)
+    @discord.ui.button(
+        label=Strings.BUTTON_DELETE, emoji="✅", style=discord.ButtonStyle.danger
+    )
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -96,7 +102,9 @@ class _ConfirmCharacterDeleteView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label=Strings.BUTTON_CANCEL, emoji="❌", style=discord.ButtonStyle.secondary
+    )
     async def cancel(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -420,7 +428,9 @@ class _SaveEditToggleButton(discord.ui.Button):
         parent_view: "CharacterSavesEditView",
     ) -> None:
         style = (
-            discord.ButtonStyle.success if is_proficient else discord.ButtonStyle.secondary
+            discord.ButtonStyle.success
+            if is_proficient
+            else discord.ButtonStyle.secondary
         )
         row = 0 if stat in ("strength", "dexterity", "constitution") else 1
         super().__init__(
@@ -434,7 +444,9 @@ class _SaveEditToggleButton(discord.ui.Button):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         """Toggle the save and refresh the view."""
-        self.parent_view.saves[self.stat] = not self.parent_view.saves.get(self.stat, False)
+        self.parent_view.saves[self.stat] = not self.parent_view.saves.get(
+            self.stat, False
+        )
         await self.parent_view._refresh(interaction)
 
 
@@ -444,7 +456,9 @@ class CharacterSavesEditView(discord.ui.View):
     Shows six toggle buttons (one per ability), plus Save Changes and Cancel.
     """
 
-    def __init__(self, char_id: int, char_name: str, current_saves: dict[str, bool]) -> None:
+    def __init__(
+        self, char_id: int, char_name: str, current_saves: dict[str, bool]
+    ) -> None:
         super().__init__(timeout=120)
         self.char_id = char_id
         self.char_name = char_name
@@ -453,7 +467,9 @@ class CharacterSavesEditView(discord.ui.View):
 
     def _add_buttons(self) -> None:
         for stat in _SAVE_STATS:
-            self.add_item(_SaveEditToggleButton(stat, self.saves.get(stat, False), self))
+            self.add_item(
+                _SaveEditToggleButton(stat, self.saves.get(stat, False), self)
+            )
         self.add_item(_SaveChangesButton(row=2))
         self.add_item(_CancelSavesButton(row=2))
 
@@ -720,8 +736,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                 return
 
             current_saves = {
-                stat: getattr(char, f"st_prof_{stat}", False)
-                for stat in _SAVE_STATS
+                stat: getattr(char, f"st_prof_{stat}", False) for stat in _SAVE_STATS
             }
             view = CharacterSavesEditView(
                 char_id=char.id,
@@ -1109,7 +1124,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                     character_count=len(all_characters),
                     player_count=len(characters_by_user),
                 ),
-                color=discord.Color.blue()
+                color=discord.Color.blue(),
             )
 
             # Add one embed field per player listing their characters.

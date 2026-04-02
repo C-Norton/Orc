@@ -21,7 +21,11 @@ from sqlalchemy import select
 
 from database import SessionLocal
 from models import Character, Party, Server, User, user_server_association
-from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
+from utils.db_helpers import (
+    get_active_character,
+    get_active_party,
+    get_or_create_user_server,
+)
 from utils.logging_config import get_logger
 from utils.strings import Strings
 

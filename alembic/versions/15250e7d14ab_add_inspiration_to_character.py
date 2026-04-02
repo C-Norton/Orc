@@ -24,7 +24,9 @@ def upgrade() -> None:
     with op.batch_alter_table("characters", schema=None) as batch_op:
         batch_op.add_column(
             # sa.false() renders as 0 on SQLite and false on PostgreSQL.
-            sa.Column("inspiration", sa.Boolean(), server_default=sa.false(), nullable=False)
+            sa.Column(
+                "inspiration", sa.Boolean(), server_default=sa.false(), nullable=False
+            )
         )
 
 

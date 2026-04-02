@@ -7,7 +7,14 @@ import pytest
 import discord
 from discord import app_commands
 
-from models import Character, CharacterSkill, ClassLevel, Encounter, EncounterTurn, Attack
+from models import (
+    Character,
+    CharacterSkill,
+    ClassLevel,
+    Encounter,
+    EncounterTurn,
+    Attack,
+)
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from enums.encounter_status import EncounterStatus
 from tests.conftest import make_interaction
@@ -251,12 +258,19 @@ async def test_save_edit_toggle_button_false_to_true(sample_character, mocker):
     view = CharacterSavesEditView(
         char_id=sample_character.id,
         char_name=sample_character.name,
-        current_saves={"strength": False, "dexterity": False, "constitution": False,
-                       "intelligence": False, "wisdom": False, "charisma": False},
+        current_saves={
+            "strength": False,
+            "dexterity": False,
+            "constitution": False,
+            "intelligence": False,
+            "wisdom": False,
+            "charisma": False,
+        },
     )
     # Grab the Strength toggle button
     toggle_btn = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, _SaveEditToggleButton) and item.stat == "strength"
     )
 
@@ -273,11 +287,18 @@ async def test_save_edit_toggle_button_true_to_false(sample_character, mocker):
     view = CharacterSavesEditView(
         char_id=sample_character.id,
         char_name=sample_character.name,
-        current_saves={"strength": True, "dexterity": False, "constitution": False,
-                       "intelligence": False, "wisdom": False, "charisma": False},
+        current_saves={
+            "strength": True,
+            "dexterity": False,
+            "constitution": False,
+            "intelligence": False,
+            "wisdom": False,
+            "charisma": False,
+        },
     )
     toggle_btn = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, _SaveEditToggleButton) and item.stat == "strength"
     )
 
@@ -299,8 +320,14 @@ async def test_saves_edit_view_refresh_calls_edit_message(sample_character, mock
     view = CharacterSavesEditView(
         char_id=sample_character.id,
         char_name=sample_character.name,
-        current_saves={"strength": False, "dexterity": False, "constitution": False,
-                       "intelligence": False, "wisdom": False, "charisma": False},
+        current_saves={
+            "strength": False,
+            "dexterity": False,
+            "constitution": False,
+            "intelligence": False,
+            "wisdom": False,
+            "charisma": False,
+        },
     )
     mock_interaction = mocker.AsyncMock(spec=discord.Interaction)
     mock_interaction.response = mocker.AsyncMock()
@@ -319,8 +346,14 @@ async def test_saves_edit_view_refresh_reflects_updated_state(sample_character, 
     view = CharacterSavesEditView(
         char_id=sample_character.id,
         char_name=sample_character.name,
-        current_saves={"strength": False, "dexterity": False, "constitution": False,
-                       "intelligence": False, "wisdom": False, "charisma": False},
+        current_saves={
+            "strength": False,
+            "dexterity": False,
+            "constitution": False,
+            "intelligence": False,
+            "wisdom": False,
+            "charisma": False,
+        },
     )
 
     # Mutate state directly to simulate a toggle having fired
@@ -333,7 +366,8 @@ async def test_saves_edit_view_refresh_reflects_updated_state(sample_character, 
 
     # After refresh, the Strength toggle button should now be success (green)
     str_btn = next(
-        item for item in view.children
+        item
+        for item in view.children
         if isinstance(item, _SaveEditToggleButton) and item.stat == "strength"
     )
     assert str_btn.style == discord.ButtonStyle.success
@@ -357,8 +391,14 @@ async def test_save_changes_button_char_deleted(
         view = CharacterSavesEditView(
             char_id=sample_character.id,
             char_name=sample_character.name,
-            current_saves={"strength": False, "dexterity": False, "constitution": False,
-                           "intelligence": False, "wisdom": False, "charisma": False},
+            current_saves={
+                "strength": False,
+                "dexterity": False,
+                "constitution": False,
+                "intelligence": False,
+                "wisdom": False,
+                "charisma": False,
+            },
         )
         save_btn = next(
             item for item in view.children if isinstance(item, _SaveChangesButton)
@@ -471,8 +511,14 @@ async def test_delete_confirm_only_character_in_encounter_sets_turn_index_to_zer
 
 
 async def test_delete_confirm_earlier_turn_decrements_current_turn_index(
-    mocker, char_bot, db_session, sample_character, sample_active_party,
-    sample_user, sample_server, session_factory
+    mocker,
+    char_bot,
+    db_session,
+    sample_character,
+    sample_active_party,
+    sample_user,
+    sample_server,
+    session_factory,
 ):
     """Deleting a turn at index LESS THAN current_turn_index should decrement the index."""
     # Create a second character to be the "other" turn
@@ -562,8 +608,12 @@ async def test_character_view_autocomplete_filters_by_current(
 
 
 async def test_character_view_autocomplete_includes_party_members(
-    char_bot, sample_character, sample_active_party, db_session,
-    sample_server, interaction
+    char_bot,
+    sample_character,
+    sample_active_party,
+    db_session,
+    sample_server,
+    interaction,
 ):
     """character_view_autocomplete should label party characters with '(party)'."""
     from models import User as U

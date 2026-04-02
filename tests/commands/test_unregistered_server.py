@@ -175,7 +175,9 @@ def test_get_or_create_with_new_user_existing_server(db_session, sample_server, 
     assert server.id == sample_server.id
 
 
-def test_get_or_create_idempotent_association(db_session, sample_user, sample_server, mocker):
+def test_get_or_create_idempotent_association(
+    db_session, sample_user, sample_server, mocker
+):
     """Calling get_or_create twice does not create duplicate association rows."""
     interaction = make_interaction(mocker, user_id=111, guild_id=222)
     get_or_create_user_server(db_session, interaction)
@@ -189,9 +191,7 @@ def test_get_or_create_idempotent_association(db_session, sample_user, sample_se
 # ===========================================================================
 
 
-async def test_character_create_auto_registers_unregistered_server(
-    mocker, db_session
-):
+async def test_character_create_auto_registers_unregistered_server(mocker, db_session):
     """``save_character_from_wizard`` bootstraps both User and Server rows
     when neither exists yet (new server + new user)."""
     from commands.wizard.state import WizardState, save_character_from_wizard
@@ -208,7 +208,9 @@ async def test_character_create_auto_registers_unregistered_server(
     db_session.commit()
 
     assert error is None
-    server = db_session.query(Server).filter_by(discord_id=str(_UNKNOWN_GUILD_ID)).first()
+    server = (
+        db_session.query(Server).filter_by(discord_id=str(_UNKNOWN_GUILD_ID)).first()
+    )
     assert server is not None
 
 

@@ -144,8 +144,7 @@ def purge_server_data(db, server: Server) -> None:
         for character in db.query(Character).filter_by(server_id=server.id).all()
     ]
     server_party_ids = [
-        party.id
-        for party in db.query(Party).filter_by(server_id=server.id).all()
+        party.id for party in db.query(Party).filter_by(server_id=server.id).all()
     ]
 
     if server_party_ids or server_character_ids:

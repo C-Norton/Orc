@@ -337,7 +337,9 @@ def test_buffer_warning_line_appends():
 def test_warning_buffer_respects_max_size():
     for i in range(dn._WARNING_BUFFER_SIZE + 10):
         buffer_warning_line(f"warn {i}")
-    all_entries, _, _ = get_warning_logs_page(page=0, page_size=dn._WARNING_BUFFER_SIZE + 100)
+    all_entries, _, _ = get_warning_logs_page(
+        page=0, page_size=dn._WARNING_BUFFER_SIZE + 100
+    )
     assert len(all_entries) == dn._WARNING_BUFFER_SIZE
 
 
@@ -507,7 +509,9 @@ async def test_notify_command_error_dm_contains_recent_logs(mocker):
     assert "recent context log" in mock_send.call_args[0][0]
 
 
-async def test_notify_command_error_responds_with_send_message_when_not_deferred(mocker):
+async def test_notify_command_error_responds_with_send_message_when_not_deferred(
+    mocker,
+):
     mocker.patch(
         "utils.dev_notifications._send_developer_dm", new_callable=mocker.AsyncMock
     )

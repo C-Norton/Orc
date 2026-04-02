@@ -36,7 +36,9 @@ def _patch_migration_infrastructure(mocker, current_rev=None, pending_scripts=No
 
 def test_run_migrations_applies_pending_migrations(mocker):
     """run_migrations() calls alembic upgrade with 'head' on a fresh database."""
-    mock_upgrade, mock_config, mock_config_instance = _patch_migration_infrastructure(mocker)
+    mock_upgrade, mock_config, mock_config_instance = _patch_migration_infrastructure(
+        mocker
+    )
 
     run_migrations()
 
@@ -122,9 +124,11 @@ def test_run_migrations_partial_applies_only_remaining_revisions(
     # All remaining migrations were applied — the DB has advanced past the initial revision.
     engine = create_engine(db_url)
     with engine.connect() as conn:
-        current_revisions = conn.execute(
-            sa_text("SELECT version_num FROM alembic_version")
-        ).scalars().all()
+        current_revisions = (
+            conn.execute(sa_text("SELECT version_num FROM alembic_version"))
+            .scalars()
+            .all()
+        )
     engine.dispose()
     # After upgrade("head"), the DB is at the final head — not the initial revision.
     assert current_revisions != ["a59f4e37528b"]

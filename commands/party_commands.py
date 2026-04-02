@@ -18,7 +18,11 @@ from enums.crit_rule import CritRule
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
-from utils.db_helpers import get_active_party, get_or_create_user, get_or_create_user_server
+from utils.db_helpers import (
+    get_active_party,
+    get_or_create_user,
+    get_or_create_user_server,
+)
 from utils.dnd_logic import perform_roll
 from utils.limits import (
     MAX_GM_PARTIES_PER_USER,
@@ -275,7 +279,10 @@ def register_party_commands(bot: commands.Bot) -> None:
             found_characters = []
             not_found = []
             if characters_list.strip():
-                character_names = [character_name.strip() for character_name in characters_list.split(",")]
+                character_names = [
+                    character_name.strip()
+                    for character_name in characters_list.split(",")
+                ]
                 for character_name in character_names:
                     character = (
                         db.query(Character)
@@ -296,7 +303,9 @@ def register_party_commands(bot: commands.Bot) -> None:
             db.commit()
 
             if not found_characters:
-                message = Strings.PARTY_CREATE_SUCCESS_EMPTY.format(party_name=party_name)
+                message = Strings.PARTY_CREATE_SUCCESS_EMPTY.format(
+                    party_name=party_name
+                )
             else:
                 message = Strings.PARTY_CREATE_SUCCESS_MEMBERS.format(
                     party_name=party_name, count=len(found_characters)
@@ -338,7 +347,9 @@ def register_party_commands(bot: commands.Bot) -> None:
 
             if party_name:
                 # Setting mode: point the user's active-party slot at the named party
-                party = await _get_party_or_error(db, interaction, party_name, server.id)
+                party = await _get_party_or_error(
+                    db, interaction, party_name, server.id
+                )
                 if party is None:
                     return
 
@@ -361,7 +372,9 @@ def register_party_commands(bot: commands.Bot) -> None:
                 result = db.execute(stmt).fetchone()
                 if result and result[0]:
                     party = db.get(Party, result[0])
-                    char_names = ", ".join([character.name for character in party.characters])
+                    char_names = ", ".join(
+                        [character.name for character in party.characters]
+                    )
                     logger.info(
                         f"/party active completed for user {interaction.user.id}: "
                         f"viewed active party '{party.name}'"
@@ -591,7 +604,9 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            character = next((c for c in party.characters if c.name == member_name), None)
+            character = next(
+                (c for c in party.characters if c.name == member_name), None
+            )
             logger.debug(
                 f"Member lookup for /party roll_as: "
                 f"{'found: ' + character.name if character else 'not found'} in party '{party.name}'"
@@ -1123,7 +1138,9 @@ def register_party_commands(bot: commands.Bot) -> None:
                 return
 
             await _apply_validated_enum_setting(
-                db, interaction, party,
+                db,
+                interaction,
+                party,
                 value=mode,
                 enum_class=EnemyInitiativeMode,
                 invalid_msg=Strings.PARTY_SETTINGS_INVALID_MODE,
@@ -1250,7 +1267,9 @@ def register_party_commands(bot: commands.Bot) -> None:
                 return
 
             await _apply_validated_enum_setting(
-                db, interaction, party,
+                db,
+                interaction,
+                party,
                 value=rule,
                 enum_class=CritRule,
                 invalid_msg=Strings.PARTY_SETTINGS_INVALID_CRIT_RULE,
@@ -1315,7 +1334,9 @@ def register_party_commands(bot: commands.Bot) -> None:
                 return
 
             await _apply_validated_enum_setting(
-                db, interaction, party,
+                db,
+                interaction,
+                party,
                 value=mode,
                 enum_class=DeathSaveNat20Mode,
                 invalid_msg=Strings.PARTY_SETTINGS_INVALID_NAT20_MODE,

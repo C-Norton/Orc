@@ -545,7 +545,9 @@ def test_view_timeout_matches_constant():
 
 def test_import_weapon_creates_new_attack(sample_character, db_session):
     """_import_weapon_to_character creates an Attack and returns is_new=True."""
-    is_new, hit_mod = _import_weapon_to_character(LONGSWORD_DATA, sample_character, db_session)
+    is_new, hit_mod = _import_weapon_to_character(
+        LONGSWORD_DATA, sample_character, db_session
+    )
     db_session.commit()
 
     assert is_new is True
@@ -566,7 +568,9 @@ def test_import_weapon_returns_false_for_existing(sample_character, db_session):
     )
     db_session.commit()
 
-    is_new, _ = _import_weapon_to_character(LONGSWORD_DATA, sample_character, db_session)
+    is_new, _ = _import_weapon_to_character(
+        LONGSWORD_DATA, sample_character, db_session
+    )
 
     assert is_new is False
 
@@ -593,7 +597,9 @@ def test_import_weapon_updates_existing_record(sample_character, db_session):
 
 def test_import_weapon_returns_hit_modifier(sample_character, db_session):
     """_import_weapon_to_character returns a WeaponHitModifier with the correct total."""
-    _, hit_mod = _import_weapon_to_character(LONGSWORD_DATA, sample_character, db_session)
+    _, hit_mod = _import_weapon_to_character(
+        LONGSWORD_DATA, sample_character, db_session
+    )
 
     assert isinstance(hit_mod, WeaponHitModifier)
     assert hit_mod.total == 6  # Aldric STR+3 + prof+3
@@ -623,7 +629,9 @@ def test_build_message_new_weapon_uses_added_header():
 
 def test_build_message_existing_weapon_uses_updated_header():
     """Updated weapon message contains 'Updated' (not 'Added')."""
-    msg = _build_weapon_add_message(LONGSWORD_DATA, _make_char(), False, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        LONGSWORD_DATA, _make_char(), False, _make_hit_mod()
+    )
     assert "Updated" in msg
     assert "Added" not in msg
 
@@ -636,7 +644,9 @@ def test_build_message_includes_weapon_name():
 
 def test_build_message_includes_hit_modifier():
     """Confirmation message contains the formatted hit modifier."""
-    msg = _build_weapon_add_message(LONGSWORD_DATA, _make_char(), True, _make_hit_mod(5))
+    msg = _build_weapon_add_message(
+        LONGSWORD_DATA, _make_char(), True, _make_hit_mod(5)
+    )
     assert "+5" in msg
 
 

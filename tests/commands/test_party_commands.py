@@ -20,14 +20,18 @@ from commands.party_commands import _lookup_party, _is_gm
 # ---------------------------------------------------------------------------
 
 
-def test_lookup_party_returns_party_when_it_exists(db_session, sample_party, sample_server):
+def test_lookup_party_returns_party_when_it_exists(
+    db_session, sample_party, sample_server
+):
     """_lookup_party finds a party by name and server_id."""
     result = _lookup_party(db_session, "The Fellowship", sample_server.id)
     assert result is not None
     assert result.id == sample_party.id
 
 
-def test_lookup_party_returns_none_when_name_does_not_match(db_session, sample_party, sample_server):
+def test_lookup_party_returns_none_when_name_does_not_match(
+    db_session, sample_party, sample_server
+):
     """_lookup_party returns None when no party has the given name."""
     result = _lookup_party(db_session, "Nonexistent Party", sample_server.id)
     assert result is None
@@ -40,7 +44,9 @@ def test_lookup_party_returns_none_when_server_does_not_match(db_session, sample
     assert result is None
 
 
-def test_lookup_party_returns_correct_party_among_multiple(db_session, sample_party, sample_server, sample_user):
+def test_lookup_party_returns_correct_party_among_multiple(
+    db_session, sample_party, sample_server, sample_user
+):
     """_lookup_party returns the right party when multiple parties exist with different names."""
     other_party = Party(name="The Order", gms=[sample_user], server=sample_server)
     db_session.add(other_party)
@@ -63,7 +69,9 @@ def test_is_gm_returns_true_when_user_is_a_gm(sample_user, sample_party):
     assert _is_gm(sample_user, sample_party) is True
 
 
-def test_is_gm_returns_false_when_user_is_not_in_gms(db_session, sample_party, sample_server):
+def test_is_gm_returns_false_when_user_is_not_in_gms(
+    db_session, sample_party, sample_server
+):
     """_is_gm returns False when the user is not a GM of the party."""
     non_gm = User(discord_id="999")
     db_session.add(non_gm)
@@ -76,7 +84,9 @@ def test_is_gm_returns_false_when_user_is_none(sample_party):
     assert _is_gm(None, sample_party) is False
 
 
-def test_is_gm_returns_false_when_user_is_member_but_not_gm(db_session, sample_party, sample_server, sample_character):
+def test_is_gm_returns_false_when_user_is_member_but_not_gm(
+    db_session, sample_party, sample_server, sample_character
+):
     """_is_gm returns False for a user who is a party member but not listed as GM."""
     # sample_character belongs to sample_user; add character to party but not as GM
     sample_party.characters.append(sample_character)
@@ -309,9 +319,7 @@ async def test_active_party_set_success(party_bot, sample_party, interaction):
 
     msg = interaction.response.send_message.call_args.args[0]
     assert "The Fellowship" in msg
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_active_party_set_not_found(

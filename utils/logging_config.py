@@ -191,7 +191,9 @@ class _OrcLogger:
 def setup_logging():
     dotenv.load_dotenv()
 
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - [guild:%(guild_id)s] - %(message)s"
+    log_format = (
+        "%(asctime)s - %(name)s - %(levelname)s - [guild:%(guild_id)s] - %(message)s"
+    )
     formatter = _GuildAwareFormatter(log_format)
 
     # Root logger captures everything; handlers filter by level independently.

@@ -133,9 +133,7 @@ async def test_weapon_search_modal_query_is_stripped(mocker):
     modal = _WeaponSearchModal(state, weapons_view)
     _set_text_input(modal.query_input, "  dagger  ")
 
-    fetch_mock = mocker.patch(
-        "commands.wizard.modals.fetch_weapons", return_value=[]
-    )
+    fetch_mock = mocker.patch("commands.wizard.modals.fetch_weapons", return_value=[])
 
     interaction = make_interaction(mocker)
     interaction.edit_original_response = mocker.AsyncMock()
@@ -182,9 +180,7 @@ async def test_manual_setup_modal_success_no_class(mocker, session_factory):
     assert call_kwargs["view"] is None
 
 
-async def test_manual_setup_modal_success_with_class_and_level(
-    mocker, session_factory
-):
+async def test_manual_setup_modal_success_with_class_and_level(mocker, session_factory):
     """Submitting name + class + level creates a character with saving throws applied."""
     captured_state: list[WizardState] = []
 
@@ -194,7 +190,9 @@ async def test_manual_setup_modal_success_with_class_and_level(
         mock_char.id = 1
         return mock_char, None
 
-    mocker.patch("commands.wizard.state.save_character_from_wizard", side_effect=_fake_save)
+    mocker.patch(
+        "commands.wizard.state.save_character_from_wizard", side_effect=_fake_save
+    )
     mocker.patch("database.SessionLocal", new=session_factory)
 
     modal = _ManualSetupModal(
@@ -302,7 +300,9 @@ async def test_manual_setup_modal_level_out_of_range_sends_error(mocker):
     )
 
 
-async def test_manual_setup_modal_save_error_sends_error_message(mocker, session_factory):
+async def test_manual_setup_modal_save_error_sends_error_message(
+    mocker, session_factory
+):
     """When save_character_from_wizard returns an error string it is sent ephemerally."""
     mocker.patch(
         "commands.wizard.state.save_character_from_wizard",
@@ -378,9 +378,7 @@ async def test_manual_setup_modal_level_zero_sends_error(mocker):
     )
 
 
-async def test_manual_setup_modal_class_input_case_insensitive(
-    mocker, session_factory
-):
+async def test_manual_setup_modal_class_input_case_insensitive(mocker, session_factory):
     """Class input is title-cased before lookup so 'fighter' and 'FIGHTER' are valid."""
     captured_state: list[WizardState] = []
 
@@ -390,7 +388,9 @@ async def test_manual_setup_modal_class_input_case_insensitive(
         mock_char.id = 1
         return mock_char, None
 
-    mocker.patch("commands.wizard.state.save_character_from_wizard", side_effect=_fake_save)
+    mocker.patch(
+        "commands.wizard.state.save_character_from_wizard", side_effect=_fake_save
+    )
     mocker.patch("database.SessionLocal", new=session_factory)
 
     modal = _ManualSetupModal(

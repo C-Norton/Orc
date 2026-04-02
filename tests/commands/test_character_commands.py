@@ -18,9 +18,7 @@ async def test_create_command_sends_wizard_intro(char_bot, interaction):
     await cb(interaction)
 
     interaction.response.send_message.assert_called_once()
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 # ---------------------------------------------------------------------------
@@ -375,9 +373,7 @@ async def test_set_ac_success_message(char_bot, sample_character, interaction):
 
     msg = interaction.response.send_message.call_args.args[0]
     assert "15" in msg
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_set_ac_too_low(char_bot, sample_character, interaction):
@@ -508,9 +504,7 @@ async def test_add_class_success_message(char_bot, sample_character, interaction
 
     msg = interaction.response.send_message.call_args.args[0]
     assert "Rogue" in msg
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_add_class_level_too_low(char_bot, sample_character, interaction):
@@ -587,9 +581,7 @@ async def test_remove_class_success_message(
 
     msg = interaction.response.send_message.call_args.args[0]
     assert "Rogue" in msg
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
 
 async def test_remove_class_not_found(char_bot, sample_character, interaction):
@@ -801,7 +793,13 @@ async def test_list_all_unknown_player_shows_unknown_player_string(
 
 
 async def test_list_all_multiple_characters_per_player_in_one_field(
-    char_bot, db_session, sample_character, sample_user, sample_server, interaction, mocker
+    char_bot,
+    db_session,
+    sample_character,
+    sample_user,
+    sample_server,
+    interaction,
+    mocker,
 ):
     """Multiple characters belonging to the same player appear in a single embed field."""
     second_char = Character(
@@ -830,7 +828,13 @@ async def test_list_all_multiple_characters_per_player_in_one_field(
 
 
 async def test_list_all_multiple_players_each_get_own_field(
-    char_bot, db_session, sample_character, sample_server, interaction, mocker, session_factory
+    char_bot,
+    db_session,
+    sample_character,
+    sample_server,
+    interaction,
+    mocker,
+    session_factory,
 ):
     """Characters from different players each appear in their own embed field."""
     second_user = User(discord_id="999")
@@ -858,7 +862,9 @@ async def test_list_all_multiple_players_each_get_own_field(
             return second_member
         raise discord.NotFound(mocker.MagicMock(), mocker.MagicMock())
 
-    interaction.guild.fetch_member = mocker.AsyncMock(side_effect=fetch_member_side_effect)
+    interaction.guild.fetch_member = mocker.AsyncMock(
+        side_effect=fetch_member_side_effect
+    )
 
     cb = get_callback(char_bot, "character", "list_all")
     await cb(interaction)

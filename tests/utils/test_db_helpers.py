@@ -26,7 +26,9 @@ from utils.db_helpers import (
 # ---------------------------------------------------------------------------
 
 
-def _make_interaction(mocker, user_id: int = 111, guild_id: int = 222, guild_name: str = "Test Server"):
+def _make_interaction(
+    mocker, user_id: int = 111, guild_id: int = 222, guild_name: str = "Test Server"
+):
     """Minimal interaction mock sufficient for db_helper tests."""
     interaction = mocker.Mock(spec=discord.Interaction)
     user = mocker.Mock()
@@ -139,7 +141,9 @@ def test_get_or_create_user_is_idempotent(db_session):
 
 def test_get_or_create_user_server_creates_both_rows(db_session, mocker):
     """Creates both user and server rows on first use."""
-    interaction = _make_interaction(mocker, user_id=444, guild_id=555, guild_name="NewGuild")
+    interaction = _make_interaction(
+        mocker, user_id=444, guild_id=555, guild_name="NewGuild"
+    )
     user, server = get_or_create_user_server(db_session, interaction)
     db_session.commit()
     assert user.discord_id == "444"
@@ -185,7 +189,9 @@ def test_get_or_create_user_server_is_idempotent(
 # ---------------------------------------------------------------------------
 
 
-def test_get_active_character_returns_active(db_session, sample_user, sample_server, sample_character):
+def test_get_active_character_returns_active(
+    db_session, sample_user, sample_server, sample_character
+):
     """Returns the active character when one exists."""
     assert sample_character.is_active is True  # precondition
     char = get_active_character(db_session, sample_user, sample_server)
@@ -306,9 +312,7 @@ def test_purge_server_data_removes_characters(
     assert db_session.query(Character).filter_by(server_id=server_id).count() == 0
 
 
-def test_purge_server_data_removes_parties(
-    db_session, sample_party, sample_server
-):
+def test_purge_server_data_removes_parties(db_session, sample_party, sample_server):
     """Parties belonging to the server are deleted."""
     server_id = sample_server.id
     purge_server_data(db_session, sample_server)

@@ -1,10 +1,15 @@
 import discord
+
 from discord import app_commands
 from discord.ext import commands
 
 from database import SessionLocal
 from models import Character, User, Server, Party
-from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
+from utils.db_helpers import (
+    get_active_character,
+    get_active_party,
+    get_or_create_user_server,
+)
 from utils.death_save_logic import character_is_dying
 from utils.hp_logic import apply_damage, apply_healing, apply_temp_hp, parse_amount
 from utils.logging_config import get_logger
@@ -144,7 +149,9 @@ class _NegativeAmountConfirmView(discord.ui.View):
         self.abs_amount = abs_amount
         self.apply_as = apply_as  # "damage" or "heal"
 
-    @discord.ui.button(label=Strings.BUTTON_APPLY, emoji="✅", style=discord.ButtonStyle.primary)
+    @discord.ui.button(
+        label=Strings.BUTTON_APPLY, emoji="✅", style=discord.ButtonStyle.primary
+    )
     async def apply_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:
@@ -169,7 +176,9 @@ class _NegativeAmountConfirmView(discord.ui.View):
             db.close()
         self.stop()
 
-    @discord.ui.button(label=Strings.BUTTON_DISCARD, emoji="❌", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(
+        label=Strings.BUTTON_DISCARD, emoji="❌", style=discord.ButtonStyle.secondary
+    )
     async def discard_button(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ) -> None:

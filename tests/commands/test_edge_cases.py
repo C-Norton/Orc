@@ -614,9 +614,7 @@ async def test_switch_active_character_does_not_change_encounter_turn(
     await cb_switch(interaction, name="Backup")
 
     # The switch itself should succeed
-    assert (
-        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
-    )
+    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
 
     # Aldric still owns turn index 0 in the encounter
     verify = session_factory()

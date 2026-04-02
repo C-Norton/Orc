@@ -141,17 +141,21 @@ async def test_page_button_tip_drawn_from_tips_list(mocker):
 async def test_tip_changes_between_navigations(mocker):
     """Each navigation produces a fresh random tip — different calls to random.choice."""
     tips = ["First tip", "Second tip", "Third tip"]
-    mock_choice = mocker.patch(
-        "commands.meta_commands.random.choice", side_effect=tips
-    )
+    mock_choice = mocker.patch("commands.meta_commands.random.choice", side_effect=tips)
     owner_id = 111
     view = HelpView(owner_id=owner_id)
 
     _, label_a, _, _ = HELP_PAGES[0]
     _, label_b, _, _ = HELP_PAGES[1]
-    btn_a = next(item for item in view.children if getattr(item, "label", "") == label_a)
-    btn_b = next(item for item in view.children if getattr(item, "label", "") == label_b)
-    home_btn = next(item for item in view.children if getattr(item, "label", "") == "Home")
+    btn_a = next(
+        item for item in view.children if getattr(item, "label", "") == label_a
+    )
+    btn_b = next(
+        item for item in view.children if getattr(item, "label", "") == label_b
+    )
+    home_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Home"
+    )
 
     tip_values = []
     for btn in (btn_a, btn_b, home_btn):
@@ -241,6 +245,7 @@ async def test_interaction_check_allows_owner(mocker):
 
     assert result is True
     btn_interaction.response.send_message.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # HelpView — on_timeout
@@ -398,7 +403,9 @@ async def test_tip_command_sends_message(meta_bot, interaction):
 
 
 async def test_tip_command_response_contains_tip_text(meta_bot, interaction, mocker):
-    mocker.patch("commands.meta_commands.random.choice", return_value="Use autocomplete!")
+    mocker.patch(
+        "commands.meta_commands.random.choice", return_value="Use autocomplete!"
+    )
     cb = get_callback(meta_bot, "tip")
     await cb(interaction)
     msg = interaction.response.send_message.call_args[0][0]
@@ -429,10 +436,11 @@ async def test_tip_command_not_ephemeral(meta_bot, interaction, mocker):
     kwargs = interaction.response.send_message.call_args.kwargs
     assert kwargs.get("ephemeral") is False or kwargs.get("ephemeral") is None
 
-async def test_help_command_ephemeral(meta_bot,interaction,mocker):
+
+async def test_help_command_ephemeral(meta_bot, interaction, mocker):
     """WIP test to check to see if help is ephemeral"""
     mocker.patch("commands.meta_commands.random.choice", return_value="Page tip")
-    cb = get_callback(meta_bot,"help")
+    cb = get_callback(meta_bot, "help")
     await cb(interaction)
     kwargs = interaction.response.send_message.call_args.kwargs
     assert kwargs.get("ephemeral") is True

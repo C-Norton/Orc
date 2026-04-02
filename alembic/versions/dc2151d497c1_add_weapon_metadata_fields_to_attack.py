@@ -36,7 +36,9 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column("properties_json", sa.Text(), nullable=True))
         batch_op.add_column(
             # sa.false() renders as 0 on SQLite and false on PostgreSQL.
-            sa.Column("is_imported", sa.Boolean(), nullable=False, server_default=sa.false())
+            sa.Column(
+                "is_imported", sa.Boolean(), nullable=False, server_default=sa.false()
+            )
         )
 
     # NOTE: the encounter_turns.character_id CASCADE FK change was already

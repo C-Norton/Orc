@@ -18,7 +18,12 @@ from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-__all__ = ["start_character_creation", "start_character_edit", "_show_hub", "_finish_wizard"]
+__all__ = [
+    "start_character_creation",
+    "start_character_edit",
+    "_show_hub",
+    "_finish_wizard",
+]
 
 
 async def start_character_creation(interaction: discord.Interaction) -> None:
@@ -38,7 +43,8 @@ async def start_character_creation(interaction: discord.Interaction) -> None:
 
 
 async def start_character_edit(
-    interaction: discord.Interaction, char,
+    interaction: discord.Interaction,
+    char,
 ) -> None:
     """Launch the character edit wizard hub pre-filled from *char*.
 

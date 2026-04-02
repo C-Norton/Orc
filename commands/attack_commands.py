@@ -18,7 +18,11 @@ from enums.encounter_status import EncounterStatus
 from dice_roller import roll_dice
 from enums.crit_rule import CritRule
 from utils.crit_logic import apply_crit_damage
-from utils.db_helpers import get_active_character, get_active_party, get_or_create_user_server
+from utils.db_helpers import (
+    get_active_character,
+    get_active_party,
+    get_or_create_user_server,
+)
 from utils.encounter_utils import (
     check_and_auto_end_encounter,
     notify_gms_hp_update,
@@ -190,7 +194,8 @@ def register_attack_commands(bot: commands.Bot) -> None:
                     f"ValueError in /attack roll (damage formula: {attack_obj.damage_formula}): {error}"
                 )
                 await interaction.response.send_message(
-                    Strings.ERROR_DAMAGE_FORMULA.format(error=str(error)), ephemeral=True
+                    Strings.ERROR_DAMAGE_FORMULA.format(error=str(error)),
+                    ephemeral=True,
                 )
                 return
 

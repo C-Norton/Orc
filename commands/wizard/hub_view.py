@@ -85,10 +85,14 @@ def _build_hub_embed(wizard_state: WizardState) -> discord.Embed:
     is_edit = wizard_state.edit_character_id is not None
     embed = discord.Embed(
         title=Strings.WIZARD_EDIT_HUB_TITLE if is_edit else Strings.WIZARD_HUB_TITLE,
-        description=Strings.WIZARD_EDIT_HUB_DESC if is_edit else Strings.WIZARD_HUB_DESC,
+        description=Strings.WIZARD_EDIT_HUB_DESC
+        if is_edit
+        else Strings.WIZARD_HUB_DESC,
         color=discord.Color.blurple(),
     )
-    name_value = wizard_state.name if wizard_state.name else Strings.WIZARD_HUB_NAME_NOT_SET
+    name_value = (
+        wizard_state.name if wizard_state.name else Strings.WIZARD_HUB_NAME_NOT_SET
+    )
     embed.add_field(
         name=Strings.WIZARD_HUB_NAME_FIELD_LABEL,
         value=name_value,
@@ -113,9 +117,7 @@ class _NameButton(discord.ui.Button):
         """Open the name entry modal."""
         from commands.wizard.modals import _CharacterNameModal
 
-        await interaction.response.send_modal(
-            _CharacterNameModal(self.wizard_state)
-        )
+        await interaction.response.send_modal(_CharacterNameModal(self.wizard_state))
 
 
 class _SectionButton(discord.ui.Button):
@@ -162,9 +164,7 @@ class _SectionButton(discord.ui.Button):
             "weapons": lambda: _WeaponsWizardView(self.wizard_state),
         }
         view = section_view_map[self.section_key]()
-        await interaction.response.edit_message(
-            embed=view._build_embed(), view=view
-        )
+        await interaction.response.edit_message(embed=view._build_embed(), view=view)
 
 
 class _SaveExitButton(discord.ui.Button):
@@ -202,9 +202,7 @@ class _HubCancelButton(discord.ui.Button):
         """Show cancellation embed and stop the view."""
         self.view.stop()
         is_edit = self.wizard_state.edit_character_id is not None
-        title = (
-            Strings.WIZARD_EDIT_CANCELLED if is_edit else Strings.WIZARD_CANCELLED
-        )
+        title = Strings.WIZARD_EDIT_CANCELLED if is_edit else Strings.WIZARD_CANCELLED
         embed = discord.Embed(title=title, color=discord.Color.red())
         await interaction.response.edit_message(embed=embed, view=None)
 

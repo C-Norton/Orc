@@ -52,8 +52,7 @@ def upgrade() -> None:
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
         op.execute(
-            f"ALTER TABLE encounter_turns "
-            f"DROP CONSTRAINT IF EXISTS {_PG_FK_NAME}"
+            f"ALTER TABLE encounter_turns DROP CONSTRAINT IF EXISTS {_PG_FK_NAME}"
         )
         op.execute(
             f"ALTER TABLE encounter_turns "
@@ -69,8 +68,7 @@ def downgrade() -> None:
     bind = op.get_bind()
     if bind.dialect.name == "postgresql":
         op.execute(
-            f"ALTER TABLE encounter_turns "
-            f"DROP CONSTRAINT IF EXISTS {_PG_FK_NAME}"
+            f"ALTER TABLE encounter_turns DROP CONSTRAINT IF EXISTS {_PG_FK_NAME}"
         )
         op.execute(
             f"ALTER TABLE encounter_turns "

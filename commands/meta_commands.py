@@ -105,7 +105,10 @@ class _HelpHomeButton(discord.ui.Button):
 
     def __init__(self, row: int) -> None:
         super().__init__(
-            emoji="🏠", label=Strings.BUTTON_HOME, style=discord.ButtonStyle.primary, row=row
+            emoji="🏠",
+            label=Strings.BUTTON_HOME,
+            style=discord.ButtonStyle.primary,
+            row=row,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:

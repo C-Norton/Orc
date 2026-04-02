@@ -135,7 +135,9 @@ async def test_11_01_player_a_creates_party(patched_bot, int_session_factory, mo
 
     verify = int_session_factory()
     party = verify.query(Party).filter_by(name="The Fellowship").first()
-    assert party is not None, "Party 'The Fellowship' should exist in DB after /party create"
+    assert party is not None, (
+        "Party 'The Fellowship' should exist in DB after /party create"
+    )
 
     gm_ids = [gm.discord_id for gm in party.gms]
     assert PLAYER_A_ID in gm_ids, "Player A should be a GM of the newly created party"
@@ -150,10 +152,7 @@ async def test_11_02_party_list(patched_bot, mocker):
     await cb(interaction)
 
     # Either send_message or followup.send must have been called
-    sent = (
-        interaction.response.send_message.called
-        or interaction.followup.send.called
-    )
+    sent = interaction.response.send_message.called or interaction.followup.send.called
     assert sent, "/party list should respond"
 
 
@@ -169,6 +168,7 @@ async def test_11_03_party_active_set(patched_bot, int_session_factory, mocker):
     assert user is not None
 
     from sqlalchemy import select
+
     assoc = verify.execute(
         select(user_server_association).where(
             user_server_association.c.user_id == user.id
@@ -187,8 +187,7 @@ async def test_11_04_party_view(patched_bot, mocker):
     await cb(interaction, party_name="The Fellowship")
 
     assert (
-        interaction.response.send_message.called
-        or interaction.followup.send.called
+        interaction.response.send_message.called or interaction.followup.send.called
     ), "/party view should respond"
 
 
@@ -325,8 +324,7 @@ async def test_12_03_party_view_shows_members(patched_bot, mocker):
     await cb(interaction, party_name="The Fellowship")
 
     assert (
-        interaction.response.send_message.called
-        or interaction.followup.send.called
+        interaction.response.send_message.called or interaction.followup.send.called
     ), "/party view should respond after adding members"
 
 
@@ -342,9 +340,9 @@ async def test_12_04_non_gm_cannot_add_character(patched_bot, mocker):
         character_owner=None,
     )
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-        "Non-GM should receive an ephemeral error when trying to add a character"
-    )
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    ), "Non-GM should receive an ephemeral error when trying to add a character"
 
 
 @pytest.mark.asyncio
@@ -399,7 +397,9 @@ async def test_12_06_player_b_as_gm_can_add_character(patched_bot, mocker):
 
 
 @pytest.mark.asyncio
-async def test_12_07_gm_remove_demotes_player_b(patched_bot, int_session_factory, mocker):
+async def test_12_07_gm_remove_demotes_player_b(
+    patched_bot, int_session_factory, mocker
+):
     """Player A removes Player B from GM role; DB updated."""
     interaction = _interaction_a(mocker)
 
@@ -413,7 +413,9 @@ async def test_12_07_gm_remove_demotes_player_b(patched_bot, int_session_factory
     verify = int_session_factory()
     party = verify.query(Party).filter_by(name="The Fellowship").first()
     gm_ids = [gm.discord_id for gm in party.gms]
-    assert PLAYER_B_ID not in gm_ids, "Player B should no longer be a GM after gm_remove"
+    assert PLAYER_B_ID not in gm_ids, (
+        "Player B should no longer be a GM after gm_remove"
+    )
     verify.close()
 
 
@@ -431,9 +433,9 @@ async def test_12_08_cannot_remove_last_gm(patched_bot, mocker):
 
     # Either last-GM guard or self-removal confirmation view — both are ephemeral
     assert interaction.response.send_message.called, "Should receive a response"
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-        "Removing the last GM should return an ephemeral error or confirmation"
-    )
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    ), "Removing the last GM should return an ephemeral error or confirmation"
 
 
 # ===========================================================================
@@ -448,10 +450,7 @@ async def test_13_01_party_roll_perception(patched_bot, mocker):
     cb = get_callback(patched_bot, "party", "roll")
     await cb(interaction, notation="perception")
 
-    sent = (
-        interaction.response.send_message.called
-        or interaction.followup.send.called
-    )
+    sent = interaction.response.send_message.called or interaction.followup.send.called
     assert sent, "/party roll perception should respond"
 
 
@@ -462,10 +461,7 @@ async def test_13_02_party_roll_dice(patched_bot, mocker):
     cb = get_callback(patched_bot, "party", "roll")
     await cb(interaction, notation="1d20")
 
-    sent = (
-        interaction.response.send_message.called
-        or interaction.followup.send.called
-    )
+    sent = interaction.response.send_message.called or interaction.followup.send.called
     assert sent, "/party roll 1d20 should respond"
 
 
@@ -481,7 +477,9 @@ async def test_14_01_party_settings_view(patched_bot, mocker):
     cb = get_callback(patched_bot, "party", "settings", "view")
     await cb(interaction, party_name=None)
 
-    assert interaction.response.send_message.called, "/party settings view should respond"
+    assert interaction.response.send_message.called, (
+        "/party settings view should respond"
+    )
 
 
 @pytest.mark.asyncio
@@ -532,7 +530,9 @@ async def test_14_04_settings_crit_rule(patched_bot, int_session_factory, mocker
 
 
 @pytest.mark.asyncio
-async def test_14_05_settings_death_save_nat20(patched_bot, int_session_factory, mocker):
+async def test_14_05_settings_death_save_nat20(
+    patched_bot, int_session_factory, mocker
+):
     """GM sets death_save_nat20 mode to 'double_success'; DB updated."""
     interaction = _interaction_a(mocker)
     cb = get_callback(patched_bot, "party", "settings", "death_save_nat20")
@@ -559,7 +559,9 @@ async def test_14_06_party_settings_view_after_changes(patched_bot, mocker):
     cb = get_callback(patched_bot, "party", "settings", "view")
     await cb(interaction, party_name=None)
 
-    assert interaction.response.send_message.called, "/party settings view should respond"
+    assert interaction.response.send_message.called, (
+        "/party settings view should respond"
+    )
 
 
 @pytest.mark.asyncio
@@ -569,9 +571,9 @@ async def test_14_07_non_gm_cannot_change_crit_rule(patched_bot, mocker):
     cb = get_callback(patched_bot, "party", "settings", "crit_rule")
     await cb(interaction, party_name="The Fellowship", rule="none")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-        "Non-GM should receive an ephemeral error when trying to change party settings"
-    )
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    ), "Non-GM should receive an ephemeral error when trying to change party settings"
 
 
 # ===========================================================================
@@ -580,7 +582,9 @@ async def test_14_07_non_gm_cannot_change_crit_rule(patched_bot, mocker):
 
 
 @pytest.mark.asyncio
-async def test_15_01_gm_grants_aldric_inspiration(patched_bot, int_session_factory, mocker):
+async def test_15_01_gm_grants_aldric_inspiration(
+    patched_bot, int_session_factory, mocker
+):
     """Player A grants inspiration to Aldric; inspiration=True in DB."""
     interaction = _interaction_a(mocker)
     cb = get_callback(patched_bot, "inspiration", "grant")
@@ -600,7 +604,9 @@ async def test_15_02_inspiration_status_shows_has_inspiration(patched_bot, mocke
     cb = get_callback(patched_bot, "inspiration", "status")
     await cb(interaction, partymember=None)
 
-    assert interaction.response.send_message.called, "/inspiration status should respond"
+    assert interaction.response.send_message.called, (
+        "/inspiration status should respond"
+    )
     msg = interaction.response.send_message.call_args.args[0]
     # The message should contain the character name and inspiration indication
     assert "Aldric" in msg or "Inspiration" in msg, (
@@ -615,9 +621,9 @@ async def test_15_03_double_grant_returns_error(patched_bot, mocker):
     cb = get_callback(patched_bot, "inspiration", "grant")
     await cb(interaction, partymember=None)
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-        "Granting inspiration when already held should return an ephemeral error"
-    )
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    ), "Granting inspiration when already held should return an ephemeral error"
 
 
 @pytest.mark.asyncio
@@ -630,7 +636,9 @@ async def test_15_04_inspiration_remove(patched_bot, int_session_factory, mocker
     verify = int_session_factory()
     aldric = verify.query(Character).filter_by(name="Aldric").first()
     assert aldric is not None
-    assert aldric.inspiration is False, "Aldric should not have inspiration after remove"
+    assert aldric.inspiration is False, (
+        "Aldric should not have inspiration after remove"
+    )
     verify.close()
 
 
@@ -641,11 +649,15 @@ async def test_15_05_inspiration_status_shows_no_inspiration(patched_bot, mocker
     cb = get_callback(patched_bot, "inspiration", "status")
     await cb(interaction, partymember=None)
 
-    assert interaction.response.send_message.called, "/inspiration status should respond"
+    assert interaction.response.send_message.called, (
+        "/inspiration status should respond"
+    )
 
 
 @pytest.mark.asyncio
-async def test_15_06_gm_grants_bramble_inspiration(patched_bot, int_session_factory, mocker):
+async def test_15_06_gm_grants_bramble_inspiration(
+    patched_bot, int_session_factory, mocker
+):
     """GM grants inspiration to Bramble via partymember param; DB updated."""
     interaction = _interaction_a(mocker)
     cb = get_callback(patched_bot, "inspiration", "grant")
@@ -665,7 +677,9 @@ async def test_15_07_inspiration_status_for_bramble(patched_bot, mocker):
     cb = get_callback(patched_bot, "inspiration", "status")
     await cb(interaction, partymember="Bramble")
 
-    assert interaction.response.send_message.called, "/inspiration status should respond"
+    assert interaction.response.send_message.called, (
+        "/inspiration status should respond"
+    )
     msg = interaction.response.send_message.call_args.args[0]
     assert "Bramble" in msg or "Inspiration" in msg, (
         "Status message should mention Bramble or Inspiration"
@@ -679,9 +693,9 @@ async def test_15_08_non_gm_cannot_grant_others_inspiration(patched_bot, mocker)
     cb = get_callback(patched_bot, "inspiration", "grant")
     await cb(interaction, partymember="Aldric")
 
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-        "Non-GM should receive an ephemeral error when granting inspiration to others"
-    )
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    ), "Non-GM should receive an ephemeral error when granting inspiration to others"
 
 
 # ===========================================================================
@@ -729,7 +743,9 @@ async def test_16_01_create_encounter(patched_bot, int_session_factory, mocker):
     verify = int_session_factory()
     encounter = verify.query(Encounter).filter_by(name="Goblin Ambush").first()
     assert encounter is not None, "Encounter 'Goblin Ambush' should exist in DB"
-    assert encounter.status == EncounterStatus.PENDING, "New encounter should be PENDING"
+    assert encounter.status == EncounterStatus.PENDING, (
+        "New encounter should be PENDING"
+    )
     verify.close()
 
 
@@ -808,7 +824,9 @@ async def test_16_05_encounter_start(patched_bot, int_session_factory, mocker):
     verify = int_session_factory()
     encounter = verify.query(Encounter).filter_by(name="Goblin Ambush").first()
     assert encounter is not None
-    assert encounter.status == EncounterStatus.ACTIVE, "Encounter should be ACTIVE after start"
+    assert encounter.status == EncounterStatus.ACTIVE, (
+        "Encounter should be ACTIVE after start"
+    )
 
     turns = verify.query(EncounterTurn).filter_by(encounter_id=encounter.id).all()
     assert len(turns) > 0, "EncounterTurn rows should be created for all participants"
@@ -823,13 +841,14 @@ async def test_16_06_encounter_view_active(patched_bot, mocker):
     await cb(interaction)
 
     assert (
-        interaction.response.send_message.called
-        or interaction.followup.send.called
+        interaction.response.send_message.called or interaction.followup.send.called
     ), "/encounter view should respond when encounter is active"
 
 
 @pytest.mark.asyncio
-async def test_16_07_encounter_next_advances_turn(patched_bot, int_session_factory, mocker):
+async def test_16_07_encounter_next_advances_turn(
+    patched_bot, int_session_factory, mocker
+):
     """/encounter next increments the current turn index."""
     verify = int_session_factory()
     encounter = verify.query(Encounter).filter_by(name="Goblin Ambush").first()
@@ -857,8 +876,7 @@ async def test_16_09_gm_can_always_advance(patched_bot, mocker):
 
     # Verify no error was returned (GM always gets a response — not necessarily ephemeral)
     assert (
-        interaction.response.send_message.called
-        or interaction.followup.send.called
+        interaction.response.send_message.called or interaction.followup.send.called
     ), "GM should always be able to advance the encounter"
 
 
@@ -893,7 +911,9 @@ async def test_16_10_gm_damages_enemy(patched_bot, int_session_factory, mocker):
 
 
 @pytest.mark.asyncio
-async def test_16_11_gm_defeats_enemy_with_lethal_damage(patched_bot, int_session_factory, mocker):
+async def test_16_11_gm_defeats_enemy_with_lethal_damage(
+    patched_bot, int_session_factory, mocker
+):
     """Applying 100 damage defeats the enemy and removes it from the turn order."""
     verify = int_session_factory()
     encounter = verify.query(Encounter).filter_by(name="Goblin Ambush").first()
@@ -967,10 +987,12 @@ async def test_17_01_gmroll_dice(patched_bot, mocker):
     cb = get_callback(patched_bot, "gmroll")
     await cb(interaction, notation="1d20", advantage=None)
 
-    assert interaction.response.send_message.called, "/gmroll should send an ephemeral response"
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-        "/gmroll response should be ephemeral"
+    assert interaction.response.send_message.called, (
+        "/gmroll should send an ephemeral response"
     )
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    ), "/gmroll response should be ephemeral"
 
 
 @pytest.mark.asyncio
@@ -986,9 +1008,9 @@ async def test_17_02_gmroll_skill(patched_bot, mocker):
     await cb(interaction, notation="stealth", advantage=None)
 
     assert interaction.response.send_message.called, "/gmroll stealth should respond"
-    assert interaction.response.send_message.call_args.kwargs.get("ephemeral") is True, (
-        "/gmroll response should be ephemeral"
-    )
+    assert (
+        interaction.response.send_message.call_args.kwargs.get("ephemeral") is True
+    ), "/gmroll response should be ephemeral"
 
 
 # ===========================================================================
@@ -1013,6 +1035,7 @@ async def _setup_crit_encounter(
     party = verify.query(Party).filter_by(name="The Fellowship").first()
     if party:
         from models import Encounter as EncounterModel
+
         open_enc = (
             verify.query(EncounterModel)
             .filter(
@@ -1127,9 +1150,7 @@ async def test_18a_double_dice_crit(patched_bot, int_session_factory, mocker):
     # Aldric should still NOT have inspiration (perkins rule not applied)
     verify2 = int_session_factory()
     aldric2 = verify2.query(Character).filter_by(name="Aldric").first()
-    assert aldric2.inspiration is False, (
-        "double_dice crit should not grant inspiration"
-    )
+    assert aldric2.inspiration is False, "double_dice crit should not grant inspiration"
     verify2.close()
 
 
@@ -1157,9 +1178,7 @@ async def test_18b_perkins_crit_grants_inspiration(
 
     verify2 = int_session_factory()
     aldric2 = verify2.query(Character).filter_by(name="Aldric").first()
-    assert aldric2.inspiration is True, (
-        "Perkins crit should grant Aldric inspiration"
-    )
+    assert aldric2.inspiration is True, "Perkins crit should grant Aldric inspiration"
     verify2.close()
 
     # Roll another nat 20 while already having inspiration — no crash expected
@@ -1236,9 +1255,7 @@ async def test_18d_max_damage_crit(patched_bot, int_session_factory, mocker):
     assert "CRITICAL" in msg.upper(), "max_damage crit should contain 'CRITICAL HIT'"
 
     # Max damage for 2d6+3 = 6+6+3 = 15
-    assert "15" in msg, (
-        "max_damage crit total should be 15 (max 2d6+3)"
-    )
+    assert "15" in msg, "max_damage crit total should be 15 (max 2d6+3)"
 
 
 @pytest.mark.asyncio

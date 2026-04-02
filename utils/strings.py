@@ -1,10 +1,6 @@
-
-
 class Strings:
-        # Common
-    ERROR_GUILD_ONLY = (
-        "❌ ORC commands can only be used inside a server, not in DMs."
-    )
+    # Common
+    ERROR_GUILD_ONLY = "❌ ORC commands can only be used inside a server, not in DMs."
     CHARACTER_NOT_FOUND = (
         "You don't have a character in this server. Use `/character create` first."
     )
@@ -206,9 +202,7 @@ class Strings:
     HP_DEATH_MSG = (
         "\n☠️ **{char_name} has died from massive damage!**\nMay they rest in peace."
     )
-    HP_DOWNED_MSG = (
-        "\n⚔️ **{char_name} has been downed!** They must make Death Saving Throws on their turn."
-    )
+    HP_DOWNED_MSG = "\n⚔️ **{char_name} has been downed!** They must make Death Saving Throws on their turn."
     HP_HEAL_MSG = "**{char_name}** healed {amount} HP! HP: {current}/{max}"
     HP_TEMP_MSG = "**{char_name}** now has {temp} temporary HP."
     HP_TEMP_PARTY_HEADER = "Temporary HP updated for the party:\n"
@@ -301,9 +295,7 @@ class Strings:
     ERROR_DICE_LIMIT = "Too many dice or too many sides! Keep it reasonable."
 
     # Roll Commands
-    ROLL_RESULT_DICE = (
-        "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**\n*Tip: {tip}*"
-    )
+    ROLL_RESULT_DICE = "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**\n*Tip: {tip}*"
     # {d20_roll} now accepts either "d20(15)" or "d20[15↑,9]" (advantage)
     ROLL_RESULT_CHAR = (
         "**{char_name}**: {label} `{d20_roll} + {modifier}` = **{total}**\n*Tip: {tip}*"
@@ -311,12 +303,20 @@ class Strings:
     ROLL_RESULT_SIMPLE = (
         "**{char_name}**: `{notation}` ({rolls}){modifier} = **{total}**\n*Tip: {tip}*"
     )
-    ROLL_RESULT_CHAR_EXPR = "**{char_name}**: `{notation}` → {breakdown} = **{total}**\n*Tip: {tip}*"
-    ROLL_RESULT_DICE_EXPR = "🎲 **{notation}**\n{breakdown}\n**Total: {total}**\n*Tip: {tip}*"
+    ROLL_RESULT_CHAR_EXPR = (
+        "**{char_name}**: `{notation}` → {breakdown} = **{total}**\n*Tip: {tip}*"
+    )
+    ROLL_RESULT_DICE_EXPR = (
+        "🎲 **{notation}**\n{breakdown}\n**Total: {total}**\n*Tip: {tip}*"
+    )
     ROLL_ERROR_CHAR = "**{char_name}**: ❌ Error: {error}"
 
-    GMROLL_GM_MESSAGE = "🎲 **{char_name}** secretly rolled **{notation}**:\n{result}\n*Tip: {tip}*"
-    GMROLL_PLAYER_MESSAGE = "**{char_name}**: `{notation}` → {breakdown} = **{total}**\n*Tip: {tip}*"
+    GMROLL_GM_MESSAGE = (
+        "🎲 **{char_name}** secretly rolled **{notation}**:\n{result}\n*Tip: {tip}*"
+    )
+    GMROLL_PLAYER_MESSAGE = (
+        "**{char_name}**: `{notation}` → {breakdown} = **{total}**\n*Tip: {tip}*"
+    )
 
     # Character Commands
     CHAR_CREATE_NAME_LIMIT = "Character name cannot exceed 100 characters."
@@ -386,7 +386,9 @@ class Strings:
     CHAR_LIST_DESC = "In server: **{server_name}**"
     CHAR_LIST_ALL_NONE = "There are no characters registered in this server."
     CHAR_LIST_ALL_TITLE = "All Characters in {server_name}"
-    CHAR_LIST_ALL_DESC = "{character_count} character(s) across {player_count} player(s)"
+    CHAR_LIST_ALL_DESC = (
+        "{character_count} character(s) across {player_count} player(s)"
+    )
     CHAR_LIST_ALL_UNKNOWN_PLAYER = "Unknown Player"
     CHAR_NOT_FOUND_NAME = "You don't have a character named **{name}** in this server."
     CHAR_DELETE_SUCCESS = "Character **{name}** has been deleted."
@@ -460,7 +462,9 @@ class Strings:
     WIZARD_LEVEL_LABEL = "Level (1–20)"
     WIZARD_LEVEL_PLACEHOLDER = "e.g. 5"
     WIZARD_LEVEL_INVALID = "Level must be a whole number between 1 and 20."
-    WIZARD_CLASS_INVALID = "**{value}** is not a valid class. Valid options: {valid_classes}"
+    WIZARD_CLASS_INVALID = (
+        "**{value}** is not a valid class. Valid options: {valid_classes}"
+    )
     WIZARD_CLASS_TOTAL_LEVEL = "Classes (Total Lv {total}/{max})"
     WIZARD_CLASS_REMOVE_BUTTON = "✕ {class_name}"
     WIZARD_CLASS_MAX_REACHED = "You can add at most {max} classes to a character."
@@ -510,16 +514,16 @@ class Strings:
         "🟢 Proficient   ⬜ Not Proficient"
     )
 
-    WIZARD_HP_STEP_DESC = (
-        "Set a custom max HP, or skip to auto-calculate from your class and Constitution."
-    )
+    WIZARD_HP_STEP_DESC = "Set a custom max HP, or skip to auto-calculate from your class and Constitution."
     WIZARD_HP_BUTTON = "✏️ Set Max HP"
     WIZARD_HP_MODAL_TITLE = "Maximum Hit Points"
     WIZARD_HP_LABEL = "Max HP (1–999)"
     WIZARD_HP_PLACEHOLDER = "e.g. 45"
     WIZARD_HP_INVALID = "Max HP must be a whole number between 1 and 999."
     WIZARD_HP_SET = "Max HP set to **{hp}**."
-    WIZARD_HP_WILL_AUTO_CALC = "HP will be auto-calculated from your class and Constitution at creation."
+    WIZARD_HP_WILL_AUTO_CALC = (
+        "HP will be auto-calculated from your class and Constitution at creation."
+    )
     WIZARD_HP_CANNOT_AUTO_CALC = (
         "HP cannot be auto-calculated until a class and Constitution are both set. "
         "You can set max HP manually above, or use `/hp set_max` after creation."
@@ -546,9 +550,7 @@ class Strings:
     WIZARD_WEAPONS_BACK_TO_SEARCH = "↩️ Cancel"
     WIZARD_WEAPONS_ALREADY_QUEUED = "**{name}** is already queued."
 
-    WIZARD_TIP_MULTICLASS = (
-        "💡 **Tip:** You can add up to 5 classes. Total level across all classes cannot exceed 20."
-    )
+    WIZARD_TIP_MULTICLASS = "💡 **Tip:** You can add up to 5 classes. Total level across all classes cannot exceed 20."
     WIZARD_TIP_WEAPONS = (
         "💡 **Tip:** Weapons can be added at any time using `/weapon search`."
     )
@@ -562,7 +564,9 @@ class Strings:
     WIZARD_COMPLETE_SET = "✅ {label}"
     WIZARD_COMPLETE_SKIPPED = "⏭️ {label} — use `{command}`"
     WIZARD_COMPLETE_FOOTER = "View your character any time with `/character view`."
-    WIZARD_COMPLETE_TIP_HP = "💡 Max HP is auto-calculated when both a class and Constitution are set."
+    WIZARD_COMPLETE_TIP_HP = (
+        "💡 Max HP is auto-calculated when both a class and Constitution are set."
+    )
     WIZARD_COMPLETE_HP_OVERRIDE = "manual"
     WIZARD_COMPLETE_HP_AUTO = "auto-calculated"
     WIZARD_COMPLETE_EPHEMERAL_DISMISS = "Character created! See the summary below."
@@ -872,10 +876,18 @@ class Strings:
     BUTTON_NEXT = "Next ▶"  # PartyListView (/party view)
     BUTTON_PREV_SHORT = "◀ Prev"  # _WarningLogsView (/admin warning_logs)
     BUTTON_NEXT_SHORT = "Next ▶"  # _WarningLogsView (/admin warning_logs)
-    BUTTON_TOP_OF_INITIATIVE = "Top of Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
-    BUTTON_BOTTOM_OF_INITIATIVE = "Bottom of Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
-    BUTTON_AFTER_CURRENT_TURN = "After Current Turn"  # EnemyPlacementView (/encounter encounter_enemy)
-    BUTTON_ROLL_INITIATIVE = "Roll Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
+    BUTTON_TOP_OF_INITIATIVE = (
+        "Top of Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
+    )
+    BUTTON_BOTTOM_OF_INITIATIVE = (
+        "Bottom of Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
+    )
+    BUTTON_AFTER_CURRENT_TURN = (
+        "After Current Turn"  # EnemyPlacementView (/encounter encounter_enemy)
+    )
+    BUTTON_ROLL_INITIATIVE = (
+        "Roll Initiative"  # EnemyPlacementView (/encounter encounter_enemy)
+    )
     BUTTON_HOME = "Home"  # HelpView (/help)
 
     # Error Messages — inline / user-facing
@@ -893,15 +905,9 @@ class Strings:
     ERROR_GENERIC = "❌ An unexpected error occurred. Please try again."
 
     # Admin Commands
-    ADMIN_GUILD_NOT_FOUND = (
-        "❌ Guild `{guild_id}` not found (bot may not be in it)."
-    )
-    ADMIN_NO_WRITABLE_CHANNEL = (
-        "❌ No writable text channel found in **{guild_name}**."
-    )
-    ADMIN_MESSAGE_SENT = (
-        "✅ Message sent to **#{channel_name}** in **{guild_name}**."
-    )
+    ADMIN_GUILD_NOT_FOUND = "❌ Guild `{guild_id}` not found (bot may not be in it)."
+    ADMIN_NO_WRITABLE_CHANNEL = "❌ No writable text channel found in **{guild_name}**."
+    ADMIN_MESSAGE_SENT = "✅ Message sent to **#{channel_name}** in **{guild_name}**."
     ADMIN_LOGS_DISPLAY = "**Recent logs** ({stats}):\n```\n{recent}\n```"
     ADMIN_RESTARTING = "♻️ Restarting…"
     ADMIN_WARNING_LOGS_DISPLAY = (
@@ -918,9 +924,6 @@ class Strings:
     # Help Embed Field Names
     HELP_TIP_FIELD_NAME = "💡 Tip"
 
-
-
-
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]
     NAT_1_ATTACK = [
         "That'll be a miss",
@@ -930,6 +933,3 @@ class Strings:
     NAT_1_SKILLCHECK = []
     NAT_20_SAVE = []
     NAT_1_SAVE = []
-
-
-
