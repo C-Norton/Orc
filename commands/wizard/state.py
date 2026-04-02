@@ -362,11 +362,13 @@ def character_to_wizard_state(
     if char.max_hp != -1:
         state.hp_override = char.max_hp
 
-    # Saving throws — load existing profs and flag as explicitly set so they
-    # survive a class change without being overwritten by auto-apply logic
+    # Saving throws — load existing profs.  Only flag as explicitly set when
+    # at least one throw is proficient; an all-False state means the character
+    # was never configured (e.g. name-only) and class defaults should still
+    # apply if a class is later added in the edit wizard.
     for stat in _ALL_STATS:
         state.saving_throws[stat] = getattr(char, f"st_prof_{stat}", False)
-    state.saves_explicitly_set = True
+    state.saves_explicitly_set = any(state.saving_throws.values())
 
     # Skills — only proficient entries are stored
     for skill in char.skills:

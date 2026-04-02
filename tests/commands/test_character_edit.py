@@ -20,7 +20,7 @@ from commands.wizard.state import (
     update_character_from_wizard,
 )
 from commands.wizard.buttons import _WeaponRemoveButton, _WeaponSelectButton
-from commands.wizard.hub_view import _build_hub_embed
+from commands.wizard.hub_view import _build_hub_embed, _section_button_style
 from enums.character_class import CharacterClass
 from enums.skill_proficiency_status import SkillProficiencyStatus
 from models import Attack, Character, CharacterSkill, ClassLevel
@@ -214,10 +214,45 @@ async def test_character_to_wizard_state_loads_hp_override(fighter_character, mo
     assert state.hp_override == 47
 
 
-async def test_character_to_wizard_state_saves_explicitly_set_is_always_true(
+async def test_character_to_wizard_state_saves_explicitly_set_false_for_name_only_character(
+    db_session, sample_user, sample_server, mocker
+):
+    """saves_explicitly_set must be False when all st_prof_* columns are False.
+
+    This is the regression test for the bug where loading a name-only character
+    (no class set, all saving throw proficiencies False in the DB) would
+    unconditionally set saves_explicitly_set = True, causing the hub's saving
+    throws button to appear green despite no saves being configured.
+    """
+    name_only_character = Character(
+        name="TestChar",
+        user=sample_user,
+        server=sample_server,
+        is_active=True,
+        st_prof_strength=False,
+        st_prof_dexterity=False,
+        st_prof_constitution=False,
+        st_prof_intelligence=False,
+        st_prof_wisdom=False,
+        st_prof_charisma=False,
+    )
+    db_session.add(name_only_character)
+    db_session.commit()
+    db_session.refresh(name_only_character)
+
+    state = _make_edit_state(name_only_character, mocker)
+
+    assert state.saves_explicitly_set is False
+
+
+async def test_character_to_wizard_state_saves_explicitly_set_true_when_any_save_prof_set(
     fighter_character, mocker
 ):
-    """saves_explicitly_set must always be True for an edit wizard state."""
+    """saves_explicitly_set must be True when at least one st_prof_* column is True.
+
+    The fighter_character fixture has st_prof_strength=True and
+    st_prof_constitution=True, so saves_explicitly_set must reflect that.
+    """
     state = _make_edit_state(fighter_character, mocker)
     assert state.saves_explicitly_set is True
 
@@ -234,6 +269,31 @@ async def test_character_to_wizard_state_loads_saving_throws(
     assert state.saving_throws["intelligence"] is False
     assert state.saving_throws["wisdom"] is False
     assert state.saving_throws["charisma"] is False
+
+
+# ---------------------------------------------------------------------------
+# _section_button_style — saving_throws button colour
+# ---------------------------------------------------------------------------
+
+
+def test_section_button_style_saving_throws_is_danger_when_saves_not_set_and_no_class():
+    """The saving_throws button must be red (danger) when saves_explicitly_set is False
+    and no class has been selected.
+
+    This covers the name-only character edit path: the hub must not show a green
+    button for saving throws when no saves have ever been configured.
+    """
+    wizard_state = WizardState(
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        saves_explicitly_set=False,
+        # classes_and_levels defaults to [] so character_class is None
+    )
+
+    button_style = _section_button_style("saving_throws", wizard_state)
+
+    assert button_style == discord.ButtonStyle.danger
 
 
 async def test_character_to_wizard_state_loads_skills(fighter_character, mocker):
@@ -380,7 +440,7 @@ async def test_sections_completed_excludes_ac_when_ac_none(empty_character, mock
 async def test_sections_completed_always_includes_saving_throws(
     fighter_character, mocker
 ):
-    """saving_throws is always added because saves_explicitly_set is forced True."""
+    """saving_throws is always added to sections_completed in edit mode."""
     state = _make_edit_state(fighter_character, mocker)
     assert "saving_throws" in state.sections_completed
 
@@ -388,7 +448,7 @@ async def test_sections_completed_always_includes_saving_throws(
 async def test_sections_completed_always_includes_saving_throws_empty_character(
     empty_character, mocker
 ):
-    """saving_throws is in sections_completed even for an empty character."""
+    """saving_throws is in sections_completed even for a name-only character."""
     state = _make_edit_state(empty_character, mocker)
     assert "saving_throws" in state.sections_completed
 
