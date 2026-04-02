@@ -78,11 +78,14 @@ def _section_button_style(
 def _build_hub_embed(wizard_state: WizardState) -> discord.Embed:
     """Build the hub embed showing completion status per section.
 
-    The Name field shows the current name or a "not set (required)" prompt.
+    In creation mode the Name field shows the current name or a
+    "not set (required)" prompt.  In edit mode the title and description
+    reflect the edit context and the name is always shown (not editable).
     """
+    is_edit = wizard_state.edit_character_id is not None
     embed = discord.Embed(
-        title=Strings.WIZARD_HUB_TITLE,
-        description=Strings.WIZARD_HUB_DESC,
+        title=Strings.WIZARD_EDIT_HUB_TITLE if is_edit else Strings.WIZARD_HUB_TITLE,
+        description=Strings.WIZARD_EDIT_HUB_DESC if is_edit else Strings.WIZARD_HUB_DESC,
         color=discord.Color.blurple(),
     )
     name_value = wizard_state.name if wizard_state.name else Strings.WIZARD_HUB_NAME_NOT_SET
@@ -187,20 +190,22 @@ class _SaveExitButton(discord.ui.Button):
 class _HubCancelButton(discord.ui.Button):
     """Cancel the entire wizard without saving any character."""
 
-    def __init__(self) -> None:
+    def __init__(self, wizard_state: WizardState) -> None:
         super().__init__(
             label=Strings.WIZARD_HUB_CANCEL,
             style=discord.ButtonStyle.danger,
             row=3,
         )
+        self.wizard_state = wizard_state
 
     async def callback(self, interaction: discord.Interaction) -> None:
         """Show cancellation embed and stop the view."""
         self.view.stop()
-        embed = discord.Embed(
-            title=Strings.WIZARD_CANCELLED,
-            color=discord.Color.red(),
+        is_edit = self.wizard_state.edit_character_id is not None
+        title = (
+            Strings.WIZARD_EDIT_CANCELLED if is_edit else Strings.WIZARD_CANCELLED
         )
+        embed = discord.Embed(title=title, color=discord.Color.red())
         await interaction.response.edit_message(embed=embed, view=None)
 
 
@@ -241,12 +246,20 @@ class HubView(discord.ui.View):
         self._build_items()
 
     def _build_items(self) -> None:
-        """Populate the view with all hub buttons."""
+        """Populate the view with all hub buttons.
+
+        In edit mode the Name button and Quick Setup button are omitted: the
+        character name is not editable via the edit wizard, and quick setup
+        only applies to new characters.
+        """
         from commands.wizard.buttons import _HubInitiativeButton
 
         self.clear_items()
-        # Row 0: name (required) + initiative (auto-calc aware)
-        self.add_item(_NameButton(self.wizard_state))
+        is_edit = self.wizard_state.edit_character_id is not None
+
+        # Row 0: name (create mode only) + initiative (auto-calc aware)
+        if not is_edit:
+            self.add_item(_NameButton(self.wizard_state))
         self.add_item(_HubInitiativeButton(self.wizard_state, row=0))
         # Rows 1–2: section buttons
         for section_key, label, row in _SECTION_BUTTONS:
@@ -258,9 +271,11 @@ class HubView(discord.ui.View):
                     wizard_state=self.wizard_state,
                 )
             )
-        # Row 3: global actions
+        # Row 3: global actions (Quick Setup omitted in edit mode)
         self.add_item(_SaveExitButton(self.wizard_state))
-        self.add_item(_HubCancelButton())
+        if not is_edit:
+            self.add_item(_QuickSetupButton(self.wizard_state))
+        self.add_item(_HubCancelButton(self.wizard_state))
 
     async def on_timeout(self) -> None:
         """Show timeout message and release state reference."""

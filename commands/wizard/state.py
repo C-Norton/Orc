@@ -79,7 +79,7 @@ _SECTION_FIELDS: dict[str, list[str]] = {
     "saving_throws": ["saving_throws", "saves_explicitly_set"],
     "skills": ["skills"],
     "hp": ["hp_override"],
-    "weapons": ["weapons_to_add"],
+    "weapons": ["weapons_to_add", "existing_attacks", "weapons_to_remove"],
 }
 
 
@@ -152,6 +152,12 @@ class WizardState:
     sections_completed: set[str] = field(default_factory=set)
     # Raw Open5e weapon dicts queued for creation when the wizard finishes
     weapons_to_add: list[dict] = field(default_factory=list)
+    # Edit mode: ID of the character being edited (None for new character creation)
+    edit_character_id: Optional[int] = None
+    # Edit mode: (attack_id, attack_name) pairs for attacks currently on the character
+    existing_attacks: list[tuple[int, str]] = field(default_factory=list)
+    # Edit mode: IDs of existing attacks to delete when the wizard finishes
+    weapons_to_remove: list[int] = field(default_factory=list)
 
     @property
     def character_class(self) -> Optional[CharacterClass]:
@@ -311,6 +317,179 @@ def save_character_from_wizard(
     weapon_count = 0
     for weapon_data in state.weapons_to_add:
         if weapon_count >= MAX_ATTACKS_PER_CHARACTER:
+            break
+        _add_attack_from_weapon_data(weapon_data, char, db)
+        weapon_count += 1
+
+    db.flush()
+    return char, None
+
+
+def character_to_wizard_state(
+    char: Character, interaction: discord.Interaction
+) -> "WizardState":
+    """Build a pre-filled WizardState from an existing Character for edit mode.
+
+    All values are loaded from *char* so the wizard opens with every section
+    pre-filled and coloured green.  ``edit_character_id`` is set so that
+    ``save_character_from_wizard`` knows to update instead of create.
+    """
+    state = WizardState(
+        user_discord_id=str(interaction.user.id),
+        guild_discord_id=str(interaction.guild_id),
+        guild_name=getattr(interaction.guild, "name", str(interaction.guild_id)),
+        name=char.name,
+        edit_character_id=char.id,
+    )
+
+    # Classes and levels (preserve insertion order via id sort)
+    state.classes_and_levels = [
+        (CharacterClass(cl.class_name), cl.level)
+        for cl in sorted(char.class_levels, key=lambda cl: cl.id)
+    ]
+
+    # Ability scores
+    for stat in _ALL_STATS:
+        value = getattr(char, stat)
+        if value is not None:
+            setattr(state, stat, value)
+    state.initiative_bonus = char.initiative_bonus
+
+    # AC
+    state.ac = char.ac
+
+    # HP — treat existing max_hp as a manual override so it is preserved
+    if char.max_hp != -1:
+        state.hp_override = char.max_hp
+
+    # Saving throws — load existing profs and flag as explicitly set so they
+    # survive a class change without being overwritten by auto-apply logic
+    for stat in _ALL_STATS:
+        state.saving_throws[stat] = getattr(char, f"st_prof_{stat}", False)
+    state.saves_explicitly_set = True
+
+    # Skills — only proficient entries are stored
+    for skill in char.skills:
+        if skill.proficiency == SkillProficiencyStatus.PROFICIENT:
+            state.skills[skill.skill_name] = True
+
+    # Existing attacks (id + name) — displayed with remove buttons in weapons section
+    state.existing_attacks = [
+        (attack.id, attack.name)
+        for attack in sorted(char.attacks, key=lambda a: a.id)
+    ]
+
+    # Mark populated sections as completed so hub buttons show green
+    if state.classes_and_levels:
+        state.sections_completed.add("class_level")
+    if any(getattr(state, s) is not None for s in _ALL_STATS):
+        state.sections_completed.add("ability_scores")
+    if state.ac is not None:
+        state.sections_completed.add("ac")
+    state.sections_completed.add("saving_throws")
+    if state.skills:
+        state.sections_completed.add("skills")
+    if state.hp_override is not None:
+        state.sections_completed.add("hp")
+    if state.existing_attacks:
+        state.sections_completed.add("weapons")
+
+    return state
+
+
+def update_character_from_wizard(
+    state: "WizardState",
+    db,
+) -> tuple[Optional[Character], Optional[str]]:
+    """Apply wizard *state* to the existing character being edited.
+
+    Replaces class levels, ability scores, saving throws, skills, AC, and HP
+    in-place on the character record.  Attacks listed in
+    ``state.weapons_to_remove`` are deleted; attacks in ``state.weapons_to_add``
+    are created up to ``MAX_ATTACKS_PER_CHARACTER``.
+
+    Returns ``(character, None)`` on success or ``(None, error_message)``
+    on failure.  The caller is responsible for calling ``db.commit()``.
+    """
+    char = db.get(Character, state.edit_character_id)
+    if not char:
+        return None, Strings.ACTIVE_CHARACTER_NOT_FOUND
+
+    # Class levels — delete all existing, recreate from state
+    for class_level in list(char.class_levels):
+        db.delete(class_level)
+    db.flush()
+
+    for index, (class_enum, class_level) in enumerate(state.classes_and_levels):
+        db.add(
+            ClassLevel(
+                character_id=char.id,
+                class_name=class_enum.value,
+                level=class_level,
+            )
+        )
+        if index == 0:
+            db.flush()
+            db.refresh(char)
+
+    if state.classes_and_levels:
+        db.flush()
+        db.refresh(char)
+
+    # Ability scores (allow clearing any stat to None)
+    for stat in _ALL_STATS:
+        setattr(char, stat, getattr(state, stat))
+    char.initiative_bonus = state.initiative_bonus
+
+    # HP — manual override takes precedence; fall back to auto-calculation
+    if state.hp_override is not None:
+        char.max_hp = state.hp_override
+        char.current_hp = state.hp_override
+    else:
+        new_max = calculate_max_hp(char)
+        if new_max != -1:
+            char.max_hp = new_max
+            char.current_hp = new_max
+        else:
+            char.max_hp = -1
+            char.current_hp = -1
+
+    # AC
+    char.ac = state.ac
+
+    # Saving throws — always write from state (saves_explicitly_set is always
+    # True for edit mode, but apply regardless to keep logic simple)
+    for stat in _ALL_STATS:
+        setattr(char, f"st_prof_{stat}", state.saving_throws.get(stat, False))
+
+    # Skills — delete all existing, recreate proficient ones from state
+    for skill in list(char.skills):
+        db.delete(skill)
+    db.flush()
+    for skill_name, is_proficient in state.skills.items():
+        if is_proficient:
+            db.add(
+                CharacterSkill(
+                    character_id=char.id,
+                    skill_name=skill_name,
+                    proficiency=SkillProficiencyStatus.PROFICIENT,
+                )
+            )
+
+    # Weapons — remove attacks marked for deletion (verify ownership to be safe)
+    for attack_id in state.weapons_to_remove:
+        attack = db.get(Attack, attack_id)
+        if attack and attack.character_id == char.id:
+            db.delete(attack)
+    db.flush()
+
+    # Add new weapons, respecting the per-character limit
+    current_attack_count = (
+        db.query(Attack).filter_by(character_id=char.id).count()
+    )
+    weapon_count = 0
+    for weapon_data in state.weapons_to_add:
+        if current_attack_count + weapon_count >= MAX_ATTACKS_PER_CHARACTER:
             break
         _add_attack_from_weapon_data(weapon_data, char, db)
         weapon_count += 1

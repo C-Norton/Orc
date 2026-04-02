@@ -11,7 +11,13 @@ from typing import Optional
 
 import discord
 
-from commands.wizard.state import WizardState, save_character_from_wizard, _ALL_STATS, _STAT_DISPLAY
+from commands.wizard.state import (
+    WizardState,
+    save_character_from_wizard,
+    update_character_from_wizard,
+    _ALL_STATS,
+    _STAT_DISPLAY,
+)
 from database import SessionLocal
 from models import Character
 from utils.logging_config import get_logger
@@ -24,23 +30,45 @@ async def _finish_wizard(
     wizard_state: WizardState,
     interaction: discord.Interaction,
 ) -> None:
-    """Commit the wizard to the DB and display the completion embed."""
+    """Commit the wizard to the DB and display the completion embed.
+
+    Branches on ``wizard_state.edit_character_id``: calls
+    ``update_character_from_wizard`` for edit mode and
+    ``save_character_from_wizard`` for new-character creation.
+    """
+    is_edit = wizard_state.edit_character_id is not None
     db = SessionLocal()
     try:
-        char, error = save_character_from_wizard(wizard_state, interaction, db)
+        if is_edit:
+            char, error = update_character_from_wizard(wizard_state, db)
+        else:
+            char, error = save_character_from_wizard(wizard_state, interaction, db)
+
         if error:
             await interaction.response.send_message(error, ephemeral=True)
             return
+
         db.commit()
-        logger.info(
-            f"Wizard completed: created '{char.name}' for user "
-            f"{interaction.user.id} in guild {interaction.guild_id}"
-        )
-        embed = _build_complete_embed(wizard_state, char)
+
+        if is_edit:
+            logger.info(
+                f"Wizard edit completed: updated '{char.name}' for user "
+                f"{interaction.user.id} in guild {interaction.guild_id}"
+            )
+            embed = _build_edit_complete_embed(wizard_state, char)
+            dismiss = Strings.WIZARD_EDIT_COMPLETE_EPHEMERAL_DISMISS
+        else:
+            logger.info(
+                f"Wizard completed: created '{char.name}' for user "
+                f"{interaction.user.id} in guild {interaction.guild_id}"
+            )
+            embed = _build_complete_embed(wizard_state, char)
+            dismiss = Strings.WIZARD_COMPLETE_EPHEMERAL_DISMISS
+
         # Discord does not allow changing ephemeral status, so dismiss the
         # ephemeral wizard message and send the summary publicly.
         await interaction.response.edit_message(
-            content=Strings.WIZARD_COMPLETE_EPHEMERAL_DISMISS, embed=None, view=None
+            content=dismiss, embed=None, view=None
         )
         await interaction.followup.send(embed=embed, ephemeral=False)
     except Exception as exc:
@@ -161,6 +189,82 @@ def _build_complete_embed(state: WizardState, char: Character) -> discord.Embed:
     if char.max_hp == -1:
         embed.description = (
             f"{Strings.WIZARD_COMPLETE_DESC}\n\n{Strings.WIZARD_COMPLETE_TIP_HP}"
+        )
+
+    return embed
+
+
+def _build_edit_complete_embed(state: WizardState, char: Character) -> discord.Embed:
+    """Build the edit-wizard completion embed showing the updated character state."""
+    embed = discord.Embed(
+        title=Strings.WIZARD_EDIT_COMPLETE_TITLE.format(name=state.name),
+        description=Strings.WIZARD_EDIT_COMPLETE_DESC,
+        color=discord.Color.green(),
+    )
+
+    # Class & Level
+    if state.classes_and_levels:
+        class_value = "\n".join(
+            f"{cls.value} {lv}" for cls, lv in state.classes_and_levels
+        )
+    else:
+        class_value = None
+    _add_wizard_embed_field(
+        embed, "Class & Level", class_value, "/character class_add", inline=True
+    )
+
+    # Ability Scores
+    stats_set = [s for s in _ALL_STATS if getattr(state, s) is not None]
+    if stats_set:
+        stat_value = "  ".join(
+            f"**{_STAT_DISPLAY[s]}** {getattr(state, s)}"
+            for s in _ALL_STATS
+            if getattr(state, s) is not None
+        )
+    else:
+        stat_value = None
+    _add_wizard_embed_field(embed, "Ability Scores", stat_value, "/character stats")
+
+    # AC
+    ac_value = str(state.ac) if state.ac is not None else None
+    _add_wizard_embed_field(embed, "AC", ac_value, "/character ac", inline=True)
+
+    # HP
+    if char.max_hp != -1:
+        hp_label = (
+            Strings.WIZARD_COMPLETE_HP_OVERRIDE
+            if state.hp_override is not None
+            else Strings.WIZARD_COMPLETE_HP_AUTO
+        )
+        hp_value = f"{char.max_hp} ({hp_label})"
+    else:
+        hp_value = None
+    _add_wizard_embed_field(embed, "Max HP", hp_value, "/hp set_max", inline=True)
+
+    # Saving Throws
+    prof_saves = [
+        _STAT_DISPLAY[s] for s in _ALL_STATS if state.saving_throws.get(s, False)
+    ]
+    saves_value = ", ".join(prof_saves) if prof_saves else "None"
+    _add_wizard_embed_field(embed, "Saving Throws", saves_value, "/character saves")
+
+    # Skills
+    proficient_skills = [sk for sk, val in state.skills.items() if val]
+    skills_value = ", ".join(proficient_skills) if proficient_skills else None
+    _add_wizard_embed_field(embed, "Skills", skills_value, "/character skill")
+
+    # Weapons — show remaining existing + newly added
+    all_weapon_names = [name for _, name in state.existing_attacks] + [
+        w.get("name", "Unknown") for w in state.weapons_to_add
+    ]
+    weapons_value = ", ".join(all_weapon_names) if all_weapon_names else None
+    _add_wizard_embed_field(embed, "Weapons", weapons_value, "/weapon search")
+
+    embed.set_footer(text=Strings.WIZARD_COMPLETE_FOOTER)
+
+    if char.max_hp == -1:
+        embed.description = (
+            f"{Strings.WIZARD_EDIT_COMPLETE_DESC}\n\n{Strings.WIZARD_COMPLETE_TIP_HP}"
         )
 
     return embed

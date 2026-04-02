@@ -549,6 +549,35 @@ def register_character_commands(bot: commands.Bot) -> None:
         await start_character_creation(interaction)
 
     # ------------------------------------------------------------------
+    # /character edit
+    # ------------------------------------------------------------------
+
+    @character_group.command(
+        name="edit",
+        description="Re-open the character wizard for your active character with all values pre-filled",
+    )
+    async def character_edit(interaction: discord.Interaction) -> None:
+        """Launch the character edit wizard for the active character."""
+        from commands.wizard import start_character_edit
+
+        logger.debug(
+            f"Command /character edit called by {interaction.user} "
+            f"(ID: {interaction.user.id}) in guild {interaction.guild_id}"
+        )
+        db = SessionLocal()
+        try:
+            user, server = get_or_create_user_server(db, interaction)
+            char = get_active_character(db, user, server)
+            if not char:
+                await interaction.response.send_message(
+                    Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True
+                )
+                return
+            await start_character_edit(interaction, char)
+        finally:
+            db.close()
+
+    # ------------------------------------------------------------------
     # /character stats
     # ------------------------------------------------------------------
 
@@ -1080,7 +1109,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                     character_count=len(all_characters),
                     player_count=len(characters_by_user),
                 ),
-                color=discord.Color.blue(),
+                color=discord.Color.blue()
             )
 
             # Add one embed field per player listing their characters.
@@ -1104,7 +1133,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                     inline=False,
                 )
 
-            await interaction.followup.send(embed=embed)
+            await interaction.followup.send(embed=embed, ephemeral=True)
             logger.info(
                 f"/character list_all completed for guild {interaction.guild_id}: "
                 f"listed {len(all_characters)} character(s) across {len(characters_by_user)} player(s)"

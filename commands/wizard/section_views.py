@@ -27,6 +27,7 @@ from commands.wizard.buttons import (
     _SearchWeaponButton,
     _SetHPButton,
     _SkillToggleButton,
+    _WeaponRemoveButton,
     _WeaponSelectButton,
     _WisChaButton,
 )
@@ -503,8 +504,14 @@ class _HPView(discord.ui.View):
 class _WeaponsWizardView(discord.ui.View):
     """Weapons section: SRD weapon search and queue.
 
-    Weapons are stored in ``wizard_state.weapons_to_add`` and created as
-    Attack records when the wizard commits.
+    In creation mode, ``wizard_state.weapons_to_add`` holds raw Open5e weapon
+    dicts queued for creation when the wizard commits.
+
+    In edit mode, ``wizard_state.existing_attacks`` holds (id, name) pairs
+    for attacks already on the character.  Each is shown with a remove button;
+    clicking one marks the attack's ID in ``wizard_state.weapons_to_remove``
+    so it is deleted at commit time.  Up to 15 existing attacks can be shown
+    as remove buttons (rows 1–3, five per row).
     """
 
     _section_key = "weapons"
@@ -513,10 +520,31 @@ class _WeaponsWizardView(discord.ui.View):
         super().__init__(timeout=_WIZARD_TIMEOUT)
         self.wizard_state = wizard_state
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
+        self._build_items()
 
-        self.add_item(_SearchWeaponButton(wizard_state, self, row=0))
+    def _build_items(self) -> None:
+        """Rebuild all buttons from current state."""
+        self.clear_items()
+        self.add_item(_SearchWeaponButton(self.wizard_state, self, row=0))
+
+        # Remove buttons for existing attacks (edit mode only), rows 1–3
+        for index, (attack_id, attack_name) in enumerate(
+            self.wizard_state.existing_attacks[:15]
+        ):
+            row = 1 + index // 5
+            self.add_item(
+                _WeaponRemoveButton(attack_id, attack_name, self.wizard_state, self, row=row)
+            )
+
         self.add_item(_SaveReturnButton())
         self.add_item(_ReturnNoSaveButton())
+
+    async def _refresh(self, interaction: discord.Interaction) -> None:
+        """Rebuild buttons from current state and update the message."""
+        self._build_items()
+        await interaction.response.edit_message(
+            embed=self._build_embed(), view=self
+        )
 
     def _build_embed(
         self, no_results_query: Optional[str] = None
@@ -525,6 +553,19 @@ class _WeaponsWizardView(discord.ui.View):
         embed = _section_embed(
             Strings.WIZARD_HUB_WEAPONS_BUTTON, Strings.WIZARD_WEAPONS_STEP_DESC
         )
+
+        # Show attacks currently on the character (edit mode)
+        if self.wizard_state.existing_attacks:
+            existing_list = "\n".join(
+                f"• {name}" for _, name in self.wizard_state.existing_attacks
+            )
+            embed.add_field(
+                name=Strings.WIZARD_WEAPONS_EXISTING.format(
+                    count=len(self.wizard_state.existing_attacks)
+                ),
+                value=existing_list,
+                inline=False,
+            )
 
         if self.wizard_state.weapons_to_add:
             weapon_list = "\n".join(

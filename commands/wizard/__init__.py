@@ -13,12 +13,12 @@ import discord
 
 from commands.wizard.completion import _finish_wizard
 from commands.wizard.hub_view import HubView, _build_hub_embed, _show_hub
-from commands.wizard.state import WizardState
+from commands.wizard.state import WizardState, character_to_wizard_state
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-__all__ = ["start_character_creation", "_show_hub", "_finish_wizard"]
+__all__ = ["start_character_creation", "start_character_edit", "_show_hub", "_finish_wizard"]
 
 
 async def start_character_creation(interaction: discord.Interaction) -> None:
@@ -32,6 +32,25 @@ async def start_character_creation(interaction: discord.Interaction) -> None:
         guild_discord_id=str(interaction.guild_id),
         guild_name=getattr(interaction.guild, "name", str(interaction.guild_id)),
     )
+    embed = _build_hub_embed(wizard_state)
+    view = HubView(wizard_state)
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
+async def start_character_edit(
+    interaction: discord.Interaction, char,
+) -> None:
+    """Launch the character edit wizard hub pre-filled from *char*.
+
+    *char* must be the active Character ORM object for the calling user.
+    The wizard opens ephemerally in the same channel.
+    """
+    logger.debug(
+        f"Command /character edit called by {interaction.user} "
+        f"(ID: {interaction.user.id}) in guild {interaction.guild_id} "
+        f"for character '{char.name}' (id={char.id})"
+    )
+    wizard_state = character_to_wizard_state(char, interaction)
     embed = _build_hub_embed(wizard_state)
     view = HubView(wizard_state)
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)

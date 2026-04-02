@@ -442,7 +442,10 @@ class _WeaponSelectButton(discord.ui.Button):
         already_queued = any(
             w.get("name") == weapon_name for w in self.state.weapons_to_add
         )
-        if already_queued:
+        already_existing = any(
+            name == weapon_name for _, name in self.state.existing_attacks
+        )
+        if already_queued or already_existing:
             await interaction.response.send_message(
                 Strings.WIZARD_WEAPONS_ALREADY_QUEUED.format(name=weapon_name),
                 ephemeral=True,
@@ -452,6 +455,46 @@ class _WeaponSelectButton(discord.ui.Button):
         await interaction.response.edit_message(
             embed=self.weapons_view._build_embed(), view=self.weapons_view
         )
+
+
+class _WeaponRemoveButton(discord.ui.Button):
+    """Removes an existing attack from the edit wizard's tracked list.
+
+    Clicking this button pops the attack from ``state.existing_attacks`` and
+    adds its ID to ``state.weapons_to_remove`` so the attack is deleted when
+    the wizard saves.  Only used in edit mode.
+    """
+
+    def __init__(
+        self,
+        attack_id: int,
+        attack_name: str,
+        state: WizardState,
+        weapons_view: "_WeaponsWizardView",
+        row: int,
+    ) -> None:
+        super().__init__(
+            label=Strings.WIZARD_WEAPONS_REMOVE_BUTTON.format(
+                name=attack_name[:70]
+            ),
+            style=discord.ButtonStyle.danger,
+            custom_id=f"wiz_remove_attack_{attack_id}",
+            row=row,
+        )
+        self.attack_id = attack_id
+        self.state = state
+        self.weapons_view = weapons_view
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        """Remove the attack from state and refresh the weapons view."""
+        self.state.existing_attacks = [
+            (aid, aname)
+            for aid, aname in self.state.existing_attacks
+            if aid != self.attack_id
+        ]
+        if self.attack_id not in self.state.weapons_to_remove:
+            self.state.weapons_to_remove.append(self.attack_id)
+        await self.weapons_view._refresh(interaction)
 
 
 class _BackToWeaponsButton(discord.ui.Button):

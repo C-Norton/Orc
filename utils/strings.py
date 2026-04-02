@@ -63,6 +63,8 @@ class Strings:
         "A central hub shows all sections (Name, Class & Level, Ability Scores, AC, Saving Throws, Skills, HP, Weapons) as buttons — "
         "🟢 green when configured, 🔴 red when not. Visit any section in any order; Name is required to save. "
         "Supports multiclassing (up to 5 classes, total level ≤ 20). Or use **Quick Setup** for a single-form entry.\n"
+        "**/character edit**: Re-open the wizard for your active character with all existing values pre-filled. "
+        "Edit any section and save to apply changes immediately.\n"
         "**/character class_add <class> <level>**: Add or update a class on your active character (for levelling up or multiclassing).\n"
         "**/character class_remove <class>**: Remove a class from your active character.\n"
         "**/character list**: View all your characters in this server.\n"
@@ -417,6 +419,20 @@ class Strings:
     # Wizard lifecycle
     WIZARD_TIMEOUT_MSG = "Character creation timed out. No character was saved."
     WIZARD_CANCELLED = "Character creation cancelled."
+    # Edit wizard
+    WIZARD_EDIT_HUB_TITLE = "Character Edit"
+    WIZARD_EDIT_HUB_DESC = (
+        "Use the buttons below to update each section of your character. "
+        "All sections are optional.\n\n"
+        "🟢 = configured  🔵 = auto-calculated  🔴 = not yet configured"
+    )
+    WIZARD_EDIT_COMPLETE_EPHEMERAL_DISMISS = "Character updated! See the summary below."
+    WIZARD_EDIT_COMPLETE_TITLE = "✅ {name} has been updated!"
+    WIZARD_EDIT_COMPLETE_DESC = "Here's a summary of your character after editing."
+    WIZARD_EDIT_TIMEOUT_MSG = "Character edit timed out. No changes were saved."
+    WIZARD_EDIT_CANCELLED = "Character edit cancelled. No changes were saved."
+    WIZARD_WEAPONS_EXISTING = "Current Weapons ({count})"
+    WIZARD_WEAPONS_REMOVE_BUTTON = "✕ {name}"
 
     # Character Creation Wizard — legacy step-based strings (retained for compatibility)
     WIZARD_INTRO_TITLE = "🧙 Character Creation"

@@ -1,6 +1,7 @@
 """Tests for PartySettings model, get_or_create helper, and /party settings commands."""
 
 import pytest
+from sqlalchemy import text
 from models import Party, PartySettings
 from enums.enemy_initiative_mode import EnemyInitiativeMode
 from tests.conftest import make_interaction
@@ -21,6 +22,31 @@ def test_party_settings_default_initiative_mode_is_by_type(
     db_session.commit()
     db_session.refresh(settings)
     assert settings.initiative_mode == EnemyInitiativeMode.BY_TYPE
+
+
+def test_initiative_mode_stored_as_lowercase_value(db_session, sample_active_party):
+    """initiative_mode must be stored using its .value (lowercase), not its name.
+
+    Without values_callable on the SAEnum, SQLAlchemy stores the enum member
+    *name* (e.g. 'BY_TYPE'), which PostgreSQL's enum type rejects because it
+    was created with lowercase labels.  This test reads the raw DB column to
+    confirm the stored string is 'by_type'.
+    """
+    settings = PartySettings(
+        party_id=sample_active_party.id,
+        initiative_mode=EnemyInitiativeMode.BY_TYPE,
+    )
+    db_session.add(settings)
+    db_session.commit()
+
+    raw = db_session.execute(
+        text("SELECT initiative_mode FROM party_settings WHERE id = :id"),
+        {"id": settings.id},
+    ).scalar()
+    assert raw == "by_type", (
+        f"Expected 'by_type' (the enum value) but got {raw!r}. "
+        "Add values_callable=lambda x: [e.value for e in x] to the SAEnum."
+    )
 
 
 def test_party_settings_default_enemy_ac_public_is_false(
