@@ -1,16 +1,12 @@
 """Critical hit damage calculation utilities."""
 
-import re
 from dataclasses import dataclass
-from typing import List
 
-from dice_roller import roll_dice
+from dice_roller import _DICE_WITH_MOD_RE, roll_dice
 from enums.crit_rule import CritRule
 from utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
-_FORMULA_RE = re.compile(r"^(\d+)?d(\d+)([+-]\d+)?$", re.IGNORECASE)
 
 
 @dataclass
@@ -25,7 +21,7 @@ class CritResult:
         grants_inspiration: True only for PERKINS — the player earns Inspiration.
     """
 
-    rolls: List[int]
+    rolls: list[int]
     modifier: int
     total: int
     grants_inspiration: bool
@@ -49,7 +45,7 @@ def apply_crit_damage(formula: str, crit_rule: CritRule) -> CritResult:
         inspiration flag.
     """
     normalised = formula.lower().replace(" ", "")
-    match = _FORMULA_RE.match(normalised)
+    match = _DICE_WITH_MOD_RE.match(normalised)
 
     if not match:
         # Graceful fallback for formulas that don't fit the simple pattern.

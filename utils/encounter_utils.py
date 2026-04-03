@@ -10,11 +10,13 @@ from utils.strings import Strings
 logger = get_logger(__name__)
 
 if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
     from models import Encounter, EncounterTurn, Enemy, Party
 
 
 def remove_enemy_turn_from_encounter(
-    db,
+    db: "Session",
     encounter: "Encounter",
     target_turn: "EncounterTurn",
 ) -> None:
@@ -47,7 +49,7 @@ def remove_enemy_turn_from_encounter(
     # else removed_order_pos > current_turn_index: no change needed
 
 
-def check_and_auto_end_encounter(db, encounter: "Encounter") -> bool:
+def check_and_auto_end_encounter(db: "Session", encounter: "Encounter") -> bool:
     """End the encounter automatically if no enemy turns remain.
 
     Queries for any remaining ``EncounterTurn`` rows tied to an enemy in this
@@ -81,7 +83,7 @@ def check_and_auto_end_encounter(db, encounter: "Encounter") -> bool:
 
 
 def insert_enemy_turns_at_position(
-    db,
+    db: "Session",
     encounter: "Encounter",
     enemies_with_rolls: "list[tuple[Enemy, int]]",
     insert_position: int,
@@ -125,7 +127,7 @@ def insert_enemy_turns_at_position(
 
 
 def insert_enemy_turns_by_roll(
-    db,
+    db: "Session",
     encounter: "Encounter",
     enemies_with_rolls: "list[tuple[Enemy, int]]",
 ) -> None:

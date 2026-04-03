@@ -293,6 +293,10 @@ class Strings:
 
     ERROR_INVALID_DICE = "Invalid dice notation. Use format like '1d20' or '2d6+3'."
     ERROR_DICE_LIMIT = "Too many dice or too many sides! Keep it reasonable."
+    ERROR_NAMED_MODIFIER_REQUIRES_CHARACTER = (
+        "Named modifier '{token}' requires a character. "
+        "Use a skill, stat, or initiative name in a roll command."
+    )
 
     # Roll Commands
     ROLL_RESULT_DICE = "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**\n*Tip: {tip}*"

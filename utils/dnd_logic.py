@@ -1,3 +1,5 @@
+"""D&D 5e roll logic: stat modifiers, proficiency, skill/save/initiative rolls."""
+
 from typing import TYPE_CHECKING, Optional
 import random
 from dice_roller import parse_expression_tokens, evaluate_expression, has_named_tokens
@@ -34,9 +36,47 @@ def get_proficiency_bonus(level: int) -> int:
 
 
 def get_stat_modifier(score: Optional[int]) -> int:
+    """Return the D&D ability score modifier for *score* (floor((score-10)/2)).
+
+    Returns 0 when *score* is None so callers don't need to guard against
+    unset stats.
+    """
     if score is None:
         return 0
     return (score - 10) // 2
+
+
+def _compute_skill_modifier(
+    skill_name: str,
+    char: "Character",
+    db: "Session",
+    prof_bonus: int,
+) -> int:
+    """Return the total modifier for *skill_name* for *char*.
+
+    Looks up the governing stat, queries the character's proficiency level,
+    and applies the appropriate proficiency multiplier (none, half, full, double).
+    """
+    from models import CharacterSkill
+
+    stat_name = SKILL_TO_STAT[skill_name]
+    stat_mod = get_stat_modifier(getattr(char, stat_name))
+    char_skill = (
+        db.query(CharacterSkill)
+        .filter_by(character_id=char.id, skill_name=skill_name)
+        .first()
+    )
+    prof_status = (
+        char_skill.proficiency if char_skill else SkillProficiencyStatus.NOT_PROFICIENT
+    )
+    modifier = stat_mod
+    if prof_status == SkillProficiencyStatus.PROFICIENT:
+        modifier += prof_bonus
+    elif prof_status == SkillProficiencyStatus.EXPERTISE:
+        modifier += 2 * prof_bonus
+    elif prof_status == SkillProficiencyStatus.JACK_OF_ALL_TRADES:
+        modifier += prof_bonus // 2
+    return modifier
 
 
 def resolve_named_modifier(
@@ -53,27 +93,7 @@ def resolve_named_modifier(
     # Skill modifier
     skill_name = next((s for s in SKILL_TO_STAT.keys() if s.lower() == clean), None)
     if skill_name:
-        stat_name = SKILL_TO_STAT[skill_name]
-        stat_mod = get_stat_modifier(getattr(char, stat_name))
-        from models import CharacterSkill
-
-        char_skill = (
-            db.query(CharacterSkill)
-            .filter_by(character_id=char.id, skill_name=skill_name)
-            .first()
-        )
-        prof_status = (
-            char_skill.proficiency
-            if char_skill
-            else SkillProficiencyStatus.NOT_PROFICIENT
-        )
-        mod = stat_mod
-        if prof_status == SkillProficiencyStatus.PROFICIENT:
-            mod += prof_bonus
-        elif prof_status == SkillProficiencyStatus.EXPERTISE:
-            mod += 2 * prof_bonus
-        elif prof_status == SkillProficiencyStatus.JACK_OF_ALL_TRADES:
-            mod += prof_bonus // 2
+        mod = _compute_skill_modifier(skill_name, char, db, prof_bonus)
         return mod, f"{skill_name}({mod:+d})"
 
     # Initiative
@@ -114,6 +134,7 @@ def _roll_d20_with_advantage(advantage: Optional[str]) -> tuple[int, Optional[in
 def _format_d20_roll(
     kept: int, discarded: Optional[int], advantage: Optional[str]
 ) -> str:
+    """Format a d20 roll result string, showing the discarded die when applicable."""
     if discarded is None:
         return f"d20({kept})"
     sym = "↑" if advantage == "advantage" else "↓"
@@ -163,27 +184,7 @@ async def perform_roll(
         if matched_skill:
             skill = matched_skill
             stat_name = SKILL_TO_STAT[skill]
-            stat_score = getattr(char, stat_name)
-            stat_mod = get_stat_modifier(stat_score)
-            from models import CharacterSkill
-
-            char_skill = (
-                db.query(CharacterSkill)
-                .filter_by(character_id=char.id, skill_name=skill)
-                .first()
-            )
-            prof_status = (
-                char_skill.proficiency
-                if char_skill
-                else SkillProficiencyStatus.NOT_PROFICIENT
-            )
-            skill_mod = stat_mod
-            if prof_status == SkillProficiencyStatus.PROFICIENT:
-                skill_mod += prof_bonus
-            elif prof_status == SkillProficiencyStatus.EXPERTISE:
-                skill_mod += 2 * prof_bonus
-            elif prof_status == SkillProficiencyStatus.JACK_OF_ALL_TRADES:
-                skill_mod += prof_bonus // 2
+            skill_mod = _compute_skill_modifier(skill, char, db, prof_bonus)
             total = d20_roll + skill_mod
             label = f"{skill} ({stat_name.title()})"
             return Strings.ROLL_RESULT_CHAR.format(

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import aiohttp
 
@@ -51,10 +51,10 @@ class ParsedWeaponFields:
     damage_type_name: str
     weapon_category: str
     range_normal_float: float
-    properties: list
-    property_names: list
-    two_handed_damage: Optional[str]
-    properties_json: Optional[str]
+    properties: list[dict]
+    property_names: list[str]
+    two_handed_damage: str | None
+    properties_json: str | None
 
 
 def parse_weapon_fields(weapon_data: dict) -> "ParsedWeaponFields":
@@ -135,7 +135,7 @@ def get_property_names(properties: list[dict]) -> list[str]:
     return names
 
 
-def extract_two_handed_damage(properties: list[dict]) -> Optional[str]:
+def extract_two_handed_damage(properties: list[dict]) -> str | None:
     """Return the two-handed damage dice for a Versatile weapon, or ``None``.
 
     For a Longsword the Versatile entry looks like::
@@ -231,21 +231,14 @@ def format_weapon_result_line(index: int, weapon: dict) -> str:
         1. Longsword — Martial Melee | 1d8 Slashing | Versatile (1d10)
         2. Short Sword — Martial Melee | 1d6 Piercing | Finesse, Light
     """
-    name = weapon.get("name", "Unknown")
-    damage_dice = weapon.get("damage_dice", "?")
-    damage_type_object = weapon.get("damage_type") or {}
-    damage_type = damage_type_object.get("name", "?")
-    is_simple = weapon.get("is_simple", True)
-    weapon_category = "Simple" if is_simple else "Martial"
-    properties = weapon.get("properties", [])
-    two_handed = extract_two_handed_damage(properties)
-    property_names = get_property_names(properties)
+    parsed = parse_weapon_fields(weapon)
+    damage_type = weapon.get("damage_type", {}).get("name", "?")
 
-    # Build property display tokens
+    # Build property display tokens, surfacing Versatile's two-handed damage.
     display_properties: list[str] = []
-    if two_handed:
-        display_properties.append(f"Versatile ({two_handed})")
-    for property_name in property_names:
+    if parsed.two_handed_damage:
+        display_properties.append(f"Versatile ({parsed.two_handed_damage})")
+    for property_name in parsed.property_names:
         if property_name != "Versatile":
             display_properties.append(property_name)
 
@@ -254,8 +247,8 @@ def format_weapon_result_line(index: int, weapon: dict) -> str:
     )
 
     return (
-        f"{index}. **{name}** — {weapon_category} | "
-        f"{damage_dice} {damage_type}{properties_suffix}"
+        f"{index}. **{parsed.name}** — {parsed.weapon_category} | "
+        f"{parsed.damage_dice} {damage_type}{properties_suffix}"
     )
 
 
