@@ -54,7 +54,7 @@ def get_callback(bot, *path):
 @pytest.fixture
 def health_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.health_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.health_commands import register_health_commands
 
     register_health_commands(bot)
@@ -64,7 +64,7 @@ def health_bot(session_factory, mocker):
 @pytest.fixture
 def char_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.character_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.character_commands import register_character_commands
 
     register_character_commands(bot)
@@ -74,7 +74,7 @@ def char_bot(session_factory, mocker):
 @pytest.fixture
 def attack_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.attack_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.attack_commands import register_attack_commands
 
     register_attack_commands(bot)
@@ -84,7 +84,7 @@ def attack_bot(session_factory, mocker):
 @pytest.fixture
 def roll_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.roll_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.roll_commands import register_roll_commands
 
     register_roll_commands(bot)
@@ -94,8 +94,7 @@ def roll_bot(session_factory, mocker):
 @pytest.fixture
 def party_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.party_commands.SessionLocal", new=session_factory)
-    mocker.patch("commands.party_views.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.party_commands import register_party_commands
 
     register_party_commands(bot)
@@ -105,7 +104,7 @@ def party_bot(session_factory, mocker):
 @pytest.fixture
 def encounter_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.encounter_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.encounter_commands import register_encounter_commands
 
     register_encounter_commands(bot)
@@ -124,7 +123,7 @@ def meta_bot():
 @pytest.fixture
 def inspiration_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.inspiration_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.inspiration_commands import register_inspiration_commands
 
     register_inspiration_commands(bot)
@@ -134,7 +133,7 @@ def inspiration_bot(session_factory, mocker):
 @pytest.fixture
 def weapon_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.weapon_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.weapon_commands import register_weapon_commands
 
     register_weapon_commands(bot)
@@ -143,11 +142,10 @@ def weapon_bot(session_factory, mocker):
 
 @pytest.fixture
 def wizard_bot(session_factory, mocker):
-    """Bot fixture that patches SessionLocal in character_commands and
-    the wizard package so wizard commit tests write to the in-memory DB."""
+    """Bot fixture that patches SessionLocal in database so all db_session()
+    calls in character_commands and the wizard package write to the in-memory DB."""
     bot = make_bot()
-    mocker.patch("commands.character_commands.SessionLocal", new=session_factory)
-    mocker.patch("commands.wizard.completion.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.character_commands import register_character_commands
 
     register_character_commands(bot)

@@ -46,7 +46,7 @@ def make_ctx(mocker, author_id: int = DEVELOPER_DISCORD_ID) -> commands.Context:
 def admin_bot(session_factory, mocker):
     """Bot with admin commands registered and SessionLocal patched."""
     bot = make_bot()
-    mocker.patch("commands.admin_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     register_admin_commands(bot)
     return bot
 

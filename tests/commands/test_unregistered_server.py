@@ -846,7 +846,7 @@ def inspiration_bot(session_factory, mocker):
     from discord.ext import commands
     from commands.inspiration_commands import register_inspiration_commands
 
-    mocker.patch("commands.inspiration_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     intents = discord.Intents.none()
     bot = commands.Bot(command_prefix="!", intents=intents)
     register_inspiration_commands(bot)

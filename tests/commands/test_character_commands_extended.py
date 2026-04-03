@@ -382,44 +382,37 @@ async def test_save_changes_button_char_deleted(
     sample_character, db_session, mocker, session_factory
 ):
     """If the character no longer exists, save-changes should edit with ERROR_CHAR_NO_LONGER_EXISTS."""
-    # Patch SessionLocal so the button uses our test DB
-    import commands.character_commands as char_cmds
+    mocker.patch("database.SessionLocal", new=session_factory)
+    view = CharacterSavesEditView(
+        char_id=sample_character.id,
+        char_name=sample_character.name,
+        current_saves={
+            "strength": False,
+            "dexterity": False,
+            "constitution": False,
+            "intelligence": False,
+            "wisdom": False,
+            "charisma": False,
+        },
+    )
+    save_btn = next(
+        item for item in view.children if isinstance(item, _SaveChangesButton)
+    )
 
-    original = char_cmds.SessionLocal
-    char_cmds.SessionLocal = session_factory
-    try:
-        view = CharacterSavesEditView(
-            char_id=sample_character.id,
-            char_name=sample_character.name,
-            current_saves={
-                "strength": False,
-                "dexterity": False,
-                "constitution": False,
-                "intelligence": False,
-                "wisdom": False,
-                "charisma": False,
-            },
-        )
-        save_btn = next(
-            item for item in view.children if isinstance(item, _SaveChangesButton)
-        )
+    # Delete the character before the button is clicked
+    char = db_session.get(Character, sample_character.id)
+    db_session.delete(char)
+    db_session.commit()
 
-        # Delete the character before the button is clicked
-        char = db_session.get(Character, sample_character.id)
-        db_session.delete(char)
-        db_session.commit()
+    mock_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    mock_interaction.response = mocker.AsyncMock()
 
-        mock_interaction = mocker.AsyncMock(spec=discord.Interaction)
-        mock_interaction.response = mocker.AsyncMock()
+    await save_btn.callback(mock_interaction)
 
-        await save_btn.callback(mock_interaction)
-
-        mock_interaction.response.edit_message.assert_called_once()
-        call_kwargs = mock_interaction.response.edit_message.call_args.kwargs
-        assert call_kwargs.get("content") == Strings.ERROR_CHAR_NO_LONGER_EXISTS
-        assert call_kwargs.get("view") is None
-    finally:
-        char_cmds.SessionLocal = original
+    mock_interaction.response.edit_message.assert_called_once()
+    call_kwargs = mock_interaction.response.edit_message.call_args.kwargs
+    assert call_kwargs.get("content") == Strings.ERROR_CHAR_NO_LONGER_EXISTS
+    assert call_kwargs.get("view") is None
 
 
 # ---------------------------------------------------------------------------
@@ -431,34 +424,28 @@ async def test_confirm_delete_view_char_already_gone(
     sample_character, db_session, mocker, session_factory
 ):
     """If the character is gone when confirm is clicked, edit with ERROR_CHAR_NO_LONGER_EXISTS."""
-    import commands.character_commands as char_cmds
+    mocker.patch("database.SessionLocal", new=session_factory)
+    view = _ConfirmCharacterDeleteView(
+        char_id=sample_character.id, char_name=sample_character.name
+    )
+    confirm_btn = next(
+        item for item in view.children if getattr(item, "label", "") == "Delete"
+    )
 
-    original = char_cmds.SessionLocal
-    char_cmds.SessionLocal = session_factory
-    try:
-        view = _ConfirmCharacterDeleteView(
-            char_id=sample_character.id, char_name=sample_character.name
-        )
-        confirm_btn = next(
-            item for item in view.children if getattr(item, "label", "") == "Delete"
-        )
+    # Remove the character before clicking confirm
+    char = db_session.get(Character, sample_character.id)
+    db_session.delete(char)
+    db_session.commit()
 
-        # Remove the character before clicking confirm
-        char = db_session.get(Character, sample_character.id)
-        db_session.delete(char)
-        db_session.commit()
+    mock_interaction = mocker.AsyncMock(spec=discord.Interaction)
+    mock_interaction.response = mocker.AsyncMock()
 
-        mock_interaction = mocker.AsyncMock(spec=discord.Interaction)
-        mock_interaction.response = mocker.AsyncMock()
+    await confirm_btn.callback(mock_interaction)
 
-        await confirm_btn.callback(mock_interaction)
-
-        mock_interaction.response.edit_message.assert_called_once()
-        call_kwargs = mock_interaction.response.edit_message.call_args.kwargs
-        assert call_kwargs.get("content") == Strings.ERROR_CHAR_NO_LONGER_EXISTS
-        assert call_kwargs.get("view") is None
-    finally:
-        char_cmds.SessionLocal = original
+    mock_interaction.response.edit_message.assert_called_once()
+    call_kwargs = mock_interaction.response.edit_message.call_args.kwargs
+    assert call_kwargs.get("content") == Strings.ERROR_CHAR_NO_LONGER_EXISTS
+    assert call_kwargs.get("view") is None
 
 
 # ---------------------------------------------------------------------------

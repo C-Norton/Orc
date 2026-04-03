@@ -1182,150 +1182,126 @@ async def test_finish_wizard_calls_update_when_edit_character_id_set(
     mocker, session_factory, fighter_character
 ):
     """When edit_character_id is set, _finish_wizard must call update_character_from_wizard."""
-    import commands.wizard.completion as completion_module
+    mocker.patch("database.SessionLocal", new=session_factory)
+    mock_update = mocker.patch(
+        "commands.wizard.completion.update_character_from_wizard",
+        return_value=(fighter_character, None),
+    )
+    mocker.patch(
+        "commands.wizard.completion._build_edit_complete_embed",
+        return_value=discord.Embed(),
+    )
 
-    original_session_local = completion_module.SessionLocal
-    completion_module.SessionLocal = session_factory
-    try:
-        mock_update = mocker.patch(
-            "commands.wizard.completion.update_character_from_wizard",
-            return_value=(fighter_character, None),
-        )
-        mocker.patch(
-            "commands.wizard.completion._build_edit_complete_embed",
-            return_value=discord.Embed(),
-        )
+    state = WizardState(
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="Aldric",
+        edit_character_id=fighter_character.id,
+    )
+    interaction = make_interaction(mocker)
 
-        state = WizardState(
-            user_discord_id="111",
-            guild_discord_id="222",
-            guild_name="Test Server",
-            name="Aldric",
-            edit_character_id=fighter_character.id,
-        )
-        interaction = make_interaction(mocker)
+    from commands.wizard.completion import _finish_wizard
 
-        from commands.wizard.completion import _finish_wizard
+    await _finish_wizard(state, interaction)
 
-        await _finish_wizard(state, interaction)
-
-        mock_update.assert_called_once()
-    finally:
-        completion_module.SessionLocal = original_session_local
+    mock_update.assert_called_once()
 
 
 async def test_finish_wizard_does_not_call_update_in_creation_mode(
     mocker, session_factory, sample_user, sample_server
 ):
     """When edit_character_id is None, _finish_wizard must NOT call update_character_from_wizard."""
-    import commands.wizard.completion as completion_module
+    mocker.patch("database.SessionLocal", new=session_factory)
+    mock_update = mocker.patch(
+        "commands.wizard.completion.update_character_from_wizard",
+    )
 
-    original_session_local = completion_module.SessionLocal
-    completion_module.SessionLocal = session_factory
-    try:
-        mock_update = mocker.patch(
-            "commands.wizard.completion.update_character_from_wizard",
-        )
+    # Patch save_character_from_wizard to avoid needing a real user/server pair
+    fake_char = mocker.MagicMock(spec=Character)
+    fake_char.name = "BrandNew"
+    fake_char.max_hp = 10
+    mocker.patch(
+        "commands.wizard.completion.save_character_from_wizard",
+        return_value=(fake_char, None),
+    )
+    mocker.patch(
+        "commands.wizard.completion._build_complete_embed",
+        return_value=discord.Embed(),
+    )
 
-        # Patch save_character_from_wizard to avoid needing a real user/server pair
-        fake_char = mocker.MagicMock(spec=Character)
-        fake_char.name = "BrandNew"
-        fake_char.max_hp = 10
-        mocker.patch(
-            "commands.wizard.completion.save_character_from_wizard",
-            return_value=(fake_char, None),
-        )
-        mocker.patch(
-            "commands.wizard.completion._build_complete_embed",
-            return_value=discord.Embed(),
-        )
+    state = WizardState(
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="BrandNew",
+        edit_character_id=None,  # creation mode
+    )
+    interaction = make_interaction(mocker)
 
-        state = WizardState(
-            user_discord_id="111",
-            guild_discord_id="222",
-            guild_name="Test Server",
-            name="BrandNew",
-            edit_character_id=None,  # creation mode
-        )
-        interaction = make_interaction(mocker)
+    from commands.wizard.completion import _finish_wizard
 
-        from commands.wizard.completion import _finish_wizard
+    await _finish_wizard(state, interaction)
 
-        await _finish_wizard(state, interaction)
-
-        mock_update.assert_not_called()
-    finally:
-        completion_module.SessionLocal = original_session_local
+    mock_update.assert_not_called()
 
 
 async def test_finish_wizard_edit_mode_sends_followup_on_success(
     mocker, session_factory, fighter_character
 ):
     """A successful edit must send a public followup embed via interaction.followup.send."""
-    import commands.wizard.completion as completion_module
+    mocker.patch("database.SessionLocal", new=session_factory)
+    mocker.patch(
+        "commands.wizard.completion.update_character_from_wizard",
+        return_value=(fighter_character, None),
+    )
+    mocker.patch(
+        "commands.wizard.completion._build_edit_complete_embed",
+        return_value=discord.Embed(),
+    )
 
-    original_session_local = completion_module.SessionLocal
-    completion_module.SessionLocal = session_factory
-    try:
-        mocker.patch(
-            "commands.wizard.completion.update_character_from_wizard",
-            return_value=(fighter_character, None),
-        )
-        mocker.patch(
-            "commands.wizard.completion._build_edit_complete_embed",
-            return_value=discord.Embed(),
-        )
+    state = WizardState(
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="Aldric",
+        edit_character_id=fighter_character.id,
+    )
+    interaction = make_interaction(mocker)
 
-        state = WizardState(
-            user_discord_id="111",
-            guild_discord_id="222",
-            guild_name="Test Server",
-            name="Aldric",
-            edit_character_id=fighter_character.id,
-        )
-        interaction = make_interaction(mocker)
+    from commands.wizard.completion import _finish_wizard
 
-        from commands.wizard.completion import _finish_wizard
+    await _finish_wizard(state, interaction)
 
-        await _finish_wizard(state, interaction)
-
-        interaction.followup.send.assert_called_once()
-        call_kwargs = interaction.followup.send.call_args.kwargs
-        assert isinstance(call_kwargs.get("embed"), discord.Embed)
-    finally:
-        completion_module.SessionLocal = original_session_local
+    interaction.followup.send.assert_called_once()
+    call_kwargs = interaction.followup.send.call_args.kwargs
+    assert isinstance(call_kwargs.get("embed"), discord.Embed)
 
 
 async def test_finish_wizard_edit_mode_sends_error_on_failure(mocker, session_factory):
     """When update_character_from_wizard returns an error, _finish_wizard must send that error."""
-    import commands.wizard.completion as completion_module
+    mocker.patch("database.SessionLocal", new=session_factory)
+    mocker.patch(
+        "commands.wizard.completion.update_character_from_wizard",
+        return_value=(None, Strings.ACTIVE_CHARACTER_NOT_FOUND),
+    )
 
-    original_session_local = completion_module.SessionLocal
-    completion_module.SessionLocal = session_factory
-    try:
-        mocker.patch(
-            "commands.wizard.completion.update_character_from_wizard",
-            return_value=(None, Strings.ACTIVE_CHARACTER_NOT_FOUND),
-        )
+    state = WizardState(
+        user_discord_id="111",
+        guild_discord_id="222",
+        guild_name="Test Server",
+        name="Ghost",
+        edit_character_id=999999,
+    )
+    interaction = make_interaction(mocker)
 
-        state = WizardState(
-            user_discord_id="111",
-            guild_discord_id="222",
-            guild_name="Test Server",
-            name="Ghost",
-            edit_character_id=999999,
-        )
-        interaction = make_interaction(mocker)
+    from commands.wizard.completion import _finish_wizard
 
-        from commands.wizard.completion import _finish_wizard
+    await _finish_wizard(state, interaction)
 
-        await _finish_wizard(state, interaction)
-
-        interaction.response.send_message.assert_called_once_with(
-            Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True
-        )
-    finally:
-        completion_module.SessionLocal = original_session_local
+    interaction.response.send_message.assert_called_once_with(
+        Strings.ACTIVE_CHARACTER_NOT_FOUND, ephemeral=True
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -2074,23 +2074,15 @@ async def test_saves_edit_view_save_changes_persists(
     # Toggle STR on
     view.saves["strength"] = True
 
-    # Patch SessionLocal in character_commands to use the test session factory
-    import commands.character_commands as cc_mod
-
-    original = cc_mod.SessionLocal
-    cc_mod.SessionLocal = session_factory
-
-    try:
-        save_btn = next(
-            item
-            for item in view.children
-            if isinstance(item, discord.ui.Button)
-            and item.label == Strings.BUTTON_SAVE_CHANGES
-        )
-        interaction = make_interaction(mocker)
-        await save_btn.callback(interaction)
-    finally:
-        cc_mod.SessionLocal = original
+    mocker.patch("database.SessionLocal", new=session_factory)
+    save_btn = next(
+        item
+        for item in view.children
+        if isinstance(item, discord.ui.Button)
+        and item.label == Strings.BUTTON_SAVE_CHANGES
+    )
+    interaction = make_interaction(mocker)
+    await save_btn.callback(interaction)
 
     # Verify via a fresh session so we don't rely on the closed test session
     verify_session = session_factory()
@@ -2585,7 +2577,9 @@ async def test_hub_view_on_timeout_does_not_raise_when_message_absent(mocker):
 
 
 @pytest.mark.asyncio
-async def test_finish_wizard_success_dismisses_ephemeral_message(mocker, db_session):
+async def test_finish_wizard_success_dismisses_ephemeral_message(
+    mocker, session_factory
+):
     """On success, edit_message is called with the dismissal string, embed=None, view=None.
 
     This verifies the ephemeral wizard message is replaced with a brief
@@ -2599,7 +2593,7 @@ async def test_finish_wizard_success_dismisses_ephemeral_message(mocker, db_sess
         "commands.wizard.completion.save_character_from_wizard",
         return_value=(fake_char, None),
     )
-    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+    mocker.patch("database.SessionLocal", new=session_factory)
 
     from commands.wizard import _finish_wizard
 
@@ -2614,7 +2608,7 @@ async def test_finish_wizard_success_dismisses_ephemeral_message(mocker, db_sess
 
 @pytest.mark.asyncio
 async def test_finish_wizard_success_sends_public_followup_with_embed(
-    mocker, db_session
+    mocker, session_factory
 ):
     """On success, followup.send is called with ephemeral=False and a discord.Embed."""
     state, interaction = _make_state(mocker)
@@ -2625,7 +2619,7 @@ async def test_finish_wizard_success_sends_public_followup_with_embed(
         "commands.wizard.completion.save_character_from_wizard",
         return_value=(fake_char, None),
     )
-    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+    mocker.patch("database.SessionLocal", new=session_factory)
 
     from commands.wizard import _finish_wizard
 
@@ -2639,7 +2633,7 @@ async def test_finish_wizard_success_sends_public_followup_with_embed(
 
 @pytest.mark.asyncio
 async def test_finish_wizard_success_does_not_pass_embed_to_edit_message(
-    mocker, db_session
+    mocker, session_factory
 ):
     """Regression: the completion embed must NOT be passed to edit_message.
 
@@ -2654,7 +2648,7 @@ async def test_finish_wizard_success_does_not_pass_embed_to_edit_message(
         "commands.wizard.completion.save_character_from_wizard",
         return_value=(fake_char, None),
     )
-    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+    mocker.patch("database.SessionLocal", new=session_factory)
 
     from commands.wizard import _finish_wizard
 
@@ -2666,7 +2660,7 @@ async def test_finish_wizard_success_does_not_pass_embed_to_edit_message(
 
 
 @pytest.mark.asyncio
-async def test_finish_wizard_error_stays_ephemeral_no_followup(mocker, db_session):
+async def test_finish_wizard_error_stays_ephemeral_no_followup(mocker, session_factory):
     """When save_character_from_wizard returns an error, the error message is
     sent ephemerally and followup.send is never called."""
     state, interaction = _make_state(mocker)
@@ -2674,7 +2668,7 @@ async def test_finish_wizard_error_stays_ephemeral_no_followup(mocker, db_sessio
         "commands.wizard.completion.save_character_from_wizard",
         return_value=(None, Strings.CHAR_CREATE_NAME_LIMIT),
     )
-    mocker.patch("commands.wizard.completion.SessionLocal", return_value=db_session)
+    mocker.patch("database.SessionLocal", new=session_factory)
 
     from commands.wizard import _finish_wizard
 

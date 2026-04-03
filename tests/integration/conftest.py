@@ -181,20 +181,24 @@ def patch_session_locals(
     session_factory: Any,
     *module_paths: str,
 ) -> list:
-    """Patch SessionLocal in each listed module to use session_factory.
+    """Patch database.SessionLocal to redirect all db_session() calls to session_factory.
 
-    Applies ``mocker.patch(module_path + ".SessionLocal", side_effect=lambda:
-    session_factory())`` for every module path provided, directing all DB
-    access in those modules to the shared integration-test database.
+    All command modules use ``db_session()`` from ``database``, which calls
+    ``SessionLocal()`` internally.  Patching the single source is sufficient
+    to redirect every command's DB access to the shared integration-test
+    database regardless of which modules are listed in *module_paths*.
+
+    The *module_paths* parameter is accepted for backwards compatibility but
+    is no longer used; a single patch on ``database.SessionLocal`` replaces
+    all per-module patches.
 
     Args:
         mocker: The pytest-mock ``mocker`` fixture.
         session_factory: A SQLAlchemy sessionmaker (e.g. int_session_factory).
-        *module_paths: Dotted module paths whose ``SessionLocal`` should be
-                       replaced, e.g. ``"commands.character_commands"``.
+        *module_paths: Ignored. Kept for call-site compatibility.
 
     Returns:
-        A list of the active patcher objects (one per module path).
+        A list containing the single active patcher object.
 
     Example::
 
@@ -205,11 +209,5 @@ def patch_session_locals(
             "commands.wizard.completion",
         )
     """
-    patchers = []
-    for module_path in module_paths:
-        patcher = mocker.patch(
-            f"{module_path}.SessionLocal",
-            side_effect=lambda: session_factory(),
-        )
-        patchers.append(patcher)
-    return patchers
+    patcher = mocker.patch("database.SessionLocal", new=session_factory)
+    return [patcher]

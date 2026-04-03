@@ -17,7 +17,7 @@ from tests.conftest import make_interaction
 @pytest.fixture
 def inspiration_bot(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.inspiration_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.inspiration_commands import register_inspiration_commands
 
     register_inspiration_commands(bot)
@@ -27,7 +27,7 @@ def inspiration_bot(session_factory, mocker):
 @pytest.fixture
 def attack_bot_patched(session_factory, mocker):
     bot = make_bot()
-    mocker.patch("commands.attack_commands.SessionLocal", new=session_factory)
+    mocker.patch("database.SessionLocal", new=session_factory)
     from commands.attack_commands import register_attack_commands
 
     register_attack_commands(bot)
