@@ -29,7 +29,7 @@ class PartySettings(Base):
         Integer, ForeignKey("parties.id"), unique=True, nullable=False
     )
     initiative_mode: Mapped[EnemyInitiativeMode] = mapped_column(
-        SAEnum(EnemyInitiativeMode, values_callable=lambda x: [e.value for e in x]),
+        SAEnum(EnemyInitiativeMode),
         nullable=False,
         default=EnemyInitiativeMode.BY_TYPE,
     )

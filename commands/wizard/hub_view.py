@@ -269,10 +269,8 @@ class HubView(discord.ui.View):
                     wizard_state=self.wizard_state,
                 )
             )
-        # Row 3: global actions (Quick Setup omitted in edit mode)
+        # Row 3: global actions
         self.add_item(_SaveExitButton(self.wizard_state))
-        if not is_edit:
-            self.add_item(_QuickSetupButton(self.wizard_state))
         self.add_item(_HubCancelButton(self.wizard_state))
 
     async def on_timeout(self) -> None:

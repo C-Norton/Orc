@@ -877,10 +877,10 @@ async def test_list_all_multiple_players_each_get_own_field(
     assert "OtherUser" in field_names
 
 
-async def test_list_all_message_is_not_ephemeral(
+async def test_list_all_message_is_ephemeral(
     char_bot, sample_character, interaction, mocker
 ):
-    """/character list_all response is visible to the channel (not ephemeral)."""
+    """/character list_all response is ephemeral (only visible to the invoking user)."""
     member = mocker.Mock()
     member.display_name = "TestUser"
     interaction.guild.fetch_member = mocker.AsyncMock(return_value=member)
@@ -889,8 +889,7 @@ async def test_list_all_message_is_not_ephemeral(
     await cb(interaction)
 
     call_kwargs = interaction.followup.send.call_args.kwargs
-    # ephemeral must be absent or explicitly False
-    assert call_kwargs.get("ephemeral") is not True
+    assert call_kwargs.get("ephemeral") is True
 
 
 # ---------------------------------------------------------------------------
