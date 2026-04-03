@@ -1,3 +1,5 @@
+"""Enum controlling how a natural 20 attack roll is resolved for a party."""
+
 from enum import Enum
 
 

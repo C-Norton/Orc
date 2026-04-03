@@ -1,3 +1,5 @@
+"""Enum controlling how a natural 20 on a death saving throw is resolved."""
+
 from enum import Enum
 
 

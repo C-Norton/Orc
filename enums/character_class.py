@@ -1,4 +1,4 @@
-"""Enum of all 12 standard SRD character classes."""
+"""Enum of the 12 standard SRD character classes plus an UA/Homebrew catch-all."""
 
 from enum import Enum
 

@@ -1,3 +1,5 @@
+"""Enum controlling how enemy initiative is rolled when an encounter starts."""
+
 from enum import Enum
 
 

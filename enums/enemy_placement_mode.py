@@ -1,9 +1,9 @@
 """Placement modes for enemies added to an active encounter."""
 
-import enum
+from enum import Enum
 
 
-class EnemyPlacementMode(enum.Enum):
+class EnemyPlacementMode(Enum):
     """Options for where a mid-combat enemy enters the initiative order."""
 
     TOP = "top"

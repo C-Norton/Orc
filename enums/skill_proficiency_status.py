@@ -1,3 +1,5 @@
+"""Enum representing the possible proficiency levels for a character skill."""
+
 from enum import Enum
 
 

@@ -9,6 +9,12 @@ if TYPE_CHECKING:
 
 
 class CharacterSkill(Base):
+    """A skill proficiency entry for a character.
+
+    One row per proficient (or higher) skill.  Skills at NOT_PROFICIENT are not
+    stored — absence of a row implies no proficiency.
+    """
+
     __tablename__ = "character_skills"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     character_id: Mapped[int] = mapped_column(

@@ -24,14 +24,14 @@ class Character(Base):
     )
 
     # Core Stats
-    strength: Mapped[int] = mapped_column(Integer, nullable=True)
-    dexterity: Mapped[int] = mapped_column(Integer, nullable=True)
-    constitution: Mapped[int] = mapped_column(Integer, nullable=True)
-    intelligence: Mapped[int] = mapped_column(Integer, nullable=True)
-    wisdom: Mapped[int] = mapped_column(Integer, nullable=True)
-    charisma: Mapped[int] = mapped_column(Integer, nullable=True)
+    strength: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    dexterity: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    constitution: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    intelligence: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    wisdom: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    charisma: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
-    initiative_bonus: Mapped[int] = mapped_column(Integer, nullable=True)
+    initiative_bonus: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Saving Throw Proficiency Status
