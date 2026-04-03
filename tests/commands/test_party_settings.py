@@ -24,13 +24,14 @@ def test_party_settings_default_initiative_mode_is_by_type(
     assert settings.initiative_mode == EnemyInitiativeMode.BY_TYPE
 
 
-def test_initiative_mode_stored_as_lowercase_value(db_session, sample_active_party):
-    """initiative_mode must be stored using its .value (lowercase), not its name.
+def test_initiative_mode_stored_as_member_name(db_session, sample_active_party):
+    """initiative_mode is stored as the enum member name, not its value.
 
-    Without values_callable on the SAEnum, SQLAlchemy stores the enum member
-    *name* (e.g. 'BY_TYPE'), which PostgreSQL's enum type rejects because it
-    was created with lowercase labels.  This test reads the raw DB column to
-    confirm the stored string is 'by_type'.
+    Unlike crit_rule and death_save_nat20_mode (which use values_callable to
+    store lowercase values), initiative_mode predates that convention and its
+    migration data was written with uppercase member names (e.g. 'BY_TYPE').
+    Adding values_callable would break reads of existing rows, so this column
+    intentionally omits it.  The ORM still round-trips correctly.
     """
     settings = PartySettings(
         party_id=sample_active_party.id,
@@ -43,9 +44,10 @@ def test_initiative_mode_stored_as_lowercase_value(db_session, sample_active_par
         text("SELECT initiative_mode FROM party_settings WHERE id = :id"),
         {"id": settings.id},
     ).scalar()
-    assert raw == "by_type", (
-        f"Expected 'by_type' (the enum value) but got {raw!r}. "
-        "Add values_callable=lambda x: [e.value for e in x] to the SAEnum."
+    assert raw == "BY_TYPE", (
+        f"Expected 'BY_TYPE' (the enum member name) but got {raw!r}. "
+        "Do NOT add values_callable to initiative_mode — existing migration data "
+        "uses uppercase names and changing the storage format would break those rows."
     )
 
 

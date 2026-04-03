@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from enums.crit_rule import CritRule
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from enums.enemy_initiative_mode import EnemyInitiativeMode
-from models.base import Base
+from models.base import Base, enum_values
 
 if TYPE_CHECKING:
     from models.party import Party
@@ -33,16 +33,17 @@ class PartySettings(Base):
         nullable=False,
         default=EnemyInitiativeMode.BY_TYPE,
     )
+    # Whether enemy AC values are shown publicly to all players (False = GM-only)
     enemy_ac_public: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )
     crit_rule: Mapped[CritRule] = mapped_column(
-        SAEnum(CritRule, values_callable=lambda x: [e.value for e in x]),
+        SAEnum(CritRule, values_callable=enum_values),
         nullable=False,
         default=CritRule.DOUBLE_DICE,
     )
     death_save_nat20_mode: Mapped[DeathSaveNat20Mode] = mapped_column(
-        SAEnum(DeathSaveNat20Mode, values_callable=lambda x: [e.value for e in x]),
+        SAEnum(DeathSaveNat20Mode, values_callable=enum_values),
         nullable=False,
         default=DeathSaveNat20Mode.REGAIN_HP,
         server_default=DeathSaveNat20Mode.REGAIN_HP.value,

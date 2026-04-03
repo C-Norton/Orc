@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
 
 class Enemy(Base):
+    """An NPC or monster participant in a combat encounter."""
+
     __tablename__ = "enemies"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

@@ -1,6 +1,6 @@
 from sqlalchemy import Integer, String, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from models.base import Base
+from models.base import Base, enum_values
 from enums.encounter_status import EncounterStatus
 from typing import TYPE_CHECKING, Optional
 
@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
 
 class Encounter(Base):
+    """A combat encounter between a party and one or more enemies."""
+
     __tablename__ = "encounters"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -23,7 +25,7 @@ class Encounter(Base):
         Integer, ForeignKey("servers.id"), nullable=False
     )
     status: Mapped[EncounterStatus] = mapped_column(
-        SAEnum(EncounterStatus, values_callable=lambda obj: [e.value for e in obj]),
+        SAEnum(EncounterStatus, values_callable=enum_values),
         nullable=False,
         default=EncounterStatus.PENDING,
     )
