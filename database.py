@@ -16,27 +16,31 @@ logger = get_logger(__name__)
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///dnd_bot.db")
 
 # Create engine
-logger.debug(f"Connecting to database at {DATABASE_URL}")
 engine = create_engine(DATABASE_URL)
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Log with the password masked to avoid writing credentials to disk.
+logger.debug(
+    f"Connecting to database at {engine.url.render_as_string(hide_password=True)}"
+)
+
 
 @event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
+def set_sqlite_pragma(dbapi_connection, connection_record) -> None:
+    """Enable foreign key enforcement for SQLite connections.
+
+    SQLite disables foreign key checks by default; this hook turns them on
+    each time a connection is opened.  The ``isinstance`` guard ensures the
+    pragma is only sent to SQLite — PostgreSQL connections are left untouched.
+    ``connection_record`` is part of the SQLAlchemy event signature and is not
+    used here.
+    """
     if isinstance(dbapi_connection, sqlite3.Connection):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
-
-
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 @contextmanager

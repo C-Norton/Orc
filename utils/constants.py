@@ -1,3 +1,10 @@
+"""Shared game-data constants used across multiple modules.
+
+``SKILL_TO_STAT`` maps each 5e skill name to its governing ability score.
+``STAT_NAMES`` normalises both full names and 3-letter abbreviations to the
+canonical lowercase full name (e.g. ``"str"`` → ``"strength"``).
+"""
+
 SKILL_TO_STAT = {
     "Acrobatics": "dexterity",
     "Animal Handling": "wisdom",
