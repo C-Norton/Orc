@@ -202,7 +202,9 @@ class DnDBot(commands.Bot):
                     db.add(server)
                     db.commit()
                     logger.info(f"Added new server: {guild.name} ({guild.id})")
-                    await notify_guild_join(guild.name, guild.id, guild.member_count)
+                    await notify_guild_join(
+                        guild.name, str(guild.id), guild.member_count
+                    )
         except Exception as e:
             logger.error(f"Error on guild join {guild.name}: {e}")
             await notify_background_error(

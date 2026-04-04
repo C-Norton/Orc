@@ -1,3 +1,11 @@
+"""Central string registry for all user-facing text in ORC.
+
+All Discord-visible messages, button labels, error text, and confirmations
+must be defined as constants on ``Strings`` and referenced via
+``Strings.CONSTANT_NAME``.  Use ``.format(...)`` for dynamic values.
+"""
+
+
 class Strings:
     # Common
     ERROR_GUILD_ONLY = "❌ ORC commands can only be used inside a server, not in DMs."
@@ -5,7 +13,6 @@ class Strings:
         "You don't have a character in this server. Use `/character create` first."
     )
     ACTIVE_CHARACTER_NOT_FOUND = "You don't have an active character."
-    SERVER_ERROR = "❌ An unexpected error occurred."
     DEVELOPER_NOTIFIED_ERROR = (
         "ORC was unable to respond to your query. "
         "This issue has been logged and forwarded to the developers."
@@ -300,7 +307,7 @@ class Strings:
 
     # Roll Commands
     ROLL_RESULT_DICE = "🎲 **{notation}**\nRolls: `({rolls}){modifier}`\n**Total: {total}**\n*Tip: {tip}*"
-    # {d20_roll} now accepts either "d20(15)" or "d20[15↑,9]" (advantage)
+    # {d20_roll} is either "d20(15)" for a plain roll or "d20[15↑,9]" for advantage/disadvantage.
     ROLL_RESULT_CHAR = (
         "**{char_name}**: {label} `{d20_roll} + {modifier}` = **{total}**\n*Tip: {tip}*"
     )
@@ -335,7 +342,6 @@ class Strings:
     CHAR_STATS_FIRST_TIME = "This is your first time setting stats for this character. Please provide all core stats (strength, dexterity, constitution, intelligence, wisdom, charisma)."
     CHAR_STAT_LIMIT = "{stat_name} score must be between 1 and 30."
     CHAR_STATS_UPDATED = "Stats updated for **{char_name}**!"
-    CHAR_SAVES_UPDATED = "Saving throw proficiencies updated for **{char_name}**!"
     CHAR_VIEW_TITLE = "👤 {char_name}"
     CHAR_VIEW_DESC = "Level {char_level} {class_summary}"
     CHAR_VIEW_INIT = "\n**Initiative:** {init_bonus:+d}"
@@ -642,9 +648,6 @@ class Strings:
     ERROR_GM_ONLY_ADD_GM = "Only a GM of this party can add other GMs."
     ERROR_GM_ONLY_REMOVE_GM = "Only a GM of this party can remove GMs."
 
-    ERROR_GM_ONLY_PARTY_CREATE = (
-        "Only the GM of the party can create an encounter."  # reused in encounter
-    )
     ERROR_GM_ONLY_PARTY_ADD = "Only a GM of the party can add members."
     ERROR_GM_ONLY_PARTY_REMOVE = "Only a GM of the party can remove members."
     ERROR_GM_ONLY_PARTY_DELETE = "Only a GM can delete the party."
@@ -931,7 +934,7 @@ class Strings:
     NAT_20_ATTACK = ["Your attack connects with ruthless efficiency"]
     NAT_1_ATTACK = [
         "That'll be a miss",
-        "Oops; did a.ayou intend to hit an ally? Or was that just happenstance?",
+        "Oops; did you intend to hit an ally? Or was that just happenstance?",
     ]
     NAT_20_SKILLCHECK = []
     NAT_1_SKILLCHECK = []

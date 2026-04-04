@@ -14,15 +14,13 @@ import math
 import os
 import sys
 import traceback
-from typing import Optional
-
 import discord
 
 DEVELOPER_DISCORD_ID: int = 181919139751788545
 _LOG_BUFFER_SIZE: int = 25
 _WARNING_BUFFER_SIZE: int = 250
 
-_client: Optional[discord.Client] = None
+_client: discord.Client | None = None
 _log_buffer: collections.deque[str] = collections.deque(maxlen=_LOG_BUFFER_SIZE)
 _warning_buffer: collections.deque[str] = collections.deque(maxlen=_WARNING_BUFFER_SIZE)
 _total_buffered_count: int = 0
@@ -70,7 +68,7 @@ def get_warning_logs_page(
     Returns:
         Tuple of (entries_for_page, clamped_page, total_pages).
     """
-    all_entries = list(reversed(list(_warning_buffer)))
+    all_entries = list(reversed(_warning_buffer))
     total_pages = max(1, math.ceil(len(all_entries) / page_size))
     clamped_page = max(0, min(page, total_pages - 1))
     start = clamped_page * page_size
@@ -109,7 +107,7 @@ def schedule_developer_dm(message: str) -> None:
         pass  # No running event loop — bot not yet connected
 
 
-async def notify_startup(applied_migrations: Optional[list[str]] = None) -> None:
+async def notify_startup(applied_migrations: list[str] | None = None) -> None:
     """Send a startup DM to the developer including DB type, migrations, and recent logs.
 
     Args:
@@ -198,7 +196,7 @@ async def notify_command_error(
         )
 
 
-async def notify_guild_join(guild_name: str, guild_id: int, member_count: int) -> None:
+async def notify_guild_join(guild_name: str, guild_id: str, member_count: int) -> None:
     """Notify the developer when the bot joins a new guild.
 
     Args:

@@ -1,3 +1,15 @@
+"""Logging configuration and the ORC proxy-logger.
+
+Sets up the root logger with:
+- A combined console + developer-DM handler (``_BufferingStreamHandler``)
+- Rotating file handlers for INFO and DEBUG output (local dev only; skipped in
+  production where ``LOG_LEVEL`` is set and the container filesystem is ephemeral)
+
+Use ``get_logger(name)`` everywhere in the codebase instead of
+``logging.getLogger`` so that every log call also feeds the in-memory
+developer-notification buffers.
+"""
+
 import contextvars
 import datetime
 import logging
@@ -45,12 +57,9 @@ class _GuildAwareFormatter(logging.Formatter):
 
 
 _THIRD_PARTY_LOGGER_PREFIXES: tuple[str, ...] = (
-    "discord.",
     "discord",
-    "sqlalchemy.",
     "sqlalchemy",
     "asyncio",
-    "alembic.",
     "alembic",
 )
 
@@ -188,7 +197,13 @@ class _OrcLogger:
         self._logger.exception(msg, *args, **kwargs)
 
 
-def setup_logging():
+def setup_logging() -> None:
+    """Configure the root logger for ORC.
+
+    Attaches a combined console + developer-DM handler and, in local development
+    (when ``LOG_LEVEL`` is not set), rotating file handlers for INFO and DEBUG
+    output.  Third-party library loggers are silenced to WARNING.
+    """
     dotenv.load_dotenv()
 
     log_format = (

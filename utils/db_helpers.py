@@ -4,7 +4,9 @@ These functions encapsulate the most frequently repeated DB lookup patterns so
 that each command file does not need its own copy.
 """
 
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 import discord
 from sqlalchemy import delete, select
@@ -12,10 +14,13 @@ from sqlalchemy import delete, select
 from models import Character, Party, Server, User, user_server_association
 from models.base import party_character_association
 
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
 
 def resolve_user_server(
-    db, interaction: discord.Interaction
-) -> tuple[Optional[User], Optional[Server]]:
+    db: "Session", interaction: discord.Interaction
+) -> tuple[User | None, Server | None]:
     """Look up the User and Server rows for a Discord interaction.
 
     Returns ``None`` for either value if the row does not exist yet.
@@ -34,7 +39,7 @@ def resolve_user_server(
     return user, server
 
 
-def get_or_create_user(db, discord_id: str) -> User:
+def get_or_create_user(db: "Session", discord_id: str) -> User:
     """Return the User row for the given Discord ID, creating it if absent.
 
     Args:
@@ -53,7 +58,7 @@ def get_or_create_user(db, discord_id: str) -> User:
 
 
 def get_or_create_user_server(
-    db, interaction: discord.Interaction
+    db: "Session", interaction: discord.Interaction
 ) -> tuple[User, Server]:
     """Return the User and Server rows for a Discord interaction, creating them
     if they do not exist yet.
@@ -70,14 +75,9 @@ def get_or_create_user_server(
     Returns:
         A ``(user, server)`` pair; both are always non-``None``.
     """
-    discord_user_id = str(interaction.user.id)
     discord_guild_id = str(interaction.guild_id)
 
-    user = db.query(User).filter_by(discord_id=discord_user_id).first()
-    if user is None:
-        user = User(discord_id=discord_user_id)
-        db.add(user)
-        db.flush()
+    user = get_or_create_user(db, str(interaction.user.id))
 
     server = db.query(Server).filter_by(discord_id=discord_guild_id).first()
     if server is None:
@@ -94,8 +94,8 @@ def get_or_create_user_server(
 
 
 def get_active_party(
-    db, user: Optional[User], server: Optional[Server]
-) -> Optional[Party]:
+    db: "Session", user: User | None, server: Server | None
+) -> Party | None:
     """Return the user's active party on this server, or None.
 
     Returns ``None`` immediately if either ``user`` or ``server`` is ``None``,
@@ -121,7 +121,7 @@ def get_active_party(
     return db.get(Party, result[0])
 
 
-def purge_server_data(db, server: Server) -> None:
+def purge_server_data(db: "Session", server: Server) -> None:
     """Delete all records associated with a server.
 
     Removes data in FK-constraint-safe order:
@@ -139,13 +139,10 @@ def purge_server_data(db, server: Server) -> None:
         db: An active SQLAlchemy session.
         server: The Server row to purge.
     """
-    server_character_ids = [
-        character.id
-        for character in db.query(Character).filter_by(server_id=server.id).all()
-    ]
-    server_party_ids = [
-        party.id for party in db.query(Party).filter_by(server_id=server.id).all()
-    ]
+    server_characters = db.query(Character).filter_by(server_id=server.id).all()
+    server_parties = db.query(Party).filter_by(server_id=server.id).all()
+    server_character_ids = [c.id for c in server_characters]
+    server_party_ids = [p.id for p in server_parties]
 
     if server_party_ids or server_character_ids:
         predicate = party_character_association.c.party_id.in_(server_party_ids)
@@ -161,23 +158,23 @@ def purge_server_data(db, server: Server) -> None:
         )
     )
 
-    # Expire all cached objects so ORM sees the state after raw SQL DELETEs.
+    # Expire cached association state so ORM relationship attributes are
+    # re-queried after the raw SQL DELETEs above.
     db.expire_all()
 
-    for character in db.query(Character).filter_by(server_id=server.id).all():
+    for character in server_characters:
         db.delete(character)
-    db.flush()
 
-    for party in db.query(Party).filter_by(server_id=server.id).all():
+    for party in server_parties:
         db.delete(party)
-    db.flush()
 
+    db.flush()
     db.delete(server)
 
 
 def get_active_character(
-    db, user: Optional[User], server: Optional[Server]
-) -> Optional[Character]:
+    db: "Session", user: User | None, server: Server | None
+) -> Character | None:
     """Return the user's active character on this server, or None.
 
     Returns ``None`` immediately if either ``user`` or ``server`` is ``None``.
