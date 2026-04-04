@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+import random
+from typing import TYPE_CHECKING
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List, Optional
+
 from database import db_session
 from dice_roller import (
     evaluate_expression,
@@ -13,13 +18,19 @@ from dice_roller import (
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from models import Character, PartySettings
 from utils.constants import SKILL_TO_STAT, STAT_NAMES
-from utils.db_helpers import get_active_character, get_or_create_user_server
+from utils.db_helpers import (
+    get_active_character,
+    get_or_create_user_server,
+    resolve_user_server,
+)
 from utils.death_save_logic import character_is_dying, process_death_save
-from utils.dnd_logic import perform_roll
 from utils.dev_notifications import notify_command_error
+from utils.dnd_logic import perform_roll
 from utils.logging_config import get_logger
 from utils.strings import Strings
-import random
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 logger = get_logger(__name__)
 
@@ -29,6 +40,10 @@ _DEATH_SAVE_NOTATION = "death save"
 _RECOGNIZED_NAMED_TOKENS: frozenset = frozenset(
     {s.lower() for s in SKILL_TO_STAT} | set(STAT_NAMES) | {"initiative", "init"}
 )
+
+# Title-cased full names and abbreviations derived from STAT_NAMES for autocomplete
+_STAT_FULL_NAMES: list[str] = [s.title() for s in STAT_NAMES if len(s) > 3]
+_STAT_ABBREVS: list[str] = [s.title() for s in STAT_NAMES if len(s) == 3]
 
 
 def _needs_character(notation: str) -> bool:
@@ -75,13 +90,13 @@ async def _notify_gmroll_gms(
         gm_message: The text to send to each GM.
     """
     party_count = len(char.parties)
-    logger.info(
+    logger.debug(
         f"_notify_gmroll_gms: character '{char.name}' belongs to "
         f"{party_count} {'party' if party_count == 1 else 'parties'}"
     )
     for party in char.parties:
         gm_ids = [gm.discord_id for gm in party.gms]
-        logger.info(
+        logger.debug(
             f"_notify_gmroll_gms: party '{party.name}' has "
             f"{len(gm_ids)} GM(s): {gm_ids or '(none)'}"
         )
@@ -100,7 +115,7 @@ async def _notify_gmroll_gms(
                 )
 
 
-def _get_nat20_mode(db, character: Character) -> DeathSaveNat20Mode:
+def _get_nat20_mode(db: Session, character: Character) -> DeathSaveNat20Mode:
     """Return the party's nat-20 death save mode, defaulting to REGAIN_HP."""
     for party in character.parties:
         settings = db.query(PartySettings).filter_by(party_id=party.id).first()
@@ -112,7 +127,7 @@ def _get_nat20_mode(db, character: Character) -> DeathSaveNat20Mode:
 async def _handle_death_save(
     interaction: discord.Interaction,
     character: Character,
-    db,
+    db: Session,
 ) -> None:
     """Process a death saving throw for a dying character."""
     if not character_is_dying(character):
@@ -190,6 +205,7 @@ async def _handle_death_save(
 
 
 def register_roll_commands(bot: commands.Bot) -> None:
+    """Register the /roll and /gmroll commands on the bot."""
 
     @bot.tree.command(name="gmroll", description="Roll dice privately to the GM(s).")
     @app_commands.describe(
@@ -325,10 +341,9 @@ def register_roll_commands(bot: commands.Bot) -> None:
         notation: str,
         advantage: str = None,
     ) -> None:
-        """ "
-        Rolls dice, a skill check, a save, or a complex expression.
-        Outputs result to the channel.
-        Selects a random tip and displays it along side the result message
+        """Roll dice, a skill check, a save, or a complex expression.
+
+        Outputs the result to the channel with a random tip.
         """
 
         logger.debug(
@@ -394,29 +409,17 @@ def register_roll_commands(bot: commands.Bot) -> None:
     @roll.autocomplete("notation")
     async def roll_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
-        suggestions = []
-        skills = sorted(SKILL_TO_STAT.keys())
-        suggestions.extend(skills)
+    ) -> list[app_commands.Choice[str]]:
+        suggestions: list[str] = sorted(SKILL_TO_STAT.keys())
         suggestions.append("Initiative")
-        stats = [
-            "Strength",
-            "Dexterity",
-            "Constitution",
-            "Intelligence",
-            "Wisdom",
-            "Charisma",
-        ]
-        suggestions.extend(stats)
-        suggestions.extend(["Str", "Dex", "Con", "Int", "Wis", "Cha"])
-        for stat in stats:
-            suggestions.append(f"{stat} Save")
-        for stat in ["Str", "Dex", "Con", "Int", "Wis", "Cha"]:
-            suggestions.append(f"{stat} Save")
+        all_stat_forms = _STAT_FULL_NAMES + _STAT_ABBREVS
+        suggestions.extend(all_stat_forms)
+        suggestions.extend(f"{stat} Save" for stat in all_stat_forms)
 
-        # Include "death save" only when the active character is at 0 HP
+        # Include "death save" only when the active character is at 0 HP.
+        # Use resolve_user_server (read-only) to avoid inserting rows on keystrokes.
         with db_session() as death_save_db:
-            user, server = get_or_create_user_server(death_save_db, interaction)
+            user, server = resolve_user_server(death_save_db, interaction)
             if user and server:
                 char = get_active_character(death_save_db, user, server)
                 if char and character_is_dying(char):

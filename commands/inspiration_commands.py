@@ -12,20 +12,23 @@ Workflow::
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import TYPE_CHECKING
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from sqlalchemy import select
 
 from database import db_session
-from models import Character, Party, Server, User, user_server_association
+from models import Character, Party, Server, User
 from utils.db_helpers import (
     get_active_character,
     get_active_party,
     get_or_create_user_server,
+    resolve_user_server,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
@@ -33,8 +36,12 @@ logger = get_logger(__name__)
 
 
 def _resolve_target(
-    db, user: User, server: Server, party: Optional[Party], partymember: Optional[str]
-) -> tuple[Optional[Character], Optional[str]]:
+    db: Session,
+    user: User,
+    server: Server,
+    party: Party | None,
+    partymember: str | None,
+) -> tuple[Character | None, str | None]:
     """Return ``(character, error_message)`` for the target of an inspiration command.
 
     When *partymember* is None the caller's own active character is returned.
@@ -76,7 +83,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
     )
     async def inspiration_grant(
         interaction: discord.Interaction,
-        partymember: Optional[str] = None,
+        partymember: str | None = None,
     ) -> None:
         """Grant Inspiration to a character.
 
@@ -116,7 +123,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
     @inspiration_grant.autocomplete("partymember")
     async def inspiration_grant_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_member_autocomplete(interaction, current)
 
     @inspiration_group.command(
@@ -128,7 +135,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
     )
     async def inspiration_use(
         interaction: discord.Interaction,
-        partymember: Optional[str] = None,
+        partymember: str | None = None,
     ) -> None:
         """Use (spend) Inspiration for a character.
 
@@ -169,7 +176,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
     @inspiration_use.autocomplete("partymember")
     async def inspiration_use_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_member_autocomplete(interaction, current)
 
     @inspiration_group.command(
@@ -179,7 +186,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
     @app_commands.describe(partymember="Party member to check (defaults to yourself)")
     async def inspiration_status(
         interaction: discord.Interaction,
-        partymember: Optional[str] = None,
+        partymember: str | None = None,
     ) -> None:
         """Display the current Inspiration state of a character.
 
@@ -229,7 +236,7 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
     @inspiration_status.autocomplete("partymember")
     async def inspiration_status_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_member_autocomplete(interaction, current)
 
     bot.tree.add_command(inspiration_group)
@@ -237,23 +244,15 @@ def register_inspiration_commands(bot: commands.Bot) -> None:
 
 async def _party_member_autocomplete(
     interaction: discord.Interaction, current: str
-) -> List[app_commands.Choice[str]]:
+) -> list[app_commands.Choice[str]]:
     """Suggest names of characters in the user's active party."""
     with db_session() as db:
-        user = db.query(User).filter_by(discord_id=str(interaction.user.id)).first()
-        server = (
-            db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
-        )
+        # Use resolve_user_server (read-only) rather than get_or_create_user_server
+        # to avoid creating DB rows on autocomplete keystrokes.
+        user, server = resolve_user_server(db, interaction)
         if not user or not server:
             return []
-        stmt = select(user_server_association.c.active_party_id).where(
-            user_server_association.c.user_id == user.id,
-            user_server_association.c.server_id == server.id,
-        )
-        result = db.execute(stmt).fetchone()
-        if not result or result[0] is None:
-            return []
-        party = db.get(Party, result[0])
+        party = get_active_party(db, user, server)
         if not party:
             return []
         return [

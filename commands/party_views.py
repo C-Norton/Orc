@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import math
 import discord
-from typing import List
 from database import db_session
 from enums.encounter_status import EncounterStatus
 from models import Character, Encounter, EncounterTurn, Party, User
@@ -153,13 +154,12 @@ class ConfirmPartyDeleteView(discord.ui.View):
             logger.info(
                 f"Confirmed deletion of party '{self.party_name}' (id={self.party_id})"
             )
-            message = Strings.PARTY_DELETE_SUCCESS.format(party_name=self.party_name)
-            if completed_names:
-                for enc_name in completed_names:
-                    message += "\n" + Strings.PARTY_DELETE_ENCOUNTER_COMPLETED.format(
-                        encounter_name=enc_name
-                    )
-            await interaction.response.edit_message(content=message, view=None)
+            parts = [Strings.PARTY_DELETE_SUCCESS.format(party_name=self.party_name)]
+            parts.extend(
+                Strings.PARTY_DELETE_ENCOUNTER_COMPLETED.format(encounter_name=enc_name)
+                for enc_name in completed_names
+            )
+            await interaction.response.edit_message(content="\n".join(parts), view=None)
         self.stop()
 
     @discord.ui.button(
@@ -248,7 +248,7 @@ class PartyListView(discord.ui.View):
 
     PARTIES_PER_PAGE: int = 10
 
-    def __init__(self, parties: List[tuple], server_name: str) -> None:
+    def __init__(self, parties: list[tuple], server_name: str) -> None:
         """Initialise the view with pre-loaded party data.
 
         Args:

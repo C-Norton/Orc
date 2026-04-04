@@ -17,6 +17,7 @@ from sqlalchemy import inspect as sa_inspect, text
 
 from database import db_session
 from utils.dev_notifications import (
+    DEVELOPER_DISCORD_ID,
     get_buffer_stats,
     get_recent_logs,
     get_warning_logs_page,
@@ -25,8 +26,6 @@ from utils.logging_config import get_logger
 from utils.strings import Strings
 
 logger = get_logger(__name__)
-
-DEVELOPER_DISCORD_ID: int = 181919139751788545
 
 
 class _WarningLogsView(discord.ui.View):
