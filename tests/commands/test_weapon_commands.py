@@ -16,7 +16,7 @@ from commands.weapon_commands import (
     _build_weapon_add_message,
     _import_weapon_to_character,
 )
-from utils.weapon_utils import WeaponHitModifier
+from utils.weapon_utils import WeaponHitModifier, parse_weapon_fields
 from tests.commands.conftest import get_callback
 from tests.conftest import make_interaction
 
@@ -545,7 +545,7 @@ def test_view_timeout_matches_constant():
 
 def test_import_weapon_creates_new_attack(sample_character, db_session):
     """_import_weapon_to_character creates an Attack and returns is_new=True."""
-    is_new, hit_mod = _import_weapon_to_character(
+    is_new, hit_mod, _ = _import_weapon_to_character(
         LONGSWORD_DATA, sample_character, db_session
     )
     db_session.commit()
@@ -568,7 +568,7 @@ def test_import_weapon_returns_false_for_existing(sample_character, db_session):
     )
     db_session.commit()
 
-    is_new, _ = _import_weapon_to_character(
+    is_new, _, _fields = _import_weapon_to_character(
         LONGSWORD_DATA, sample_character, db_session
     )
 
@@ -597,7 +597,7 @@ def test_import_weapon_updates_existing_record(sample_character, db_session):
 
 def test_import_weapon_returns_hit_modifier(sample_character, db_session):
     """_import_weapon_to_character returns a WeaponHitModifier with the correct total."""
-    _, hit_mod = _import_weapon_to_character(
+    _, hit_mod, _fields = _import_weapon_to_character(
         LONGSWORD_DATA, sample_character, db_session
     )
 
@@ -622,7 +622,9 @@ def _make_char(name: str = "Aldric"):
 
 def test_build_message_new_weapon_uses_added_header():
     """New weapon message contains 'Added' (not 'Updated')."""
-    msg = _build_weapon_add_message(LONGSWORD_DATA, _make_char(), True, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        parse_weapon_fields(LONGSWORD_DATA), _make_char(), True, _make_hit_mod()
+    )
     assert "Added" in msg
     assert "Updated" not in msg
 
@@ -630,7 +632,7 @@ def test_build_message_new_weapon_uses_added_header():
 def test_build_message_existing_weapon_uses_updated_header():
     """Updated weapon message contains 'Updated' (not 'Added')."""
     msg = _build_weapon_add_message(
-        LONGSWORD_DATA, _make_char(), False, _make_hit_mod()
+        parse_weapon_fields(LONGSWORD_DATA), _make_char(), False, _make_hit_mod()
     )
     assert "Updated" in msg
     assert "Added" not in msg
@@ -638,41 +640,51 @@ def test_build_message_existing_weapon_uses_updated_header():
 
 def test_build_message_includes_weapon_name():
     """Confirmation message contains the weapon name."""
-    msg = _build_weapon_add_message(LONGSWORD_DATA, _make_char(), True, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        parse_weapon_fields(LONGSWORD_DATA), _make_char(), True, _make_hit_mod()
+    )
     assert "Longsword" in msg
 
 
 def test_build_message_includes_hit_modifier():
     """Confirmation message contains the formatted hit modifier."""
     msg = _build_weapon_add_message(
-        LONGSWORD_DATA, _make_char(), True, _make_hit_mod(5)
+        parse_weapon_fields(LONGSWORD_DATA), _make_char(), True, _make_hit_mod(5)
     )
     assert "+5" in msg
 
 
 def test_build_message_includes_damage_dice_and_type():
     """Confirmation message contains damage dice and damage type."""
-    msg = _build_weapon_add_message(LONGSWORD_DATA, _make_char(), True, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        parse_weapon_fields(LONGSWORD_DATA), _make_char(), True, _make_hit_mod()
+    )
     assert "1d8" in msg
     assert "Slashing" in msg
 
 
 def test_build_message_includes_versatile_suffix_when_present():
     """Confirmation message shows two-handed damage for Versatile weapons."""
-    msg = _build_weapon_add_message(LONGSWORD_DATA, _make_char(), True, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        parse_weapon_fields(LONGSWORD_DATA), _make_char(), True, _make_hit_mod()
+    )
     assert "1d10" in msg
     assert "two-handed" in msg
 
 
 def test_build_message_no_versatile_suffix_for_non_versatile():
     """Non-versatile weapons do not show a two-handed damage entry."""
-    msg = _build_weapon_add_message(SHORTBOW_DATA, _make_char(), True, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        parse_weapon_fields(SHORTBOW_DATA), _make_char(), True, _make_hit_mod()
+    )
     assert "two-handed" not in msg
 
 
 def test_build_message_includes_properties_when_present():
     """Confirmation message lists all weapon properties."""
-    msg = _build_weapon_add_message(DAGGER_DATA, _make_char(), True, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        parse_weapon_fields(DAGGER_DATA), _make_char(), True, _make_hit_mod()
+    )
     assert "Finesse" in msg
     assert "Light" in msg
     assert "Thrown" in msg
@@ -680,5 +692,7 @@ def test_build_message_includes_properties_when_present():
 
 def test_build_message_no_properties_line_when_empty():
     """Confirmation message has no Properties line when weapon has no properties."""
-    msg = _build_weapon_add_message(SHORTBOW_DATA, _make_char(), True, _make_hit_mod())
+    msg = _build_weapon_add_message(
+        parse_weapon_fields(SHORTBOW_DATA), _make_char(), True, _make_hit_mod()
+    )
     assert "Properties" not in msg

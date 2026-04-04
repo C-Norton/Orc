@@ -239,6 +239,7 @@ class Strings:
         "**{char_name}** has no attacks saved. Use `/attack add` to add some!"
     )
     ATTACK_LIST_TITLE = "Attacks for {char_name}"
+    ATTACK_LIST_FIELD_VALUE = "To Hit: `+{hit_modifier}` | Damage: `{damage_formula}`"
     ATTACK_ROLL_MSG = "⚔️ **{char_name}** attacks with **{attack_obj_name}**!\n**To Hit**: `d20({d20_roll}) + {hit_modifier}` = **{hit_total}**\n**Damage**: `{damage_formula}` -> `{damage_detail}` = **{damage_total}**"
     ATTACK_ROLL_HIT_TARGET = (
         "⚔️ **{char_name}** attacks **{enemy_name}** with **{attack_name}**!\n"

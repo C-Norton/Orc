@@ -15,6 +15,8 @@ for its lifetime and is cleaned up automatically on timeout.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -23,6 +25,9 @@ from database import db_session
 from enums.ruleset_edition import RulesetEdition
 from models import Attack, Character
 from utils.db_helpers import get_active_character, get_or_create_user_server
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.dev_notifications import notify_command_error
 from utils.logging_config import get_logger
@@ -46,13 +51,18 @@ WEAPON_SEARCH_VIEW_TIMEOUT_SECONDS: int = 300
 
 
 def _import_weapon_to_character(
-    weapon_data: dict, character: "Character", db
-) -> tuple[bool, WeaponHitModifier]:
+    weapon_data: dict,
+    character: Character,
+    db: Session,
+    existing_attack: Attack | None = None,
+) -> tuple[bool, WeaponHitModifier, object]:
     """Insert or update an Attack record for *weapon_data* on *character*.
 
-    Returns ``(is_new, hit_modifier_result)`` where ``is_new`` is ``True``
-    when a new Attack was created and ``False`` when an existing one was
-    updated.  The caller is responsible for calling ``db.commit()``.
+    Returns ``(is_new, hit_modifier_result, fields)`` where ``is_new`` is
+    ``True`` when a new Attack was created and ``False`` when an existing one
+    was updated.  Pass *existing_attack* when the caller has already queried
+    for it to avoid a redundant round-trip.  The caller is responsible for
+    calling ``db.commit()``.
     """
     # Parse all weapon fields from the API dict in one place
     fields = parse_weapon_fields(weapon_data)
@@ -60,10 +70,13 @@ def _import_weapon_to_character(
         character, fields.properties, fields.range_normal_float
     )
 
-    # Check for an existing attack with the same name (upsert)
-    existing_attack = (
-        db.query(Attack).filter_by(character_id=character.id, name=fields.name).first()
-    )
+    # Use the pre-fetched record when provided; otherwise query once.
+    if existing_attack is None:
+        existing_attack = (
+            db.query(Attack)
+            .filter_by(character_id=character.id, name=fields.name)
+            .first()
+        )
 
     if existing_attack:
         # Update all fields on the existing record
@@ -74,7 +87,7 @@ def _import_weapon_to_character(
         existing_attack.two_handed_damage = fields.two_handed_damage
         existing_attack.properties_json = fields.properties_json
         existing_attack.is_imported = True
-        return False, hit_modifier_result
+        return False, hit_modifier_result, fields
 
     # No existing record — create a new Attack
     db.add(
@@ -90,19 +103,16 @@ def _import_weapon_to_character(
             is_imported=True,
         )
     )
-    return True, hit_modifier_result
+    return True, hit_modifier_result, fields
 
 
 def _build_weapon_add_message(
-    weapon_data: dict,
-    character: "Character",
+    fields: object,
+    character: Character,
     is_new: bool,
     hit_modifier_result: WeaponHitModifier,
 ) -> str:
     """Build the public confirmation message shown after a weapon is added."""
-    # Re-use field parser to avoid duplicating extraction logic
-    fields = parse_weapon_fields(weapon_data)
-
     header = (
         Strings.WEAPON_ADD_SUCCESS_HEADER
         if is_new
@@ -192,12 +202,12 @@ class WeaponAddButton(discord.ui.Button):
                         )
                         return
 
-                is_new, hit_modifier_result = _import_weapon_to_character(
-                    self.weapon, character, db
+                is_new, hit_modifier_result, fields = _import_weapon_to_character(
+                    self.weapon, character, db, existing_attack=existing_attack
                 )
                 db.commit()
                 confirmation = _build_weapon_add_message(
-                    self.weapon, character, is_new, hit_modifier_result
+                    fields, character, is_new, hit_modifier_result
                 )
         except Exception as error:
             logger.error(

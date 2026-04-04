@@ -1,9 +1,16 @@
+from __future__ import annotations
+
+import random
+from typing import TYPE_CHECKING
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List, Optional
-import random
+
 from database import db_session
+from enums.crit_rule import CritRule
+from enums.encounter_status import EncounterStatus
+from dice_roller import roll_dice
 from models import (
     User,
     Server,
@@ -14,14 +21,12 @@ from models import (
     EncounterTurn,
     Enemy,
 )
-from enums.encounter_status import EncounterStatus
-from dice_roller import roll_dice
-from enums.crit_rule import CritRule
 from utils.crit_logic import apply_crit_damage
 from utils.db_helpers import (
     get_active_character,
     get_active_party,
     get_or_create_user_server,
+    resolve_user_server,
 )
 from utils.encounter_utils import (
     check_and_auto_end_encounter,
@@ -31,6 +36,9 @@ from utils.encounter_utils import (
 from utils.limits import MAX_ATTACKS_PER_CHARACTER
 from utils.logging_config import get_logger
 from utils.strings import Strings
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 logger = get_logger(__name__)
 
@@ -52,6 +60,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
     async def attack_add(
         interaction: discord.Interaction, name: str, hit_mod: int, damage_formula: str
     ) -> None:
+        """Add or update a named attack on the active character."""
         logger.debug(
             f"Command /attack add called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {name}"
@@ -65,13 +74,13 @@ def register_attack_commands(bot: commands.Bot) -> None:
                     f"{'found: ' + char.name if char else 'not found'}"
                 )
 
-                roll_dice(damage_formula)  # raises ValueError on invalid formula
-
                 if not char:
                     await interaction.response.send_message(
                         Strings.CHARACTER_NOT_FOUND, ephemeral=True
                     )
                     return
+
+                roll_dice(damage_formula)  # raises ValueError on invalid formula
 
                 attack = (
                     db.query(Attack).filter_by(character_id=char.id, name=name).first()
@@ -124,7 +133,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
     async def attack_roll(
         interaction: discord.Interaction,
         attack_name: str,
-        target: Optional[str] = None,
+        target: str | None = None,
     ) -> None:
         """Roll to-hit and damage for a saved attack.
 
@@ -378,10 +387,12 @@ def register_attack_commands(bot: commands.Bot) -> None:
     @attack_roll.autocomplete("attack_name")
     async def attack_roll_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         """Suggest attacks belonging to the user's active character."""
         with db_session() as db:
-            user, server = get_or_create_user_server(db, interaction)
+            user, server = resolve_user_server(db, interaction)
+            if not user or not server:
+                return []
             char = get_active_character(db, user, server)
 
             if not char or not char.attacks:
@@ -396,10 +407,12 @@ def register_attack_commands(bot: commands.Bot) -> None:
     @attack_roll.autocomplete("target")
     async def attack_roll_target_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         """Suggest enemy names from the active encounter's initiative order."""
         with db_session() as db:
-            user, server = get_or_create_user_server(db, interaction)
+            user, server = resolve_user_server(db, interaction)
+            if not user or not server:
+                return []
             party = get_active_party(db, user, server)
             if not party:
                 return []
@@ -430,6 +443,7 @@ def register_attack_commands(bot: commands.Bot) -> None:
         name="list", description="List all attacks for your active character"
     )
     async def attack_list(interaction: discord.Interaction) -> None:
+        """Display all saved attacks for the active character as an embed."""
         logger.debug(
             f"Command /attack list called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
@@ -461,7 +475,10 @@ def register_attack_commands(bot: commands.Bot) -> None:
             for attack_obj in char.attacks:
                 embed.add_field(
                     name=attack_obj.name,
-                    value=f"To Hit: `+{attack_obj.hit_modifier}` | Damage: `{attack_obj.damage_formula}`",
+                    value=Strings.ATTACK_LIST_FIELD_VALUE.format(
+                        hit_modifier=attack_obj.hit_modifier,
+                        damage_formula=attack_obj.damage_formula,
+                    ),
                     inline=False,
                 )
 

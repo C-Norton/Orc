@@ -1,5 +1,9 @@
-import discord
+from __future__ import annotations
 
+import enum
+from typing import TYPE_CHECKING
+
+import discord
 from discord import app_commands
 from discord.ext import commands
 
@@ -15,13 +19,23 @@ from utils.hp_logic import apply_damage, apply_healing, apply_temp_hp, parse_amo
 from utils.logging_config import get_logger
 from utils.strings import Strings
 
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
+
 logger = get_logger(__name__)
+
+
+class _ApplyAs(enum.Enum):
+    """Whether a confirmed negative-amount operation applies as damage or healing."""
+
+    DAMAGE = "damage"
+    HEAL = "heal"
 
 
 async def _execute_damage(
     interaction: discord.Interaction,
     char: Character,
-    db,
+    db: Session,
     dmg: int,
     *,
     respond_by_editing: bool = False,
@@ -83,7 +97,7 @@ async def _execute_damage(
 async def _execute_healing(
     interaction: discord.Interaction,
     char: Character,
-    db,
+    db: Session,
     healing: int,
     *,
     respond_by_editing: bool = False,
@@ -141,13 +155,13 @@ class _NegativeAmountConfirmView(discord.ui.View):
     """
 
     def __init__(
-        self, char_id: int, char_name: str, abs_amount: int, apply_as: str
+        self, char_id: int, char_name: str, abs_amount: int, apply_as: _ApplyAs
     ) -> None:
         super().__init__(timeout=30)
         self.char_id = char_id
         self.char_name = char_name
         self.abs_amount = abs_amount
-        self.apply_as = apply_as  # "damage" or "heal"
+        self.apply_as = apply_as
 
     @discord.ui.button(
         label=Strings.BUTTON_APPLY, emoji="✅", style=discord.ButtonStyle.primary
@@ -163,7 +177,7 @@ class _NegativeAmountConfirmView(discord.ui.View):
                     content=Strings.ERROR_CHAR_NO_LONGER_EXISTS, view=None
                 )
                 return
-            if self.apply_as == "damage":
+            if self.apply_as == _ApplyAs.DAMAGE:
                 await _execute_damage(
                     interaction, char, db, self.abs_amount, respond_by_editing=True
                 )
@@ -283,7 +297,7 @@ def register_health_commands(bot: commands.Bot) -> None:
                     char_id=char.id,
                     char_name=char.name,
                     abs_amount=abs_amount,
-                    apply_as="damage",
+                    apply_as=_ApplyAs.DAMAGE,
                 )
                 await interaction.response.send_message(
                     Strings.HP_NEGATIVE_DAMAGE_CONFIRM.format(
@@ -351,7 +365,7 @@ def register_health_commands(bot: commands.Bot) -> None:
                     char_id=char.id,
                     char_name=char.name,
                     abs_amount=abs_amount,
-                    apply_as="heal",
+                    apply_as=_ApplyAs.HEAL,
                 )
                 await interaction.response.send_message(
                     Strings.HP_NEGATIVE_HEAL_CONFIRM.format(
