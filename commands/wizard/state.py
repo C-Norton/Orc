@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import discord
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 from enums.character_class import CharacterClass
 from enums.skill_proficiency_status import SkillProficiencyStatus
@@ -55,6 +58,13 @@ _SKILLS: list[str] = list(SKILL_TO_STAT.keys())
 
 # Maximum number of classes a single character can have in the wizard.
 _MAX_CLASSES = 5
+
+# Maximum total character level across all classes (5e 2024 cap).
+_MAX_CHARACTER_LEVEL = 20
+
+# Maximum remove-buttons shown for existing attacks in the weapons section
+# (3 Discord button rows × 5 buttons per row = 15).
+_MAX_EXISTING_WEAPON_BUTTONS = 15
 
 # Wizard timeout in seconds (10 minutes).
 _WIZARD_TIMEOUT = 600
@@ -128,15 +138,15 @@ class WizardState:
     guild_name: str
     name: str = ""
     classes_and_levels: list[tuple[CharacterClass, int]] = field(default_factory=list)
-    strength: Optional[int] = None
-    dexterity: Optional[int] = None
-    constitution: Optional[int] = None
-    intelligence: Optional[int] = None
-    wisdom: Optional[int] = None
-    charisma: Optional[int] = None
-    initiative_bonus: Optional[int] = None
-    ac: Optional[int] = None
-    hp_override: Optional[int] = None
+    strength: int | None = None
+    dexterity: int | None = None
+    constitution: int | None = None
+    intelligence: int | None = None
+    wisdom: int | None = None
+    charisma: int | None = None
+    initiative_bonus: int | None = None
+    ac: int | None = None
+    hp_override: int | None = None
     # Saving throws: stat_name -> bool (defaults all False; updated when
     # first class is selected or user explicitly toggles)
     saving_throws: dict[str, bool] = field(
@@ -151,19 +161,19 @@ class WizardState:
     # Raw Open5e weapon dicts queued for creation when the wizard finishes
     weapons_to_add: list[dict] = field(default_factory=list)
     # Edit mode: ID of the character being edited (None for new character creation)
-    edit_character_id: Optional[int] = None
+    edit_character_id: int | None = None
     # Edit mode: (attack_id, attack_name) pairs for attacks currently on the character
     existing_attacks: list[tuple[int, str]] = field(default_factory=list)
     # Edit mode: IDs of existing attacks to delete when the wizard finishes
     weapons_to_remove: list[int] = field(default_factory=list)
 
     @property
-    def character_class(self) -> Optional[CharacterClass]:
+    def character_class(self) -> CharacterClass | None:
         """Return the first class in ``classes_and_levels``, or ``None``."""
         return self.classes_and_levels[0][0] if self.classes_and_levels else None
 
     @property
-    def level(self) -> Optional[int]:
+    def level(self) -> int | None:
         """Return the level of the first class, or ``None``."""
         return self.classes_and_levels[0][1] if self.classes_and_levels else None
 
@@ -178,10 +188,38 @@ class WizardState:
 # ---------------------------------------------------------------------------
 
 
+def _apply_hp_to_character(
+    char: Character,
+    state: WizardState,
+    clear_on_no_calc: bool = False,
+) -> None:
+    """Apply HP from *state* to *char*.
+
+    Manual override takes precedence.  Falls back to auto-calculation via
+    ``calculate_max_hp``; when that returns -1 (missing class or CON) the
+    behaviour depends on *clear_on_no_calc*:
+
+    - ``False`` (create mode): leave HP untouched so the field stays at its
+      default value.
+    - ``True`` (edit mode): reset both fields to -1 to clear any previous HP.
+    """
+    if state.hp_override is not None:
+        char.max_hp = state.hp_override
+        char.current_hp = state.hp_override
+    else:
+        new_max = calculate_max_hp(char)
+        if new_max != -1:
+            char.max_hp = new_max
+            char.current_hp = new_max
+        elif clear_on_no_calc:
+            char.max_hp = -1
+            char.current_hp = -1
+
+
 def _add_attack_from_weapon_data(
     weapon_data: dict,
     character: Character,
-    db,
+    db: Session,
 ) -> None:
     """Create an Attack record on *character* from a raw Open5e weapon dict.
 
@@ -211,8 +249,8 @@ def _add_attack_from_weapon_data(
 def save_character_from_wizard(
     state: WizardState,
     interaction: discord.Interaction,
-    db,
-) -> tuple[Optional[Character], Optional[str]]:
+    db: Session,
+) -> tuple[Character | None, str | None]:
     """Validate and persist a character from *state*.
 
     Creates all ClassLevel records for every entry in
@@ -284,14 +322,7 @@ def save_character_from_wizard(
         char.initiative_bonus = state.initiative_bonus
 
     # HP — manual override takes precedence over auto-calculation
-    if state.hp_override is not None:
-        char.max_hp = state.hp_override
-        char.current_hp = state.hp_override
-    else:
-        new_max = calculate_max_hp(char)
-        if new_max != -1:
-            char.max_hp = new_max
-            char.current_hp = new_max
+    _apply_hp_to_character(char, state)
 
     # AC
     if state.ac is not None:
@@ -313,13 +344,9 @@ def save_character_from_wizard(
                 )
             )
 
-    # Weapons queued during the Weapons section
-    weapon_count = 0
-    for weapon_data in state.weapons_to_add:
-        if weapon_count >= MAX_ATTACKS_PER_CHARACTER:
-            break
+    # Weapons queued during the Weapons section (capped at per-character limit)
+    for weapon_data in state.weapons_to_add[:MAX_ATTACKS_PER_CHARACTER]:
         _add_attack_from_weapon_data(weapon_data, char, db)
-        weapon_count += 1
 
     db.flush()
     return char, None
@@ -399,9 +426,9 @@ def character_to_wizard_state(
 
 
 def update_character_from_wizard(
-    state: "WizardState",
-    db,
-) -> tuple[Optional[Character], Optional[str]]:
+    state: WizardState,
+    db: Session,
+) -> tuple[Character | None, str | None]:
     """Apply wizard *state* to the existing character being edited.
 
     Replaces class levels, ability scores, saving throws, skills, AC, and HP
@@ -443,17 +470,7 @@ def update_character_from_wizard(
     char.initiative_bonus = state.initiative_bonus
 
     # HP — manual override takes precedence; fall back to auto-calculation
-    if state.hp_override is not None:
-        char.max_hp = state.hp_override
-        char.current_hp = state.hp_override
-    else:
-        new_max = calculate_max_hp(char)
-        if new_max != -1:
-            char.max_hp = new_max
-            char.current_hp = new_max
-        else:
-            char.max_hp = -1
-            char.current_hp = -1
+    _apply_hp_to_character(char, state, clear_on_no_calc=True)
 
     # AC
     char.ac = state.ac

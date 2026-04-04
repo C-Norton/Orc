@@ -12,8 +12,6 @@ are defined in ``buttons.py``.
 
 from __future__ import annotations
 
-from typing import Optional
-
 import discord
 
 from commands.wizard.buttons import (
@@ -34,7 +32,9 @@ from commands.wizard.buttons import (
 from commands.wizard.state import (
     WizardState,
     _ALL_STATS,
+    _MAX_CHARACTER_LEVEL,
     _MAX_CLASSES,
+    _MAX_EXISTING_WEAPON_BUTTONS,
     _SKILLS,
     _STAT_DISPLAY,
     _WIZARD_TIMEOUT,
@@ -46,7 +46,7 @@ from utils.strings import Strings
 
 
 # ---------------------------------------------------------------------------
-# Section view base helpers (shared method mix-in pattern via plain methods)
+# Section view base class
 # ---------------------------------------------------------------------------
 
 
@@ -59,24 +59,63 @@ def _section_embed(title: str, description: str) -> discord.Embed:
     )
 
 
+class _WizardSectionView(discord.ui.View):
+    """Base class for all wizard section views.
+
+    Provides the three methods shared by every section:
+
+    - ``_save_and_return`` — marks section complete and returns to hub.
+    - ``_return_no_save`` — restores pre-entry snapshot and returns to hub.
+    - ``on_timeout`` — clears the state reference to prevent memory leaks.
+
+    Subclasses must set ``_section_key`` and ``_section_snapshot`` before
+    calling these methods.  Override ``_save_and_return`` if extra work is
+    needed before marking the section complete (e.g. ``_SavesView``).
+    """
+
+    _section_key: str
+    _section_snapshot: dict
+
+    def __init__(self, wizard_state: WizardState, **kwargs: object) -> None:
+        super().__init__(**kwargs)
+        self.wizard_state = wizard_state
+
+    async def _save_and_return(self, interaction: discord.Interaction) -> None:
+        """Mark section complete and return to hub."""
+        from commands.wizard import _show_hub
+
+        self.wizard_state.sections_completed.add(self._section_key)
+        await _show_hub(interaction, self.wizard_state)
+
+    async def _return_no_save(self, interaction: discord.Interaction) -> None:
+        """Restore snapshot and return to hub without saving."""
+        from commands.wizard import _show_hub
+
+        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
+        await _show_hub(interaction, self.wizard_state)
+
+    async def on_timeout(self) -> None:
+        """Clear state reference to prevent memory leak."""
+        self.wizard_state = None
+
+
 # ---------------------------------------------------------------------------
 # Class & Level section
 # ---------------------------------------------------------------------------
 
 
-class _ClassLevelView(discord.ui.View):
+class _ClassLevelView(_WizardSectionView):
     """Class & Level section: class selection with multiclass support.
 
     The class dropdown opens a level modal on selection.  Each added class
     shows a remove button.  Up to ``_MAX_CLASSES`` classes may be added;
-    total level across all classes may not exceed 20.
+    total level across all classes may not exceed ``_MAX_CHARACTER_LEVEL``.
     """
 
     _section_key = "class_level"
 
     def __init__(self, wizard_state: WizardState) -> None:
-        super().__init__(timeout=_WIZARD_TIMEOUT)
-        self.wizard_state = wizard_state
+        super().__init__(wizard_state, timeout=_WIZARD_TIMEOUT)
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
         self._build_items()
 
@@ -120,7 +159,7 @@ class _ClassLevelView(discord.ui.View):
         selected = self._class_select.values[0]
         class_enum = CharacterClass(selected)
 
-        existing_index: Optional[int] = next(
+        existing_index: int | None = next(
             (
                 i
                 for i, (cls, _) in enumerate(self.wizard_state.classes_and_levels)
@@ -155,7 +194,7 @@ class _ClassLevelView(discord.ui.View):
             )
             embed.add_field(
                 name=Strings.WIZARD_CLASS_TOTAL_LEVEL.format(
-                    total=self.wizard_state.total_level, max=20
+                    total=self.wizard_state.total_level, max=_MAX_CHARACTER_LEVEL
                 ),
                 value=class_lines,
                 inline=False,
@@ -172,31 +211,13 @@ class _ClassLevelView(discord.ui.View):
         self._build_items()
         await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
-    async def _save_and_return(self, interaction: discord.Interaction) -> None:
-        """Mark section complete and return to hub."""
-        from commands.wizard import _show_hub
-
-        self.wizard_state.sections_completed.add(self._section_key)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def _return_no_save(self, interaction: discord.Interaction) -> None:
-        """Restore snapshot and return to hub without saving."""
-        from commands.wizard import _show_hub
-
-        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def on_timeout(self) -> None:
-        """Clear state reference to prevent memory leak."""
-        self.wizard_state = None
-
 
 # ---------------------------------------------------------------------------
 # Ability Scores section
 # ---------------------------------------------------------------------------
 
 
-class _StatsView(discord.ui.View):
+class _StatsView(_WizardSectionView):
     """Ability Scores section: STR/DEX/CON and INT/WIS/CHA modal buttons.
 
     Each button is green when all stats in its group are set, red otherwise.
@@ -207,8 +228,7 @@ class _StatsView(discord.ui.View):
     _section_key = "ability_scores"
 
     def __init__(self, wizard_state: WizardState) -> None:
-        super().__init__(timeout=_WIZARD_TIMEOUT)
-        self.wizard_state = wizard_state
+        super().__init__(wizard_state, timeout=_WIZARD_TIMEOUT)
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
         self._build_items()
 
@@ -234,7 +254,9 @@ class _StatsView(discord.ui.View):
             stat_text = "  ".join(
                 f"**{_STAT_DISPLAY[s]}** {v}" for s, v in set_stats.items()
             )
-            embed.add_field(name="Currently set", value=stat_text, inline=False)
+            embed.add_field(
+                name=Strings.WIZARD_STATS_CURRENTLY_SET, value=stat_text, inline=False
+            )
         return embed
 
     async def _refresh(self, interaction: discord.Interaction) -> None:
@@ -242,38 +264,19 @@ class _StatsView(discord.ui.View):
         self._build_items()
         await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
-    async def _save_and_return(self, interaction: discord.Interaction) -> None:
-        """Mark section complete and return to hub."""
-        from commands.wizard import _show_hub
-
-        self.wizard_state.sections_completed.add(self._section_key)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def _return_no_save(self, interaction: discord.Interaction) -> None:
-        """Restore snapshot and return to hub without saving."""
-        from commands.wizard import _show_hub
-
-        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def on_timeout(self) -> None:
-        """Clear state reference to prevent memory leak."""
-        self.wizard_state = None
-
 
 # ---------------------------------------------------------------------------
 # Armor Class section
 # ---------------------------------------------------------------------------
 
 
-class _ACView(discord.ui.View):
+class _ACView(_WizardSectionView):
     """Armor Class section: single modal-opening button."""
 
     _section_key = "ac"
 
     def __init__(self, wizard_state: WizardState) -> None:
-        super().__init__(timeout=_WIZARD_TIMEOUT)
-        self.wizard_state = wizard_state
+        super().__init__(wizard_state, timeout=_WIZARD_TIMEOUT)
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
 
         self.add_item(_EnterACButton(wizard_state, self, row=0))
@@ -284,26 +287,12 @@ class _ACView(discord.ui.View):
         """Build the AC section embed."""
         embed = _section_embed(Strings.WIZARD_HUB_AC_BUTTON, Strings.WIZARD_AC_DESC)
         if self.wizard_state.ac is not None:
-            embed.add_field(name="AC", value=str(self.wizard_state.ac), inline=True)
+            embed.add_field(
+                name=Strings.WIZARD_AC_FIELD_NAME,
+                value=str(self.wizard_state.ac),
+                inline=True,
+            )
         return embed
-
-    async def _save_and_return(self, interaction: discord.Interaction) -> None:
-        """Mark section complete and return to hub."""
-        from commands.wizard import _show_hub
-
-        self.wizard_state.sections_completed.add(self._section_key)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def _return_no_save(self, interaction: discord.Interaction) -> None:
-        """Restore snapshot and return to hub without saving."""
-        from commands.wizard import _show_hub
-
-        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def on_timeout(self) -> None:
-        """Clear state reference to prevent memory leak."""
-        self.wizard_state = None
 
 
 # ---------------------------------------------------------------------------
@@ -311,14 +300,13 @@ class _ACView(discord.ui.View):
 # ---------------------------------------------------------------------------
 
 
-class _SavesView(discord.ui.View):
+class _SavesView(_WizardSectionView):
     """Saving Throws section: six toggle buttons."""
 
     _section_key = "saving_throws"
 
     def __init__(self, wizard_state: WizardState) -> None:
-        super().__init__(timeout=_WIZARD_TIMEOUT)
-        self.wizard_state = wizard_state
+        super().__init__(wizard_state, timeout=_WIZARD_TIMEOUT)
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
         self._add_buttons()
 
@@ -348,24 +336,10 @@ class _SavesView(discord.ui.View):
         return _section_embed(Strings.WIZARD_HUB_SAVING_THROWS_BUTTON, desc)
 
     async def _save_and_return(self, interaction: discord.Interaction) -> None:
-        """Mark saves as explicitly set, mark section complete, return to hub."""
-        from commands.wizard import _show_hub
-
-        # Record that the user explicitly configured saves
+        """Record that saves were explicitly configured, then return to hub."""
+        # Flag must be set before the base-class call marks the section complete
         self.wizard_state.saves_explicitly_set = True
-        self.wizard_state.sections_completed.add(self._section_key)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def _return_no_save(self, interaction: discord.Interaction) -> None:
-        """Restore snapshot and return to hub without saving."""
-        from commands.wizard import _show_hub
-
-        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def on_timeout(self) -> None:
-        """Clear state reference to prevent memory leak."""
-        self.wizard_state = None
+        await super()._save_and_return(interaction)
 
 
 # ---------------------------------------------------------------------------
@@ -373,14 +347,13 @@ class _SavesView(discord.ui.View):
 # ---------------------------------------------------------------------------
 
 
-class _SkillsView(discord.ui.View):
+class _SkillsView(_WizardSectionView):
     """Skills section: eighteen skill toggle buttons."""
 
     _section_key = "skills"
 
     def __init__(self, wizard_state: WizardState) -> None:
-        super().__init__(timeout=_WIZARD_TIMEOUT)
-        self.wizard_state = wizard_state
+        super().__init__(wizard_state, timeout=_WIZARD_TIMEOUT)
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
         self._add_buttons()
 
@@ -405,38 +378,19 @@ class _SkillsView(discord.ui.View):
             Strings.WIZARD_HUB_SKILLS_BUTTON, Strings.WIZARD_SKILLS_DESC
         )
 
-    async def _save_and_return(self, interaction: discord.Interaction) -> None:
-        """Mark section complete and return to hub."""
-        from commands.wizard import _show_hub
-
-        self.wizard_state.sections_completed.add(self._section_key)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def _return_no_save(self, interaction: discord.Interaction) -> None:
-        """Restore snapshot and return to hub without saving."""
-        from commands.wizard import _show_hub
-
-        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def on_timeout(self) -> None:
-        """Clear state reference to prevent memory leak."""
-        self.wizard_state = None
-
 
 # ---------------------------------------------------------------------------
 # Hit Points section
 # ---------------------------------------------------------------------------
 
 
-class _HPView(discord.ui.View):
+class _HPView(_WizardSectionView):
     """Hit Points section: optional manual HP override."""
 
     _section_key = "hp"
 
     def __init__(self, wizard_state: WizardState) -> None:
-        super().__init__(timeout=_WIZARD_TIMEOUT)
-        self.wizard_state = wizard_state
+        super().__init__(wizard_state, timeout=_WIZARD_TIMEOUT)
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
 
         self.add_item(_SetHPButton(wizard_state, self, row=0))
@@ -450,7 +404,7 @@ class _HPView(discord.ui.View):
         )
         if self.wizard_state.hp_override is not None:
             embed.add_field(
-                name="Max HP",
+                name=Strings.WIZARD_HP_MAX_HP_FIELD,
                 value=Strings.WIZARD_HP_SET.format(hp=self.wizard_state.hp_override),
                 inline=False,
             )
@@ -464,26 +418,10 @@ class _HPView(discord.ui.View):
                 if can_auto_calc
                 else Strings.WIZARD_HP_CANNOT_AUTO_CALC
             )
-            embed.add_field(name="HP Status", value=hint, inline=False)
+            embed.add_field(
+                name=Strings.WIZARD_HP_STATUS_FIELD, value=hint, inline=False
+            )
         return embed
-
-    async def _save_and_return(self, interaction: discord.Interaction) -> None:
-        """Mark section complete and return to hub."""
-        from commands.wizard import _show_hub
-
-        self.wizard_state.sections_completed.add(self._section_key)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def _return_no_save(self, interaction: discord.Interaction) -> None:
-        """Restore snapshot and return to hub without saving."""
-        from commands.wizard import _show_hub
-
-        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def on_timeout(self) -> None:
-        """Clear state reference to prevent memory leak."""
-        self.wizard_state = None
 
 
 # ---------------------------------------------------------------------------
@@ -491,7 +429,7 @@ class _HPView(discord.ui.View):
 # ---------------------------------------------------------------------------
 
 
-class _WeaponsWizardView(discord.ui.View):
+class _WeaponsWizardView(_WizardSectionView):
     """Weapons section: SRD weapon search and queue.
 
     In creation mode, ``wizard_state.weapons_to_add`` holds raw Open5e weapon
@@ -500,15 +438,14 @@ class _WeaponsWizardView(discord.ui.View):
     In edit mode, ``wizard_state.existing_attacks`` holds (id, name) pairs
     for attacks already on the character.  Each is shown with a remove button;
     clicking one marks the attack's ID in ``wizard_state.weapons_to_remove``
-    so it is deleted at commit time.  Up to 15 existing attacks can be shown
-    as remove buttons (rows 1–3, five per row).
+    so it is deleted at commit time.  Up to ``_MAX_EXISTING_WEAPON_BUTTONS``
+    existing attacks can be shown as remove buttons (rows 1–3, five per row).
     """
 
     _section_key = "weapons"
 
     def __init__(self, wizard_state: WizardState) -> None:
-        super().__init__(timeout=_WIZARD_TIMEOUT)
-        self.wizard_state = wizard_state
+        super().__init__(wizard_state, timeout=_WIZARD_TIMEOUT)
         self._section_snapshot = snapshot_section(wizard_state, self._section_key)
         self._build_items()
 
@@ -519,7 +456,7 @@ class _WeaponsWizardView(discord.ui.View):
 
         # Remove buttons for existing attacks (edit mode only), rows 1–3
         for index, (attack_id, attack_name) in enumerate(
-            self.wizard_state.existing_attacks[:15]
+            self.wizard_state.existing_attacks[:_MAX_EXISTING_WEAPON_BUTTONS]
         ):
             row = 1 + index // 5
             self.add_item(
@@ -536,7 +473,7 @@ class _WeaponsWizardView(discord.ui.View):
         self._build_items()
         await interaction.response.edit_message(embed=self._build_embed(), view=self)
 
-    def _build_embed(self, no_results_query: Optional[str] = None) -> discord.Embed:
+    def _build_embed(self, no_results_query: str | None = None) -> discord.Embed:
         """Build the Weapons section embed."""
         embed = _section_embed(
             Strings.WIZARD_HUB_WEAPONS_BUTTON, Strings.WIZARD_WEAPONS_STEP_DESC
@@ -581,24 +518,6 @@ class _WeaponsWizardView(discord.ui.View):
             inline=False,
         )
         return embed
-
-    async def _save_and_return(self, interaction: discord.Interaction) -> None:
-        """Mark section complete and return to hub."""
-        from commands.wizard import _show_hub
-
-        self.wizard_state.sections_completed.add(self._section_key)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def _return_no_save(self, interaction: discord.Interaction) -> None:
-        """Restore snapshot and return to hub without saving."""
-        from commands.wizard import _show_hub
-
-        restore_section(self.wizard_state, self._section_key, self._section_snapshot)
-        await _show_hub(interaction, self.wizard_state)
-
-    async def on_timeout(self) -> None:
-        """Clear state reference to prevent memory leak."""
-        self.wizard_state = None
 
 
 # ---------------------------------------------------------------------------

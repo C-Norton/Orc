@@ -7,8 +7,6 @@ completion summary.  ``_build_complete_embed`` and its helper
 
 from __future__ import annotations
 
-from typing import Optional
-
 import discord
 
 from commands.wizard.state import (
@@ -85,7 +83,7 @@ async def _finish_wizard(
 def _add_wizard_embed_field(
     embed: discord.Embed,
     label: str,
-    value: Optional[str],
+    value: str | None,
     skipped_command: str,
     inline: bool = False,
 ) -> None:
@@ -110,35 +108,35 @@ def _add_wizard_embed_field(
         )
 
 
-def _build_complete_embed(state: WizardState, char: Character) -> discord.Embed:
-    """Build the wizard completion embed summarising what was and wasn't set."""
-    embed = discord.Embed(
-        title=Strings.WIZARD_COMPLETE_TITLE.format(name=state.name),
-        description=Strings.WIZARD_COMPLETE_DESC,
-        color=discord.Color.green(),
-    )
+def _add_shared_embed_fields(
+    embed: discord.Embed,
+    state: WizardState,
+    char: Character,
+    always_show_saves: bool,
+) -> None:
+    """Populate the six embed fields shared by both completion embeds.
 
+    The only behavioural difference between create and edit mode is how saves
+    are gated: create mode shows them only when explicitly set or a class is
+    chosen; edit mode always shows them.  All other fields are identical.
+    """
     # Class & Level (multiclass-aware display)
-    if state.classes_and_levels:
-        class_value = "\n".join(
-            f"{cls.value} {lv}" for cls, lv in state.classes_and_levels
-        )
-    else:
-        class_value = None
+    class_value = (
+        "\n".join(f"{cls.value} {lv}" for cls, lv in state.classes_and_levels)
+        if state.classes_and_levels
+        else None
+    )
     _add_wizard_embed_field(
         embed, "Class & Level", class_value, "/character class_add", inline=True
     )
 
     # Ability Scores — show all set stats in a single inline block
     stats_set = [s for s in _ALL_STATS if getattr(state, s) is not None]
-    if stats_set:
-        stat_value = "  ".join(
-            f"**{_STAT_DISPLAY[s]}** {getattr(state, s)}"
-            for s in _ALL_STATS
-            if getattr(state, s) is not None
-        )
-    else:
-        stat_value = None
+    stat_value = (
+        "  ".join(f"**{_STAT_DISPLAY[s]}** {getattr(state, s)}" for s in stats_set)
+        if stats_set
+        else None
+    )
     _add_wizard_embed_field(embed, "Ability Scores", stat_value, "/character stats")
 
     # AC
@@ -157,8 +155,12 @@ def _build_complete_embed(state: WizardState, char: Character) -> discord.Embed:
         hp_value = None
     _add_wizard_embed_field(embed, "Max HP", hp_value, "/hp set_max", inline=True)
 
-    # Saving Throws — shown when class was set or user explicitly toggled saves
-    if state.saves_explicitly_set or state.character_class is not None:
+    # Saving Throws — create mode gates on class/explicit; edit always shows
+    if (
+        always_show_saves
+        or state.saves_explicitly_set
+        or state.character_class is not None
+    ):
         prof_saves = [
             _STAT_DISPLAY[s] for s in _ALL_STATS if state.saving_throws.get(s, False)
         ]
@@ -172,84 +174,45 @@ def _build_complete_embed(state: WizardState, char: Character) -> discord.Embed:
     skills_value = ", ".join(proficient_skills) if proficient_skills else None
     _add_wizard_embed_field(embed, "Skills", skills_value, "/character skill")
 
+
+def _build_complete_embed(state: WizardState, char: Character) -> discord.Embed:
+    """Build the wizard completion embed summarising what was and wasn't set."""
+    base_desc = Strings.WIZARD_COMPLETE_DESC
+    embed = discord.Embed(
+        title=Strings.WIZARD_COMPLETE_TITLE.format(name=state.name),
+        description=base_desc,
+        color=discord.Color.green(),
+    )
+
+    _add_shared_embed_fields(embed, state, char, always_show_saves=False)
+
     # Weapons — list queued weapon names, or mark skipped
-    if state.weapons_to_add:
-        weapons_value = ", ".join(
-            w.get("name", "Unknown") for w in state.weapons_to_add
-        )
-    else:
-        weapons_value = None
+    weapons_value = (
+        ", ".join(w.get("name", "Unknown") for w in state.weapons_to_add)
+        if state.weapons_to_add
+        else None
+    )
     _add_wizard_embed_field(embed, "Weapons", weapons_value, "/weapon search")
 
     embed.set_footer(text=Strings.WIZARD_COMPLETE_FOOTER)
 
     # Tip: remind users to set HP when auto-calc wasn't possible
     if char.max_hp == -1:
-        embed.description = (
-            f"{Strings.WIZARD_COMPLETE_DESC}\n\n{Strings.WIZARD_COMPLETE_TIP_HP}"
-        )
+        embed.description = f"{base_desc}\n\n{Strings.WIZARD_COMPLETE_TIP_HP}"
 
     return embed
 
 
 def _build_edit_complete_embed(state: WizardState, char: Character) -> discord.Embed:
     """Build the edit-wizard completion embed showing the updated character state."""
+    base_desc = Strings.WIZARD_EDIT_COMPLETE_DESC
     embed = discord.Embed(
         title=Strings.WIZARD_EDIT_COMPLETE_TITLE.format(name=state.name),
-        description=Strings.WIZARD_EDIT_COMPLETE_DESC,
+        description=base_desc,
         color=discord.Color.green(),
     )
 
-    # Class & Level
-    if state.classes_and_levels:
-        class_value = "\n".join(
-            f"{cls.value} {lv}" for cls, lv in state.classes_and_levels
-        )
-    else:
-        class_value = None
-    _add_wizard_embed_field(
-        embed, "Class & Level", class_value, "/character class_add", inline=True
-    )
-
-    # Ability Scores
-    stats_set = [s for s in _ALL_STATS if getattr(state, s) is not None]
-    if stats_set:
-        stat_value = "  ".join(
-            f"**{_STAT_DISPLAY[s]}** {getattr(state, s)}"
-            for s in _ALL_STATS
-            if getattr(state, s) is not None
-        )
-    else:
-        stat_value = None
-    _add_wizard_embed_field(embed, "Ability Scores", stat_value, "/character stats")
-
-    # AC
-    ac_value = str(state.ac) if state.ac is not None else None
-    _add_wizard_embed_field(embed, "AC", ac_value, "/character ac", inline=True)
-
-    # HP
-    if char.max_hp != -1:
-        hp_label = (
-            Strings.WIZARD_COMPLETE_HP_OVERRIDE
-            if state.hp_override is not None
-            else Strings.WIZARD_COMPLETE_HP_AUTO
-        )
-        hp_value = f"{char.max_hp} ({hp_label})"
-    else:
-        hp_value = None
-    _add_wizard_embed_field(embed, "Max HP", hp_value, "/hp set_max", inline=True)
-
-    # Saving Throws
-    prof_saves = [
-        _STAT_DISPLAY[s] for s in _ALL_STATS if state.saving_throws.get(s, False)
-    ]
-    saves_value = ", ".join(prof_saves) if prof_saves else "None"
-    _add_wizard_embed_field(embed, "Saving Throws", saves_value, "/character saves")
-
-    # Skills
-    proficient_skills = [sk for sk, val in state.skills.items() if val]
-    skills_value = ", ".join(proficient_skills) if proficient_skills else None
-    _add_wizard_embed_field(embed, "Skills", skills_value, "/character skill")
+    _add_shared_embed_fields(embed, state, char, always_show_saves=True)
 
     # Weapons — show remaining existing + newly added
     all_weapon_names = [name for _, name in state.existing_attacks] + [
@@ -261,8 +224,6 @@ def _build_edit_complete_embed(state: WizardState, char: Character) -> discord.E
     embed.set_footer(text=Strings.WIZARD_COMPLETE_FOOTER)
 
     if char.max_hp == -1:
-        embed.description = (
-            f"{Strings.WIZARD_EDIT_COMPLETE_DESC}\n\n{Strings.WIZARD_COMPLETE_TIP_HP}"
-        )
+        embed.description = f"{base_desc}\n\n{Strings.WIZARD_COMPLETE_TIP_HP}"
 
     return embed

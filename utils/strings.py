@@ -524,6 +524,11 @@ class Strings:
         "🟢 Proficient   ⬜ Not Proficient"
     )
 
+    WIZARD_STATS_CURRENTLY_SET = "Currently set"
+    WIZARD_AC_FIELD_NAME = "AC"
+    WIZARD_HP_MAX_HP_FIELD = "Max HP"
+    WIZARD_HP_STATUS_FIELD = "HP Status"
+
     WIZARD_HP_STEP_DESC = "Set a custom max HP, or skip to auto-calculate from your class and Constitution."
     WIZARD_HP_BUTTON = "✏️ Set Max HP"
     WIZARD_HP_MODAL_TITLE = "Maximum Hit Points"

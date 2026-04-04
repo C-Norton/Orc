@@ -7,11 +7,11 @@ hub (name modal).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import discord
 
-from commands.wizard.state import WizardState, _ALL_STATS
+from commands.wizard.state import WizardState, _ALL_STATS, _MAX_CHARACTER_LEVEL
 from enums.character_class import CharacterClass
 from enums.ruleset_edition import RulesetEdition
 from utils.class_data import get_class_save_profs
@@ -39,7 +39,7 @@ logger = get_logger(__name__)
 async def _validate_stat_inputs(
     mapping: dict[str, str],
     interaction: discord.Interaction,
-) -> Optional[dict[str, int]]:
+) -> dict[str, int] | None:
     """Parse and range-check a mapping of stat names to raw string values.
 
     Sends an ephemeral error and returns ``None`` on the first invalid entry.
@@ -113,7 +113,7 @@ class _LevelForClassModal(discord.ui.Modal):
         self,
         state: WizardState,
         class_enum: CharacterClass,
-        existing_index: Optional[int],
+        existing_index: int | None,
         parent_view: "_ClassLevelView",
     ) -> None:
         super().__init__(
@@ -151,7 +151,7 @@ class _LevelForClassModal(discord.ui.Modal):
                 Strings.WIZARD_LEVEL_INVALID, ephemeral=True
             )
             return
-        if not 1 <= level <= 20:
+        if not 1 <= level <= _MAX_CHARACTER_LEVEL:
             await interaction.response.send_message(
                 Strings.CHAR_LEVEL_LIMIT, ephemeral=True
             )
@@ -163,7 +163,7 @@ class _LevelForClassModal(discord.ui.Modal):
             # Editing: subtract the old level before adding the new one
             current_total -= self.state.classes_and_levels[self.existing_index][1]
         new_total = current_total + level
-        if new_total > 20:
+        if new_total > _MAX_CHARACTER_LEVEL:
             await interaction.response.send_message(
                 Strings.WIZARD_TOTAL_LEVEL_EXCEEDED.format(
                     added=level,
@@ -509,7 +509,7 @@ class _ManualSetupModal(discord.ui.Modal):
             )
             return
 
-        character_class: Optional[CharacterClass] = None
+        character_class: CharacterClass | None = None
         level = 1
 
         raw_class = self.class_input.value.strip() if self.class_input.value else ""
@@ -535,7 +535,7 @@ class _ManualSetupModal(discord.ui.Modal):
                     Strings.WIZARD_LEVEL_INVALID, ephemeral=True
                 )
                 return
-            if not 1 <= level <= 20:
+            if not 1 <= level <= _MAX_CHARACTER_LEVEL:
                 await interaction.response.send_message(
                     Strings.CHAR_LEVEL_LIMIT, ephemeral=True
                 )
@@ -549,7 +549,9 @@ class _ManualSetupModal(discord.ui.Modal):
             name=name,
             classes_and_levels=classes_and_levels,
         )
-        # Auto-apply class saves so they are stored even in manual mode
+        # Pre-fill saving throws on the state so it reflects the applied class profs.
+        # save_character_from_wizard will also apply them directly via
+        # apply_class_save_profs, keeping the character record consistent.
         if character_class:
             class_profs = get_class_save_profs(character_class)
             state.saving_throws = {s: s in class_profs for s in _ALL_STATS}
