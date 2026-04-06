@@ -64,9 +64,9 @@ def test_party_settings_default_enemy_ac_public_is_false(
 
 def test_get_or_create_returns_defaults_for_new_party(db_session, sample_active_party):
     """Helper creates settings with defaults when none exist."""
-    from commands.party_commands import _get_or_create_party_settings
+    from utils.db_helpers import get_or_create_party_settings
 
-    settings = _get_or_create_party_settings(db_session, sample_active_party)
+    settings = get_or_create_party_settings(db_session, sample_active_party)
     assert settings.party_id == sample_active_party.id
     assert settings.initiative_mode == EnemyInitiativeMode.BY_TYPE
     assert settings.enemy_ac_public is False
@@ -76,11 +76,11 @@ def test_get_or_create_does_not_duplicate_on_second_call(
     db_session, sample_active_party
 ):
     """Calling the helper twice returns the same settings row, not a duplicate."""
-    from commands.party_commands import _get_or_create_party_settings
+    from utils.db_helpers import get_or_create_party_settings
 
-    settings_first = _get_or_create_party_settings(db_session, sample_active_party)
+    settings_first = get_or_create_party_settings(db_session, sample_active_party)
     db_session.commit()
-    settings_second = _get_or_create_party_settings(db_session, sample_active_party)
+    settings_second = get_or_create_party_settings(db_session, sample_active_party)
     assert settings_first.id == settings_second.id
     all_settings = (
         db_session.query(PartySettings).filter_by(party_id=sample_active_party.id).all()
@@ -111,9 +111,9 @@ async def test_settings_view_shows_correct_initiative_mode_after_update(
     db_session, party_bot, sample_active_party, interaction
 ):
     """View reflects the current initiative_mode after it has been changed."""
-    from commands.party_commands import _get_or_create_party_settings
+    from utils.db_helpers import get_or_create_party_settings
 
-    settings = _get_or_create_party_settings(db_session, sample_active_party)
+    settings = get_or_create_party_settings(db_session, sample_active_party)
     settings.initiative_mode = EnemyInitiativeMode.INDIVIDUAL
     db_session.commit()
 

@@ -1,28 +1,37 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List, Optional
-from sqlalchemy import update, select, insert
+from sqlalchemy import insert, select, update
+
 from database import db_session
-from models import (
-    User,
-    Server,
-    Character,
-    Party,
-    PartySettings,
-    Encounter,
-    EncounterTurn,
-    user_server_association,
-)
 from enums.crit_rule import CritRule
 from enums.death_save_nat20_mode import DeathSaveNat20Mode
 from enums.encounter_status import EncounterStatus
 from enums.enemy_initiative_mode import EnemyInitiativeMode
+from models import (
+    Character,
+    Encounter,
+    EncounterTurn,
+    Party,
+    PartySettings,
+    Server,
+    User,
+    user_server_association,
+)
 from utils.db_helpers import (
     get_active_party,
+    get_or_create_party_settings,
     get_or_create_user,
     get_or_create_user_server,
+    resolve_user_server,
 )
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 from utils.dnd_logic import perform_roll
 from utils.limits import (
     MAX_GM_PARTIES_PER_USER,
@@ -41,37 +50,19 @@ from commands.party_views import (
 logger = get_logger(__name__)
 
 
-def _get_or_create_party_settings(db, party: Party) -> PartySettings:
-    """Return the PartySettings for a party, creating with defaults if absent.
-
-    Args:
-        db: An active SQLAlchemy session.
-        party: The Party instance whose settings are needed.
-
-    Returns:
-        The existing or newly-created PartySettings for the party.
-    """
-    settings = db.query(PartySettings).filter_by(party_id=party.id).first()
-    if settings is None:
-        settings = PartySettings(party_id=party.id)
-        db.add(settings)
-        db.flush()
-    return settings
-
-
-def _lookup_party(db, party_name: str, server_id: int) -> Optional[Party]:
+def _lookup_party(db: Session, party_name: str, server_id: int) -> Party | None:
     """Return the Party with the given name in the given server, or None."""
     return db.query(Party).filter_by(name=party_name, server_id=server_id).first()
 
 
-def _is_gm(user: Optional[User], party: Party) -> bool:
+def _is_gm(user: User | None, party: Party) -> bool:
     """Return True if user is a GM of the party."""
     return user is not None and user in party.gms
 
 
 async def _get_party_or_error(
-    db, interaction: discord.Interaction, party_name: str, server_id: int
-) -> Optional[Party]:
+    db: Session, interaction: discord.Interaction, party_name: str, server_id: int
+) -> Party | None:
     """Look up the party; if absent, send the not-found error and return None.
 
     Callers must check `if party is None: return` immediately after awaiting this.
@@ -87,7 +78,7 @@ async def _get_party_or_error(
 
 async def _require_gm_or_error(
     interaction: discord.Interaction,
-    user: Optional[User],
+    user: User | None,
     party: Party,
     error_string: str,
 ) -> bool:
@@ -113,7 +104,7 @@ def register_party_commands(bot: commands.Bot) -> None:
 
     async def _party_name_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         """Return autocomplete choices for party names in the current server."""
         with db_session() as db:
             server = (
@@ -130,7 +121,7 @@ def register_party_commands(bot: commands.Bot) -> None:
 
     async def _character_name_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         """Return autocomplete choices for character names in the current server."""
         with db_session() as db:
             server = (
@@ -145,7 +136,9 @@ def register_party_commands(bot: commands.Bot) -> None:
                 if current.lower() in character.name.lower()
             ][:25]
 
-    def _set_active_party(db, user: User, server: Server, party: Party) -> None:
+    def _set_active_party(
+        db: Session, user: User, server: Server, party: Party
+    ) -> None:
         """Upsert the user-server association to point at party."""
         stmt = select(user_server_association).where(
             user_server_association.c.user_id == user.id,
@@ -173,7 +166,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             )
 
     async def _apply_validated_enum_setting(
-        db,
+        db: Session,
         interaction: discord.Interaction,
         party: Party,
         value: str,
@@ -201,7 +194,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         if value not in valid_values:
             await interaction.response.send_message(invalid_msg, ephemeral=True)
             return
-        party_settings = _get_or_create_party_settings(db, party)
+        party_settings = get_or_create_party_settings(db, party)
         setattr(party_settings, attribute_name, enum_class(value))
         db.commit()
         logger.info(log_msg)
@@ -221,6 +214,7 @@ def register_party_commands(bot: commands.Bot) -> None:
         party_name: str,
         characters_list: str = "",
     ) -> None:
+        """Create a new party, optionally pre-populated with comma-separated character names."""
         logger.debug(
             f"Command /party create called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
@@ -267,25 +261,23 @@ def register_party_commands(bot: commands.Bot) -> None:
 
             new_party = Party(name=party_name, gms=[user], server=server)
 
-            # Walk the comma-separated list and resolve each name against this server's
-            # characters; collect matches and misses separately to report both at the end
+            # Resolve the comma-separated character names in a single bulk query,
+            # then diff against the requested list to find missing names.
             found_characters = []
             not_found = []
             if characters_list.strip():
-                character_names = [
-                    character_name.strip()
-                    for character_name in characters_list.split(",")
-                ]
-                for character_name in character_names:
-                    character = (
-                        db.query(Character)
-                        .filter_by(name=character_name, server_id=server.id)
-                        .first()
+                character_names = [n.strip() for n in characters_list.split(",")]
+                matched = (
+                    db.query(Character)
+                    .filter(
+                        Character.name.in_(character_names),
+                        Character.server_id == server.id,
                     )
-                    if character:
-                        found_characters.append(character)
-                    else:
-                        not_found.append(character_name)
+                    .all()
+                )
+                found_names = {c.name for c in matched}
+                found_characters = matched
+                not_found = [n for n in character_names if n not in found_names]
 
             new_party.characters = found_characters
             db.add(new_party)
@@ -326,8 +318,9 @@ def register_party_commands(bot: commands.Bot) -> None:
         party_name="Party to set as active (leave blank to view current)"
     )
     async def party_active(
-        interaction: discord.Interaction, party_name: Optional[str] = None
+        interaction: discord.Interaction, party_name: str | None = None
     ) -> None:
+        """Set the caller's active party (with name) or display the current one (without)."""
         logger.debug(
             f"Command /party active called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
@@ -383,7 +376,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_active.autocomplete("party_name")
     async def party_active_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     # ------------------------------------------------------------------
@@ -393,6 +386,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_group.command(name="view", description="View details of a party")
     @app_commands.describe(party_name="The name of the party to view")
     async def party_view(interaction: discord.Interaction, party_name: str) -> None:
+        """Display an embed with the party's GMs, members, and member count."""
         logger.debug(
             f"Command /party view called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
@@ -448,7 +442,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_view.autocomplete("party_name")
     async def party_view_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     # ------------------------------------------------------------------
@@ -458,6 +452,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_group.command(name="delete", description="Delete a party")
     @app_commands.describe(party_name="The name of the party to delete")
     async def party_delete(interaction: discord.Interaction, party_name: str) -> None:
+        """Delete a party (GM only); auto-completes any open encounters before deleting."""
         logger.debug(
             f"Command /party delete called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {party_name}"
@@ -500,7 +495,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_delete.autocomplete("party_name")
     async def party_delete_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     # ------------------------------------------------------------------
@@ -512,6 +507,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     )
     @app_commands.describe(notation="Skill, stat, save, initiative, or dice notation")
     async def party_roll(interaction: discord.Interaction, notation: str) -> None:
+        """Roll the same notation for every member of the active party and post all results."""
         logger.debug(
             f"Command /party roll called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — notation: {notation}"
@@ -568,6 +564,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     async def party_roll_as(
         interaction: discord.Interaction, member_name: str, notation: str
     ) -> None:
+        """Roll a notation as a specific named party member."""
         logger.debug(
             f"Command /party roll_as called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — member: {member_name}, notation: {notation}"
@@ -608,9 +605,9 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_roll_as.autocomplete("member_name")
     async def party_roll_as_member_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         with db_session() as db:
-            user, server = get_or_create_user_server(db, interaction)
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
             party = get_active_party(db, user, server)
@@ -636,8 +633,9 @@ def register_party_commands(bot: commands.Bot) -> None:
         interaction: discord.Interaction,
         party_name: str,
         character_name: str,
-        character_owner: Optional[discord.Member] = None,
+        character_owner: discord.Member | None = None,
     ) -> None:
+        """Add a named character to a party (GM only); enforces the per-party member cap."""
         logger.debug(
             f"Command /party character_add called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} — party: {party_name}, char: {character_name}"
@@ -726,13 +724,13 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_character_add.autocomplete("party_name")
     async def party_character_add_party_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     @party_character_add.autocomplete("character_name")
     async def party_character_add_char_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _character_name_autocomplete(interaction, current)
 
     # ------------------------------------------------------------------
@@ -751,8 +749,9 @@ def register_party_commands(bot: commands.Bot) -> None:
         interaction: discord.Interaction,
         party_name: str,
         character_name: str,
-        character_owner: Optional[discord.Member] = None,
+        character_owner: discord.Member | None = None,
     ) -> None:
+        """Remove a character from a party (GM only); prompts if an active encounter turn exists."""
         logger.debug(
             f"Command /party character_remove called by {interaction.user} "
             f"(ID: {interaction.user.id}) "
@@ -828,13 +827,13 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_character_remove.autocomplete("party_name")
     async def party_character_remove_party_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     @party_character_remove.autocomplete("character_name")
     async def party_character_remove_char_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         with db_session() as db:
             server = (
                 db.query(Server).filter_by(discord_id=str(interaction.guild_id)).first()
@@ -904,7 +903,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_gm_add.autocomplete("party_name")
     async def party_gm_add_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     # ------------------------------------------------------------------
@@ -988,7 +987,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_gm_remove.autocomplete("party_name")
     async def party_gm_remove_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     # ------------------------------------------------------------------
@@ -1008,7 +1007,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     )
     async def party_settings_view(
         interaction: discord.Interaction,
-        party_name: Optional[str] = None,
+        party_name: str | None = None,
     ) -> None:
         """Display the current settings for the specified (or active) party.
 
@@ -1033,7 +1032,7 @@ def register_party_commands(bot: commands.Bot) -> None:
                 )
                 return
 
-            party_settings = _get_or_create_party_settings(db, party)
+            party_settings = get_or_create_party_settings(db, party)
             db.commit()
 
             msg = Strings.PARTY_SETTINGS_VIEW.format(
@@ -1050,7 +1049,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_settings_view.autocomplete("party_name")
     async def party_settings_view_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     @settings_group.command(
@@ -1113,7 +1112,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_settings_initiative_mode.autocomplete("party_name")
     async def party_settings_initiative_mode_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     @settings_group.command(
@@ -1153,7 +1152,7 @@ def register_party_commands(bot: commands.Bot) -> None:
             ):
                 return
 
-            party_settings = _get_or_create_party_settings(db, party)
+            party_settings = get_or_create_party_settings(db, party)
             party_settings.enemy_ac_public = public
             db.commit()
 
@@ -1172,7 +1171,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_settings_enemy_ac.autocomplete("party_name")
     async def party_settings_enemy_ac_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     @settings_group.command(
@@ -1236,7 +1235,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_settings_crit_rule.autocomplete("party_name")
     async def party_settings_crit_rule_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     @settings_group.command(
@@ -1299,7 +1298,7 @@ def register_party_commands(bot: commands.Bot) -> None:
     @party_settings_death_save_nat20.autocomplete("party_name")
     async def party_settings_death_save_nat20_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         return await _party_name_autocomplete(interaction, current)
 
     party_group.add_command(settings_group)

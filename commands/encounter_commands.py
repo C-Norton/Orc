@@ -1,23 +1,34 @@
+from __future__ import annotations
+
 import random
+from typing import TYPE_CHECKING
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List, Optional
+
 from database import db_session
+from enums.encounter_status import EncounterStatus
+from enums.enemy_initiative_mode import EnemyInitiativeMode
+from enums.enemy_placement_mode import EnemyPlacementMode
 from models import (
-    User,
-    Server,
-    Party,
-    PartySettings,
     Character,
     Encounter,
     Enemy,
     EncounterTurn,
+    Party,
+    PartySettings,
+    Server,
+    User,
 )
-from enums.encounter_status import EncounterStatus
-from enums.enemy_initiative_mode import EnemyInitiativeMode
-from enums.enemy_placement_mode import EnemyPlacementMode
-from utils.db_helpers import get_active_party, get_or_create_user_server
+from utils.db_helpers import (
+    get_active_party,
+    get_or_create_party_settings,
+    get_or_create_user_server,
+)
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 from utils.death_save_logic import character_is_dying
 from utils.dnd_logic import roll_initiative_for_character, get_stat_modifier
 from utils.encounter_utils import (
@@ -32,24 +43,6 @@ from utils.strings import Strings
 from dice_roller import roll_dice
 
 logger = get_logger(__name__)
-
-
-def _get_or_create_party_settings(db, party: Party) -> PartySettings:
-    """Return the PartySettings for a party, creating with defaults if absent.
-
-    Args:
-        db: An active SQLAlchemy session.
-        party: The Party instance whose settings are needed.
-
-    Returns:
-        The existing or newly-created PartySettings for the party.
-    """
-    settings = db.query(PartySettings).filter_by(party_id=party.id).first()
-    if settings is None:
-        settings = PartySettings(party_id=party.id)
-        db.add(settings)
-        db.flush()
-    return settings
 
 
 def _validate_hp_format(value: str) -> None:
@@ -105,14 +98,14 @@ def _parse_hp_input(value: str) -> tuple[int, bool]:
 
 
 def _create_enemies_for_encounter(
-    db,
+    db: Session,
     encounter: Encounter,
     enemy_name: str,
     initiative_modifier: int,
     max_hp_str: str,
     count: int,
-    ac: Optional[int],
-) -> tuple[List[Enemy], bool]:
+    ac: int | None,
+) -> tuple[list[Enemy], bool]:
     """Persist Enemy rows for an encounter and return them.
 
     Handles both single (``count == 1``) and bulk (``count > 1``) creation.
@@ -132,7 +125,7 @@ def _create_enemies_for_encounter(
         A ``(enemies, any_clamped)`` tuple.  ``any_clamped`` is ``True`` when
         at least one enemy's rolled HP was below 1 and was raised to 1.
     """
-    enemies: List[Enemy] = []
+    enemies: list[Enemy] = []
     any_clamped = False
     if count == 1:
         resolved_hp, was_clamped = _parse_hp_input(max_hp_str)
@@ -167,7 +160,7 @@ def _create_enemies_for_encounter(
     return enemies, any_clamped
 
 
-def _open_encounter(db, party: Party) -> Optional[Encounter]:
+def _open_encounter(db: Session, party: Party) -> Encounter | None:
     """Return the party's PENDING or ACTIVE encounter, if any."""
     return (
         db.query(Encounter)
@@ -179,7 +172,7 @@ def _open_encounter(db, party: Party) -> Optional[Encounter]:
     )
 
 
-def _active_encounter(db, party: Party) -> Optional[Encounter]:
+def _active_encounter(db: Session, party: Party) -> Encounter | None:
     """Return the party's ACTIVE encounter, or None.
 
     Unlike ``_open_encounter``, this only returns encounters that have already
@@ -203,11 +196,11 @@ def _active_encounter(db, party: Party) -> Optional[Encounter]:
 
 
 async def _require_active_encounter(
-    db,
+    db: Session,
     interaction: discord.Interaction,
     no_party_msg: str = Strings.ENCOUNTER_NOT_ACTIVE,
     no_encounter_msg: str = Strings.ENCOUNTER_NOT_ACTIVE,
-) -> tuple[Optional[User], Optional[Party], Optional[Encounter]]:
+) -> tuple[User | None, Party | None, Encounter | None]:
     """Resolve user, active party, and active encounter for a command handler.
 
     Sends an ephemeral error and returns ``(None, None, None)`` at the first
@@ -318,7 +311,7 @@ class EnemyPlacementView(discord.ui.View):
         initiative_modifier: int,
         max_hp_str: str,
         count: int,
-        ac: Optional[int],
+        ac: int | None,
     ) -> None:
         super().__init__(timeout=180)
         self.encounter_id = encounter_id
@@ -328,7 +321,7 @@ class EnemyPlacementView(discord.ui.View):
         self.max_hp_str = max_hp_str
         self.count = count
         self.ac = ac
-        self.message: Optional[discord.Message] = None
+        self.message: discord.Message | None = None
 
     def _build_enemy_description(self) -> str:
         """Return a short display string describing the enemy or group."""
@@ -336,7 +329,9 @@ class EnemyPlacementView(discord.ui.View):
             return f"**{self.enemy_name}**"
         return f"**{self.count}× {self.enemy_name}**"
 
-    def _create_enemies(self, db, encounter: "Encounter") -> tuple[List[Enemy], bool]:
+    def _create_enemies(
+        self, db: Session, encounter: Encounter
+    ) -> tuple[list[Enemy], bool]:
         """Persist Enemy rows for this placement and return them.
 
         Delegates to the module-level ``_create_enemies_for_encounter`` using
@@ -358,8 +353,8 @@ class EnemyPlacementView(discord.ui.View):
         )
 
     def _roll_for_enemies(
-        self, enemies: List[Enemy], initiative_mode: EnemyInitiativeMode
-    ) -> List[tuple]:
+        self, enemies: list[Enemy], initiative_mode: EnemyInitiativeMode
+    ) -> list[tuple]:
         """Return ``(enemy, roll)`` pairs based on the party's initiative mode.
 
         SHARED and BY_TYPE both produce one shared roll for the entire batch
@@ -401,11 +396,11 @@ class EnemyPlacementView(discord.ui.View):
                 return
 
             party = db.get(Party, self.party_id)
-            encounter_settings = _get_or_create_party_settings(db, party)
+            encounter_settings = get_or_create_party_settings(db, party)
             initiative_mode = encounter_settings.initiative_mode
 
             enemies, hp_clamped = self._create_enemies(db, encounter)
-            all_turns_count = len([t for t in encounter.turns])
+            all_turns_count = len(encounter.turns)
 
             if placement == EnemyPlacementMode.TOP:
                 roll = random.randint(1, 20) + self.initiative_modifier
@@ -534,6 +529,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
     )
     @app_commands.describe(name="Name for this encounter (e.g. 'Goblin Ambush')")
     async def encounter_create(interaction: discord.Interaction, name: str) -> None:
+        """Create a new PENDING encounter for the active party (GM only)."""
         logger.debug(f"Command /encounter create called by {interaction.user.id}")
         with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
@@ -594,7 +590,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         initiative_modifier: int,
         max_hp: str,
         count: int = 1,
-        ac: Optional[int] = None,
+        ac: int | None = None,
     ) -> None:
         """Add one or more enemies to the current PENDING encounter.
 
@@ -747,6 +743,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         name="start", description="Roll initiative and begin the encounter"
     )
     async def encounter_start(interaction: discord.Interaction) -> None:
+        """Roll initiative for all party members and enemies, then begin the encounter."""
         logger.debug(f"Command /encounter start called by {interaction.user.id}")
         with db_session() as db:
             user, server = get_or_create_user_server(db, interaction)
@@ -801,7 +798,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
                     )
                 )
 
-            encounter_settings = _get_or_create_party_settings(db, party)
+            encounter_settings = get_or_create_party_settings(db, party)
             initiative_mode = encounter_settings.initiative_mode
 
             if initiative_mode == EnemyInitiativeMode.SHARED:
@@ -897,6 +894,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
         name="next", description="End your turn and advance the initiative order"
     )
     async def encounter_next(interaction: discord.Interaction) -> None:
+        """Advance to the next turn; only the current combatant or a GM may call this."""
         logger.debug(f"Command /encounter next called by {interaction.user.id}")
         with db_session() as db:
             user, party, encounter = await _require_active_encounter(db, interaction)
@@ -951,6 +949,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
 
     @encounter_group.command(name="end", description="End the current encounter")
     async def encounter_end(interaction: discord.Interaction) -> None:
+        """Mark the active encounter as COMPLETE (GM only)."""
         logger.debug(f"Command /encounter end called by {interaction.user.id}")
         with db_session() as db:
             user, party, encounter = await _require_active_encounter(
@@ -1105,7 +1104,7 @@ def register_encounter_commands(bot: commands.Bot) -> None:
             if encounter is None:
                 return
 
-            settings = _get_or_create_party_settings(db, party)
+            settings = get_or_create_party_settings(db, party)
             enemy_ac_public = settings.enemy_ac_public
             is_gm = user is not None and user in party.gms
 

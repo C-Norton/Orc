@@ -11,7 +11,14 @@ from typing import TYPE_CHECKING
 import discord
 from sqlalchemy import delete, select
 
-from models import Character, Party, Server, User, user_server_association
+from models import (
+    Character,
+    Party,
+    PartySettings,
+    Server,
+    User,
+    user_server_association,
+)
 from models.base import party_character_association
 
 if TYPE_CHECKING:
@@ -170,6 +177,24 @@ def purge_server_data(db: "Session", server: Server) -> None:
 
     db.flush()
     db.delete(server)
+
+
+def get_or_create_party_settings(db: Session, party: Party) -> PartySettings:
+    """Return the PartySettings for a party, creating with defaults if absent.
+
+    Args:
+        db: An active SQLAlchemy session.
+        party: The Party instance whose settings are needed.
+
+    Returns:
+        The existing or newly-created PartySettings for the party.
+    """
+    settings = db.query(PartySettings).filter_by(party_id=party.id).first()
+    if settings is None:
+        settings = PartySettings(party_id=party.id)
+        db.add(settings)
+        db.flush()
+    return settings
 
 
 def get_active_character(

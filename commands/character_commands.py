@@ -1,27 +1,30 @@
+from __future__ import annotations
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import List, Optional
+
 from database import db_session
+from enums.character_class import CharacterClass
+from enums.encounter_status import EncounterStatus
+from enums.skill_proficiency_status import SkillProficiencyStatus
 from models import (
-    User,
-    Server,
     Character,
     CharacterSkill,
     ClassLevel,
     Encounter,
     EncounterTurn,
     Party,
+    Server,
+    User,
 )
-from enums.character_class import CharacterClass
-from enums.encounter_status import EncounterStatus
-from enums.skill_proficiency_status import SkillProficiencyStatus
 from utils.class_data import apply_class_save_profs, calculate_max_hp
 from utils.constants import SKILL_TO_STAT
 from utils.db_helpers import (
     get_active_character,
     get_active_party,
     get_or_create_user_server,
+    resolve_user_server,
 )
 from utils.dnd_logic import get_proficiency_bonus, get_stat_modifier
 from utils.limits import MAX_CHARACTERS_PER_USER
@@ -313,7 +316,9 @@ def _build_sheet_page3(char: Character) -> discord.Embed:
         for atk in char.attacks:
             embed.add_field(
                 name=atk.name,
-                value=f"**To Hit:** +{atk.hit_modifier}  |  **Damage:** `{atk.damage_formula}`",
+                value=Strings.ATTACK_LIST_FIELD_VALUE.format(
+                    hit_modifier=atk.hit_modifier, damage_formula=atk.damage_formula
+                ),
                 inline=False,
             )
 
@@ -394,24 +399,6 @@ class CharacterSheetView(discord.ui.View):
                 pass
 
 
-_SAVE_STATS: list[str] = [
-    "strength",
-    "dexterity",
-    "constitution",
-    "intelligence",
-    "wisdom",
-    "charisma",
-]
-_SAVE_STAT_ABBR: dict[str, str] = {
-    "strength": "STR",
-    "dexterity": "DEX",
-    "constitution": "CON",
-    "intelligence": "INT",
-    "wisdom": "WIS",
-    "charisma": "CHA",
-}
-
-
 class _SaveEditToggleButton(discord.ui.Button):
     """Toggle button for a single saving throw inside CharacterSavesEditView."""
 
@@ -428,7 +415,7 @@ class _SaveEditToggleButton(discord.ui.Button):
         )
         row = 0 if stat in ("strength", "dexterity", "constitution") else 1
         super().__init__(
-            label=f"{_SAVE_STAT_ABBR[stat]} Save",
+            label=f"{_STAT_ABBR[stat]} Save",
             style=style,
             custom_id=f"saves_edit_{stat}",
             row=row,
@@ -460,7 +447,7 @@ class CharacterSavesEditView(discord.ui.View):
         self._add_buttons()
 
     def _add_buttons(self) -> None:
-        for stat in _SAVE_STATS:
+        for stat in _STAT_NAMES:
             self.add_item(
                 _SaveEditToggleButton(stat, self.saves.get(stat, False), self)
             )
@@ -502,7 +489,7 @@ class _SaveChangesButton(discord.ui.Button):
                     content=Strings.ERROR_CHAR_NO_LONGER_EXISTS, view=None, embed=None
                 )
                 return
-            for stat in _SAVE_STATS:
+            for stat in _STAT_NAMES:
                 setattr(char, f"st_prof_{stat}", view.saves.get(stat, False))
             db.commit()
             logger.info(
@@ -599,14 +586,15 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
     async def character_stats(
         interaction: discord.Interaction,
-        strength: Optional[int] = None,
-        dexterity: Optional[int] = None,
-        constitution: Optional[int] = None,
-        intelligence: Optional[int] = None,
-        wisdom: Optional[int] = None,
-        charisma: Optional[int] = None,
-        initiative_bonus: Optional[int] = None,
+        strength: int | None = None,
+        dexterity: int | None = None,
+        constitution: int | None = None,
+        intelligence: int | None = None,
+        wisdom: int | None = None,
+        charisma: int | None = None,
+        initiative_bonus: int | None = None,
     ) -> None:
+        """Set one or more ability scores on the active character."""
         logger.debug(
             f"Command /character stats called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
@@ -701,6 +689,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         description="Toggle your active character's saving throw proficiencies",
     )
     async def character_saves(interaction: discord.Interaction) -> None:
+        """Toggle saving throw proficiencies on the active character."""
         logger.debug(
             f"Command /character saves called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
@@ -720,7 +709,7 @@ def register_character_commands(bot: commands.Bot) -> None:
                 return
 
             current_saves = {
-                stat: getattr(char, f"st_prof_{stat}", False) for stat in _SAVE_STATS
+                stat: getattr(char, f"st_prof_{stat}", False) for stat in _STAT_NAMES
             }
             view = CharacterSavesEditView(
                 char_id=char.id,
@@ -753,6 +742,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     async def character_skill(
         interaction: discord.Interaction, skill: str, status: str
     ) -> None:
+        """Set the proficiency status for a skill on the active character."""
         logger.debug(
             f"Command /character skill called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with skill: {skill}, status: {status}"
@@ -823,6 +813,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
     @app_commands.describe(ac="Armor Class value (1-30)")
     async def character_ac(interaction: discord.Interaction, ac: int) -> None:
+        """Set the Armor Class of the active character."""
         logger.debug(
             f"Command /character ac called by {interaction.user} (ID: {interaction.user.id}) "
             f"with ac: {ac}"
@@ -869,7 +860,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         name="Character name — your characters or anyone in your active party (leave blank for your active character)"
     )
     async def character_view(
-        interaction: discord.Interaction, name: Optional[str] = None
+        interaction: discord.Interaction, name: str | None = None
     ) -> None:
         """Display a paginated character sheet.
 
@@ -928,10 +919,10 @@ def register_character_commands(bot: commands.Bot) -> None:
     @character_view.autocomplete("name")
     async def character_view_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         """Suggest own characters first, then active party members' characters."""
         with db_session() as db:
-            user, server = get_or_create_user_server(db, interaction)
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -971,6 +962,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         name="list", description="View all of your characters in this server"
     )
     async def character_list(interaction: discord.Interaction) -> None:
+        """List all characters the invoking user owns in this server."""
         logger.debug(
             f"Command /character list called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
@@ -1033,6 +1025,7 @@ def register_character_commands(bot: commands.Bot) -> None:
         name="list_all", description="View all characters registered in this server"
     )
     async def character_list_all(interaction: discord.Interaction) -> None:
+        """List every character registered in this server, grouped by player."""
         logger.debug(
             f"Command /character list_all called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id}"
@@ -1129,6 +1122,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
     @app_commands.describe(name="The name of the character to switch to")
     async def character_switch(interaction: discord.Interaction, name: str) -> None:
+        """Switch the invoking user's active character in this server."""
         logger.debug(
             f"Command /character switch called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {name}"
@@ -1167,10 +1161,10 @@ def register_character_commands(bot: commands.Bot) -> None:
     @character_switch.autocomplete("name")
     async def character_switch_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
         """Suggest character names owned by this user on this server."""
         with db_session() as db:
-            user, server = get_or_create_user_server(db, interaction)
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -1190,6 +1184,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     )
     @app_commands.describe(name="The name of the character to delete")
     async def character_delete(interaction: discord.Interaction, name: str) -> None:
+        """Permanently delete one of the invoking user's characters."""
         logger.debug(
             f"Command /character delete called by {interaction.user} (ID: {interaction.user.id}) "
             f"for guild {interaction.guild_id} with name: {name}"
@@ -1244,9 +1239,10 @@ def register_character_commands(bot: commands.Bot) -> None:
     @character_delete.autocomplete("name")
     async def character_delete_autocomplete(
         interaction: discord.Interaction, current: str
-    ) -> List[app_commands.Choice[str]]:
+    ) -> list[app_commands.Choice[str]]:
+        """Suggest character names owned by this user on this server."""
         with db_session() as db:
-            user, server = get_or_create_user_server(db, interaction)
+            user, server = resolve_user_server(db, interaction)
             if not user or not server:
                 return []
 
@@ -1278,6 +1274,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     async def character_class_add(
         interaction: discord.Interaction, character_class: str, level: int
     ) -> None:
+        """Add or update a class level on the active character."""
         logger.debug(
             f"Command /character class_add called by {interaction.user} (ID: {interaction.user.id}) "
             f"with class: {character_class}, level: {level}"
@@ -1381,6 +1378,7 @@ def register_character_commands(bot: commands.Bot) -> None:
     async def character_class_remove(
         interaction: discord.Interaction, character_class: str
     ) -> None:
+        """Remove a class from the active character."""
         logger.debug(
             f"Command /character class_remove called by {interaction.user} (ID: {interaction.user.id}) "
             f"with class: {character_class}"
