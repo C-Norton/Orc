@@ -267,7 +267,6 @@ class _MentalStatsModal(discord.ui.Modal):
         required=True,
     )
 
-
     def __init__(self, state: WizardState, parent_view: "_StatsView") -> None:
         super().__init__(title=Strings.WIZARD_WIS_CHA_MODAL_TITLE)
         self.state = state
