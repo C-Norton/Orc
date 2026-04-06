@@ -27,7 +27,7 @@ from commands.wizard.buttons import (
     _SkillToggleButton,
     _WeaponRemoveButton,
     _WeaponSelectButton,
-    _WisChaButton,
+    _IntWisChaButton,
 )
 from commands.wizard.state import (
     WizardState,
@@ -236,7 +236,7 @@ class _StatsView(_WizardSectionView):
         """Rebuild buttons with current completion-based styles."""
         self.clear_items()
         self.add_item(_PrimaryStatsButton(self.wizard_state, self, row=0))
-        self.add_item(_WisChaButton(self.wizard_state, self, row=1))
+        self.add_item(_IntWisChaButton(self.wizard_state, self, row=1))
         self.add_item(_SaveReturnButton())
         self.add_item(_ReturnNoSaveButton())
 

@@ -62,6 +62,16 @@ class Character(Base):
     temp_hp: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     ac: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
+    # Tracks whether HP and saves were explicitly set by the user in the wizard,
+    # vs. auto-calculated/auto-applied.  Used by the edit wizard to restore the
+    # correct button colour (green = explicit, blue = auto) when reopening.
+    hp_manually_set: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    saves_explicitly_configured: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+
     # Inspiration (5e: awarded by GM or via Perkins crit rule; spent for advantage)
     inspiration: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="0"

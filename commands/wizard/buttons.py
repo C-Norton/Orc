@@ -270,7 +270,7 @@ class _PrimaryStatsButton(discord.ui.Button):
         )
 
 
-class _WisChaButton(discord.ui.Button):
+class _IntWisChaButton(discord.ui.Button):
     """Opens the INT/WIS/CHA modal.
 
     Green when all three mental stats are set; red when any is missing.

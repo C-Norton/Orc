@@ -70,9 +70,11 @@ def fighter_character(db_session, sample_user, sample_server):
         ac=17,
         max_hp=47,
         current_hp=47,
+        hp_manually_set=True,
         initiative_bonus=2,
         st_prof_strength=True,
         st_prof_constitution=True,
+        saves_explicitly_configured=True,
     )
     db_session.add(char)
     db_session.flush()

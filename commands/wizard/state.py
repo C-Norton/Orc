@@ -332,6 +332,8 @@ def save_character_from_wizard(
     if state.saves_explicitly_set:
         for stat in _ALL_STATS:
             setattr(char, f"st_prof_{stat}", state.saving_throws.get(stat, False))
+    char.saves_explicitly_configured = state.saves_explicitly_set
+    char.hp_manually_set = state.hp_override is not None
 
     # Skill proficiencies — only store proficient entries
     for skill_name, is_proficient in state.skills.items():
@@ -385,17 +387,18 @@ def character_to_wizard_state(
     # AC
     state.ac = char.ac
 
-    # HP — treat existing max_hp as a manual override so it is preserved
-    if char.max_hp != -1:
+    # HP — only treat existing max_hp as a manual override when the character
+    # record says it was explicitly set by the user; auto-calculated HP should
+    # remain blue (auto-calc) in the edit wizard rather than appearing green.
+    if char.max_hp != -1 and char.hp_manually_set:
         state.hp_override = char.max_hp
 
-    # Saving throws — load existing profs.  Only flag as explicitly set when
-    # at least one throw is proficient; an all-False state means the character
-    # was never configured (e.g. name-only) and class defaults should still
-    # apply if a class is later added in the edit wizard.
+    # Saving throws — load existing profs.  Restore the explicit-set flag from
+    # the persisted value so that auto-applied class defaults stay blue instead
+    # of appearing green when the wizard is reopened.
     for stat in _ALL_STATS:
         state.saving_throws[stat] = getattr(char, f"st_prof_{stat}", False)
-    state.saves_explicitly_set = any(state.saving_throws.values())
+    state.saves_explicitly_set = char.saves_explicitly_configured
 
     # Skills — only proficient entries are stored
     for skill in char.skills:
@@ -417,7 +420,7 @@ def character_to_wizard_state(
     state.sections_completed.add("saving_throws")
     if state.skills:
         state.sections_completed.add("skills")
-    if state.hp_override is not None:
+    if char.hp_manually_set:
         state.sections_completed.add("hp")
     if state.existing_attacks:
         state.sections_completed.add("weapons")
@@ -479,6 +482,8 @@ def update_character_from_wizard(
     # True for edit mode, but apply regardless to keep logic simple)
     for stat in _ALL_STATS:
         setattr(char, f"st_prof_{stat}", state.saving_throws.get(stat, False))
+    char.saves_explicitly_configured = state.saves_explicitly_set
+    char.hp_manually_set = state.hp_override is not None
 
     # Skills — delete all existing, recreate proficient ones from state
     for skill in list(char.skills):

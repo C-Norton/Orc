@@ -2169,7 +2169,7 @@ def test_primary_stats_button_is_success_when_all_physical_stats_set():
 
 def test_wischa_button_is_danger_when_mental_stats_incomplete():
     """_WisChaButton is danger when any of INT, WIS, or CHA is missing."""
-    from commands.wizard.buttons import _WisChaButton
+    from commands.wizard.buttons import _IntWisChaButton
 
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
@@ -2178,14 +2178,14 @@ def test_wischa_button_is_danger_when_mental_stats_incomplete():
     state.wisdom = 12
     parent_view = _StatsView(state)
 
-    button = _WisChaButton(state, parent_view, row=1)
+    button = _IntWisChaButton(state, parent_view, row=1)
 
     assert button.style == discord.ButtonStyle.danger
 
 
 def test_wischa_button_is_success_when_all_mental_stats_set():
     """_WisChaButton is success when INT, WIS, and CHA are all set."""
-    from commands.wizard.buttons import _WisChaButton
+    from commands.wizard.buttons import _IntWisChaButton
 
     state = WizardState(
         user_discord_id="1", guild_discord_id="2", guild_name="Test", name="Hero"
@@ -2195,7 +2195,7 @@ def test_wischa_button_is_success_when_all_mental_stats_set():
     state.charisma = 8
     parent_view = _StatsView(state)
 
-    button = _WisChaButton(state, parent_view, row=1)
+    button = _IntWisChaButton(state, parent_view, row=1)
 
     assert button.style == discord.ButtonStyle.success
 
@@ -2241,7 +2241,7 @@ async def test_stats_view_refresh_turns_physical_button_green_after_all_set(mock
 async def test_stats_view_refresh_turns_mental_button_green_after_all_set(mocker):
     """After setting all mental stats via modal, _StatsView._refresh rebuilds the
     INT/WIS/CHA button as success (green)."""
-    from commands.wizard.buttons import _WisChaButton
+    from commands.wizard.buttons import _IntWisChaButton
     from commands.wizard.modals import _MentalStatsModal
 
     state = WizardState(
@@ -2251,7 +2251,7 @@ async def test_stats_view_refresh_turns_mental_button_green_after_all_set(mocker
 
     # Confirm the button starts red (no stats set)
     mental_btn_before = next(
-        item for item in parent_view.children if isinstance(item, _WisChaButton)
+        item for item in parent_view.children if isinstance(item, _IntWisChaButton)
     )
     assert mental_btn_before.style == discord.ButtonStyle.danger
 
@@ -2266,7 +2266,7 @@ async def test_stats_view_refresh_turns_mental_button_green_after_all_set(mocker
 
     # _refresh was called — find the updated button
     mental_btn_after = next(
-        item for item in parent_view.children if isinstance(item, _WisChaButton)
+        item for item in parent_view.children if isinstance(item, _IntWisChaButton)
     )
     assert mental_btn_after.style == discord.ButtonStyle.success
 
@@ -2678,3 +2678,219 @@ async def test_finish_wizard_error_stays_ephemeral_no_followup(mocker, session_f
         Strings.CHAR_CREATE_NAME_LIMIT, ephemeral=True
     )
     interaction.followup.send.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# save_character_from_wizard — flag persistence (hp_manually_set, saves_explicitly_configured)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_save_wizard_hp_manually_set_true_when_hp_override_provided(
+    mocker, db_session, sample_user, sample_server
+):
+    """When state.hp_override is set, char.hp_manually_set is True after save."""
+    state, interaction = _make_state(mocker)
+    state.hp_override = 42
+
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+
+    assert error is None
+    assert char.hp_manually_set is True
+
+
+@pytest.mark.asyncio
+async def test_save_wizard_hp_manually_set_false_when_no_hp_override(
+    mocker, db_session, sample_user, sample_server
+):
+    """When state.hp_override is None, char.hp_manually_set is False after save."""
+    state, interaction = _make_state(mocker)
+    state.hp_override = None
+
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+
+    assert error is None
+    assert char.hp_manually_set is False
+
+
+@pytest.mark.asyncio
+async def test_save_wizard_saves_explicitly_configured_true_when_saves_explicitly_set(
+    mocker, db_session, sample_user, sample_server
+):
+    """When state.saves_explicitly_set is True, char.saves_explicitly_configured is True."""
+    state, interaction = _make_state(mocker)
+    state.saves_explicitly_set = True
+
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+
+    assert error is None
+    assert char.saves_explicitly_configured is True
+
+
+@pytest.mark.asyncio
+async def test_save_wizard_saves_explicitly_configured_false_when_not_explicitly_set(
+    mocker, db_session, sample_user, sample_server
+):
+    """When state.saves_explicitly_set is False, char.saves_explicitly_configured is False."""
+    state, interaction = _make_state(mocker)
+    state.saves_explicitly_set = False
+
+    char, error = save_character_from_wizard(state, interaction, db_session)
+    db_session.commit()
+
+    assert error is None
+    assert char.saves_explicitly_configured is False
+
+
+# ---------------------------------------------------------------------------
+# character_to_wizard_state — correct state restoration
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_character(mocker) -> Character:
+    """Build a minimal mock Character with all attributes needed by character_to_wizard_state."""
+    char = mocker.Mock(spec=Character)
+    char.id = 1
+    char.name = "Thalindra"
+    char.class_levels = []
+    char.skills = []
+    char.attacks = []
+    char.ac = None
+    char.initiative_bonus = None
+    char.max_hp = -1
+    char.hp_manually_set = False
+    char.saves_explicitly_configured = False
+    # All ability scores default to None so no ability_scores section is marked
+    for stat in (
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ):
+        setattr(char, stat, None)
+    # All saving throw proficiencies default to False
+    for stat in (
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    ):
+        setattr(char, f"st_prof_{stat}", False)
+    return char
+
+
+def test_character_to_wizard_state_hp_override_set_when_hp_manually_set(mocker):
+    """When char.hp_manually_set=True and char.max_hp=50, state.hp_override is 50."""
+    from commands.wizard.state import character_to_wizard_state
+
+    char = _make_mock_character(mocker)
+    char.max_hp = 50
+    char.hp_manually_set = True
+
+    interaction = make_interaction(mocker)
+    state = character_to_wizard_state(char, interaction)
+
+    assert state.hp_override == 50
+
+
+def test_character_to_wizard_state_hp_override_not_set_when_hp_not_manually_set(mocker):
+    """When char.hp_manually_set=False and char.max_hp=50 (auto-calculated), state.hp_override is None."""
+    from commands.wizard.state import character_to_wizard_state
+
+    char = _make_mock_character(mocker)
+    char.max_hp = 50
+    char.hp_manually_set = False
+
+    interaction = make_interaction(mocker)
+    state = character_to_wizard_state(char, interaction)
+
+    assert state.hp_override is None
+
+
+def test_character_to_wizard_state_hp_override_not_set_when_max_hp_is_minus_one(mocker):
+    """When char.max_hp == -1, state.hp_override is None regardless of hp_manually_set."""
+    from commands.wizard.state import character_to_wizard_state
+
+    char = _make_mock_character(mocker)
+    char.max_hp = -1
+    char.hp_manually_set = (
+        True  # flag True but HP sentinel value means no real HP stored
+    )
+
+    interaction = make_interaction(mocker)
+    state = character_to_wizard_state(char, interaction)
+
+    assert state.hp_override is None
+
+
+def test_character_to_wizard_state_saves_explicitly_set_from_flag(mocker):
+    """state.saves_explicitly_set mirrors char.saves_explicitly_configured for both True and False."""
+    from commands.wizard.state import character_to_wizard_state
+
+    interaction = make_interaction(mocker)
+
+    char_true = _make_mock_character(mocker)
+    char_true.saves_explicitly_configured = True
+    state_true = character_to_wizard_state(char_true, interaction)
+    assert state_true.saves_explicitly_set is True
+
+    char_false = _make_mock_character(mocker)
+    char_false.saves_explicitly_configured = False
+    state_false = character_to_wizard_state(char_false, interaction)
+    assert state_false.saves_explicitly_set is False
+
+
+def test_character_to_wizard_state_saves_explicitly_set_false_even_when_saves_exist(
+    mocker,
+):
+    """When char.saves_explicitly_configured=False but some saves are proficient (class auto-applied),
+    state.saves_explicitly_set is still False."""
+    from commands.wizard.state import character_to_wizard_state
+
+    char = _make_mock_character(mocker)
+    char.saves_explicitly_configured = False
+    # Simulate a Fighter whose STR and CON saves were auto-applied by the class selection
+    char.st_prof_strength = True
+    char.st_prof_constitution = True
+
+    interaction = make_interaction(mocker)
+    state = character_to_wizard_state(char, interaction)
+
+    assert state.saves_explicitly_set is False
+
+
+def test_character_to_wizard_state_hp_section_not_completed_when_hp_not_manually_set(
+    mocker,
+):
+    """When char.hp_manually_set=False, 'hp' is not in state.sections_completed."""
+    from commands.wizard.state import character_to_wizard_state
+
+    char = _make_mock_character(mocker)
+    char.max_hp = 30
+    char.hp_manually_set = False
+
+    interaction = make_interaction(mocker)
+    state = character_to_wizard_state(char, interaction)
+
+    assert "hp" not in state.sections_completed
+
+
+def test_character_to_wizard_state_hp_section_completed_when_hp_manually_set(mocker):
+    """When char.hp_manually_set=True and char.max_hp != -1, 'hp' is in state.sections_completed."""
+    from commands.wizard.state import character_to_wizard_state
+
+    char = _make_mock_character(mocker)
+    char.max_hp = 30
+    char.hp_manually_set = True
+
+    interaction = make_interaction(mocker)
+    state = character_to_wizard_state(char, interaction)
+
+    assert "hp" in state.sections_completed

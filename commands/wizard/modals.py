@@ -248,6 +248,12 @@ class _PhysicalStatsModal(discord.ui.Modal):
 class _MentalStatsModal(discord.ui.Modal):
     """Collect Intelligence, Wisdom, and Charisma; refreshes the Stats section."""
 
+    int_input: discord.ui.TextInput = discord.ui.TextInput(
+        label=Strings.WIZARD_INT_LABEL,
+        placeholder="e.g. 10",
+        max_length=2,
+        required=True,
+    )
     wis_input: discord.ui.TextInput = discord.ui.TextInput(
         label=Strings.WIZARD_WIS_LABEL,
         placeholder="e.g. 12",
@@ -260,12 +266,7 @@ class _MentalStatsModal(discord.ui.Modal):
         max_length=2,
         required=True,
     )
-    int_input: discord.ui.TextInput = discord.ui.TextInput(
-        label=Strings.WIZARD_INT_LABEL,
-        placeholder="e.g. 10",
-        max_length=2,
-        required=True,
-    )
+
 
     def __init__(self, state: WizardState, parent_view: "_StatsView") -> None:
         super().__init__(title=Strings.WIZARD_WIS_CHA_MODAL_TITLE)
