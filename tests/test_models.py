@@ -55,7 +55,7 @@ def test_party_settings_crit_rule_reads_lowercase_value_from_db(
     db_session.execute(
         text(
             "INSERT INTO party_settings (party_id, initiative_mode, enemy_ac_public, crit_rule) "
-            "VALUES (:party_id, 'BY_TYPE', 0, 'double_dice')"
+            "VALUES (:party_id, 'by_type', 0, 'double_dice')"
         ),
         {"party_id": party.id},
     )
